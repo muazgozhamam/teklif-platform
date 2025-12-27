@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Put, Query, Req, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Param, Put, Body, Query, Req, UseGuards } from '@nestjs/common';
 import { ListingsService } from './listings.service';
 import { ConsultantGuard } from './consultant.guard';
 import * as ListingDto from './listings.dto';
@@ -31,4 +31,15 @@ export class ListingsController {
     const userId = String(req.headers['x-user-id']);
     return this.listings.update(id, userId, dto);
   }
+
+  @Get('/deals/:dealId/listing')
+  getByDeal(@Param('dealId') dealId: string) {
+    return this.listings.getByDealId(dealId);
+  }
+
+  @Post('/deals/:dealId/listing')
+  upsertFromDeal(@Param('dealId') dealId: string) {
+    return this.listings.upsertFromDeal(dealId);
+  }
+
 }
