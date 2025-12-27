@@ -1,0 +1,19 @@
+node_modules
+dist
+.next
+.DS_Store
+.env
+apps/api/prisma/dev.db
+apps/mobile/.expo
+# --- generated / caches ---
+.tmp/
+.turbo/
+node_modules/
+dist/
+*.log
+
+# --- local env ---
+.env.*
+
+# --- prisma ---
+apps/api/prisma/dev.db-journal

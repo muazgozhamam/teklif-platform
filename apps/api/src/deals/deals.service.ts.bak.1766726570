@@ -1,0 +1,103 @@
+import { Injectable, ConflictException, NotFoundException } from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
+
+@Injectable()
+export class DealsService {
+  constructor(private prisma: PrismaService) {}
+
+  async getById(id: string) {
+    const deal = await this.prisma.deal.findUnique({
+      where: { id },
+      include: {
+        lead: true,
+        consultant: true,
+      },
+    });
+
+    if (!deal) {
+      throw new NotFoundException('Deal not found');
+    }
+
+    return deal;
+  }
+
+  async matchDeal(id: string) {
+    const deal = await this.prisma.deal.findUnique({
+      where: { id },
+    });
+
+    if (!deal) {
+      throw new NotFoundException('Deal not found');
+    }
+
+    // idempotent
+    if (deal.status === 'ASSIGNED') {
+      return deal;
+    }
+
+    const consultant = await this.prisma.user.findFirst({
+      where: { role: 'CONSULTANT' },
+    });
+
+    if (!consultant) {
+      throw new ConflictException('No consultant available');
+    }
+
+    return this.prisma.deal.update({
+      where: { id },
+      data: {
+        consultantId: consultant.id,
+        status: 'ASSIGNED',
+      },
+    });
+  }
+
+
+  // ===== Legacy compatibility methods =====
+
+  async getByLeadId(leadId: string) {
+    return this.prisma.deal.findFirst({
+      where: { leadId },
+      include: {
+        lead: true,
+        consultant: true,
+      },
+    });
+  }
+
+  async ensureForLead(leadId: string) {
+    const existing = await this.prisma.deal.findFirst({
+      where: { leadId },
+    });
+
+    if (existing) return existing;
+
+    return this.prisma.deal.create({
+      data: {
+        leadId,
+        status: 'OPEN',
+      },
+    });
+  }
+
+  async ensureStatusReadyForMatching(id: string) {
+    const deal = await this.prisma.deal.findUnique({ where: { id } });
+    if (!deal) return null;
+
+    if (deal.status === 'OPEN') return deal;
+
+    return this.prisma.deal.update({
+      where: { id },
+      data: { status: 'OPEN' },
+    });
+  }
+
+  async advanceDeal(id: string, event: string) {
+    // Minimal advance: no FSM yet
+    return this.prisma.deal.update({
+      where: { id },
+      data: { status: DealStatus[event as keyof typeof DealStatus] as any },
+    });
+  }
+
+}

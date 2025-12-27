@@ -1,0 +1,130 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum OfferStatus {
+  DRAFT
+  SENT
+  ACCEPTED
+  REJECTED
+  CANCELLED
+}
+
+model User {
+  id              String   @id @default(cuid())
+  email           String   @unique
+  password        String
+  name            String?
+  role            Role     @default(USER)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  offers          Offer[]  @relation("UserOffers")
+  consultantDeals Deal[]   @relation("DealConsultant")
+}
+
+enum Role {
+  USER
+  ADMIN
+  CONSULTANT
+}
+
+model Lead {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Kullanıcının ilk serbest metni
+  initialText String
+
+  // Durum (sonra pipeline yapacağız)
+  status LeadStatus @default(OPEN)
+
+  // İsteğe bağlı: admin/agent ataması (sonra User ile ilişkilendiririz)
+  assignedTo String?
+
+  // Cevaplar
+  answers LeadAnswer[]
+  offers  Offer[]
+  deal    Deal?
+}
+
+model LeadAnswer {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  leadId String
+  lead   Lead   @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  key      String // soru anahtarı (e.g. "city")
+  question String
+  answer   String
+}
+
+enum LeadStatus {
+  OPEN
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+
+  ASSIGNED
+  OFFERED
+  WON
+  LOST
+  ARCHIVED
+}
+
+enum DealStatus {
+  OPEN
+  READY_FOR_MATCHING
+  ASSIGNED
+  WON
+  LOST
+}
+
+model Offer {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  leadId String
+  lead   Lead   @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  consultantId String
+  consultant   User    @relation(name: "UserOffers", fields: [consultantId], references: [id], onDelete: Restrict)
+  amount       Int
+  currency     String  @default("TRY")
+  description  String?
+
+  status OfferStatus @default(DRAFT)
+
+  sentAt    DateTime?
+  decidedAt DateTime?
+
+  @@index([leadId, status])
+  @@index([consultantId, status])
+}
+
+model Deal {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  status DealStatus @default(OPEN)
+
+  // LeadAnswer snapshot (LeadAnswer key’lerinden dolacak)
+  city     String?
+  district String?
+  type     String? // kiralık/satılık
+  rooms    String?
+
+  leadId       String  @unique
+  consultantId String?
+  consultant   User?   @relation(name: "DealConsultant", fields: [consultantId], references: [id], onDelete: SetNull)
+  lead         Lead    @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+}

@@ -1,0 +1,85 @@
+import { Role } from '@prisma/client';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
+import { DealEvent, nextStatus } from './deals.engine';
+
+// Not: DealStatus enum'u Prisma'da var, ama burada string ile çalışmak daha az kırılgan.
+// nextStatus zaten engine içinde karar veriyor.
+
+@Injectable()
+export class DealsService {
+  constructor(private prisma: PrismaService) {}
+
+  async getByLeadId(leadId: string) {
+    const deal = await this.prisma.deal.findUnique({ where: { leadId } });
+    if (!deal) throw new NotFoundException('Deal not found');
+    return deal;
+  }
+
+  async ensureForLead(leadId: string) {
+    // leadId schema'da unique → upsert en doğru yol
+    return this.prisma.deal.upsert({
+      where: { leadId },
+      update: {},
+      create: { leadId },
+    });
+  }
+
+  async advanceDeal(dealId: string, event: DealEvent) {
+    const deal = await this.prisma.deal.findUnique({ where: { id: dealId } });
+    if (!deal) throw new NotFoundException('Deal not found');
+
+    const current = deal.status as any;
+    const next = nextStatus(current, event);
+
+    if (!next) {
+      throw new BadRequestException(`No transition for status=${current} event=${event}`);
+    }
+
+    return this.prisma.deal.update({
+      where: { id: dealId },
+      data: { status: next as any },
+    });
+  }
+
+  /**
+   * E2E / workflow safety: QUESTIONS_COMPLETED sonrası deal status'unu READY_FOR_MATCHING yap.
+   * Not: prisma enum/migration durumuna göre DB tarafında enum değeri mevcut olmalı.
+   */
+  async ensureStatusReadyForMatching(dealId: string) {
+    return this.prisma.deal.update({
+      where: { id: dealId },
+      data: { status: 'READY_FOR_MATCHING' as any },
+    });
+  }
+
+  async matchDeal(dealId: string) {
+    // 1) Deal mevcut mu?
+    const deal = await this.prisma.deal.findUnique({ where: { id: dealId } });
+    if (!deal) {
+      // Nest standard
+      throw new Error(`Deal not found: ${dealId}`);
+    }
+
+    // 2) Uygun consultant bul (önce role=CONSULTANT dene; yoksa ilk kullanıcı)
+    // Not: role alanı enum/string olabilir; TS için any cast.
+    const consultant =
+      (await this.prisma.user.findFirst({ where: { role: Role.CONSULTANT } })) ||
+      (await this.prisma.user.findFirst());
+
+    if (!consultant) {
+      throw new Error("No consultant/user found to assign.");
+    }
+
+    // 3) Deal'i ASSIGNED yap ve consultantId yaz
+    return this.prisma.deal.update({
+      where: { id: dealId },
+      data: {
+        status: "ASSIGNED" as any,
+        consultantId: consultant.id,
+      } as any,
+    });
+  }
+
+
+}

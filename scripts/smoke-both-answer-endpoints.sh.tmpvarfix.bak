@@ -1,0 +1,61 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+BASE="${BASE_URL:-http://localhost:3001}"
+CURL="curl -sS"
+
+echo "==> 0) Health"
+$CURL "$BASE/health" >/dev/null
+echo "OK"
+
+echo
+echo "==> 1) Create lead"
+LEAD_JSON="$($CURL -X POST "$BASE/leads" -H "Content-Type: application/json" -d '{"initialText":"smoke both endpoints"}')"
+LEAD_ID="$(node -e "const s=process.argv[1]; try{console.log(JSON.parse(s).id)}catch{process.exit(1)}" "$LEAD_JSON")"
+echo "leadId=$LEAD_ID"
+
+echo
+echo "==> 2) Hit wizard/answer (should persist to Deal via delegation)"
+$CURL -X POST "$BASE/leads/$LEAD_ID/wizard/answer" -H "Content-Type: application/json" -d '{"key":"city","answer":"Konya"}' >/dev/null
+$CURL -X POST "$BASE/leads/$LEAD_ID/wizard/answer" -H "Content-Type: application/json" -d '{"key":"district","answer":"Meram"}' >/dev/null
+
+echo
+echo "==> 3) Hit normal /answer (should also persist)"
+$CURL -X POST "$BASE/leads/$LEAD_ID/answer" -H "Content-Type: application/json" -d '{"key":"type","answer":"SATILIK"}' >/dev/null
+$CURL -X POST "$BASE/leads/$LEAD_ID/answer" -H "Content-Type: application/json" -d '{"key":"rooms","answer":"2+1"}' >/dev/null
+
+echo
+echo "==> 4) Snapshot Deal by lead"
+DEAL_JSON="$($CURL "$BASE/deals/by-lead/$LEAD_ID")"
+echo "$DEAL_JSON" | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{try{console.log(JSON.stringify(JSON.parse(s),null,2))}catch{console.log(s)}})"
+
+echo
+echo
+echo "==> 5) Assert fields are set (basic)"
+# NOTE: "node -" kullanınca process.argv[1] '-' olur. Dosya argümanı process.argv[2]'dedir.
+node - "$TMP_DEAL_JSON" <<'NODE'
+const fs = require("fs");
+
+// node - <file>  => argv[1] = "-", argv[2] = "<file>"
+// node <file>    => argv[1] = "<file>"
+const path = (process.argv[2] && process.argv[2] !== "-") ? process.argv[2] : process.argv[1];
+
+const raw = fs.readFileSync(path, "utf8");
+const deal = JSON.parse(raw);
+
+const ok =
+  deal.city === "Konya" &&
+  deal.district === "Meram" &&
+  deal.type === "SATILIK" &&
+  deal.rooms === "2+1";
+
+if (!ok) {
+  console.error("❌ FAIL: Deal fields not fully persisted");
+  console.error("Got:", deal);
+  process.exit(1);
+}
+console.log("✅ PASS: Deal fields persisted via BOTH endpoints");
+NODE
+
+echo
+echo "✅ DONE"

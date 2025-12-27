@@ -1,0 +1,53 @@
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { DealEvent, nextStatus } from './deals.engine';
+import { PrismaService } from '../prisma/prisma.service';
+
+@Injectable()
+export class DealsService {
+  constructor(private prisma: PrismaService) {}
+
+  async getByLeadId(leadId: string) {
+    const deal =
+      (await (this.prisma as any).deal.findUnique?.({ where: { leadId } })) ??
+      (await (this.prisma as any).deal.findFirst({ where: { leadId } }));
+
+    if (!deal) throw new NotFoundException('Deal not found');
+    return deal;
+  }
+
+  async ensureForLead(leadId: string) {
+    // leadId unique olduğundan en temiz yol: upsert
+    return this.prisma.deal.upsert({
+      where: { leadId },
+      update: {},
+      create: { leadId },
+    });
+  } catch {
+      return await (this.prisma as any).deal.create({ data: { leadId, status: 'OPEN' } });
+    }
+  }
+
+
+  async advanceDeal(dealId: string, event: DealEvent) {
+    const deal = await this.prisma.deal.findUnique({ where: { id: dealId } });
+    if (!deal) throw new NotFoundException('Deal not found');
+
+    const current = deal.status as any;
+    const next = nextStatus(current, event);
+
+    if (next === current) {
+      throw new BadRequestException(`No transition: ${current} + ${event}`);
+    }
+
+    const now = new Date();
+    const patch: any = { status: next, statusChangedAt: now };
+
+    if (next === 'QUALIFIED') patch.qualifiedAt = now;
+    if (next === 'ACCEPTED') patch.acceptedAt = now;
+    if (next === 'REJECTED') patch.rejectedAt = now;
+    if (next === 'EXPIRED') patch.expiresAt = now;
+
+    return this.prisma.deal.update({ where: { id: dealId }, data: patch });
+  }
+
+}

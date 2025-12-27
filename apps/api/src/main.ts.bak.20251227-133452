@@ -1,0 +1,28 @@
+import { NestFactory } from '@nestjs/core';
+import { AppModule } from './app.module';
+import { DevSeedModule } from './dev/dev-seed.module';
+
+import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
+import { PrismaExceptionFilter } from './common/filters/prisma-exception.filter';
+
+async function bootstrap() {
+    const isDev = process.env.NODE_ENV !== 'production';
+const app = await NestFactory.create(isDev ? { module: AppModule, imports: [DevSeedModule] } : AppModule);
+  app.useGlobalFilters(new PrismaExceptionFilter());
+
+  const config = new DocumentBuilder()
+    .setTitle('Emlak API')
+    .setVersion('1.0.0')
+    .build();
+
+  const doc = SwaggerModule.createDocument(app, config);
+  SwaggerModule.setup('docs', app, doc);
+
+  app.enableShutdownHooks();
+
+  const port = Number(process.env.PORT ?? 3001);
+  await app.listen(port);
+  console.log(`API http://localhost:${port}`);
+  console.log(`Swagger http://localhost:${port}/docs`);
+}
+bootstrap();

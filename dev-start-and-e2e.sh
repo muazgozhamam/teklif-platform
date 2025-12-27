@@ -1,0 +1,163 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT="$HOME/Desktop/teklif-platform"
+API_DIR="$ROOT/apps/api"
+BASE_URL="http://localhost:3001"
+LOG="/tmp/teklif-api-dev.log"
+PIDFILE="/tmp/teklif-api-dev.pid"
+
+need() { command -v "$1" >/dev/null 2>&1 || { echo "❌ '$1' yok"; exit 1; }; }
+need curl
+
+HAS_JQ=0
+if command -v jq >/dev/null 2>&1; then HAS_JQ=1; fi
+
+echo "==> 0) Konum kontrol"
+echo "ROOT=$ROOT"
+echo "API_DIR=$API_DIR"
+echo "LOG=$LOG"
+echo "PIDFILE=$PIDFILE"
+echo
+
+[[ -d "$API_DIR" ]] || { echo "❌ API_DIR yok: $API_DIR"; exit 1; }
+
+echo "==> 1) Eski server varsa kapat (PIDFILE / port 3001)"
+if [[ -f "$PIDFILE" ]]; then
+  OLD_PID="$(cat "$PIDFILE" || true)"
+  if [[ -n "${OLD_PID:-}" ]] && kill -0 "$OLD_PID" 2>/dev/null; then
+    echo "-> kill $OLD_PID"
+    kill "$OLD_PID" 2>/dev/null || true
+    sleep 1
+  fi
+  rm -f "$PIDFILE" || true
+fi
+
+# 3001 dinleyen varsa kapat (macOS)
+if command -v lsof >/dev/null 2>&1; then
+  PIDS="$(lsof -ti tcp:3001 || true)"
+  if [[ -n "${PIDS:-}" ]]; then
+    echo "-> 3001 portunda süreç(ler) var: $PIDS"
+    for p in $PIDS; do
+      kill "$p" 2>/dev/null || true
+    done
+    sleep 1
+  fi
+fi
+echo "✅ temiz"
+echo
+
+echo "==> 2) Prisma generate + build (apps/api)"
+cd "$API_DIR"
+pnpm -s prisma generate --schema prisma/schema.prisma
+pnpm -s build
+echo "✅ build OK"
+echo
+
+echo "==> 3) API başlat (background) + health bekle"
+# Not: start:dev kullanıyoruz; sende script adı farklıysa (ör: dev) burada değiştir.
+# Çoğu Nest projesinde start:dev var.
+nohup pnpm -s start:dev >"$LOG" 2>&1 & echo $! >"$PIDFILE"
+PID="$(cat "$PIDFILE")"
+echo "PID=$PID"
+echo "LOG=$LOG"
+echo
+
+# health wait
+OK=0
+for i in {1..40}; do
+  if curl -fsS "$BASE_URL/health" >/dev/null 2>&1; then OK=1; break; fi
+  sleep 0.5
+done
+if [[ "$OK" -ne 1 ]]; then
+  echo "❌ Health gelmedi: $BASE_URL/health"
+  echo "Son log satırları:"
+  tail -n 120 "$LOG" || true
+  exit 1
+fi
+
+echo "✅ health OK"
+curl -sS "$BASE_URL/health" | (jq || cat)
+echo
+
+echo "==> 4) E2E: lead -> wizard complete -> status -> match"
+LEAD_JSON="$(curl -sS -X POST "$BASE_URL/leads" -H "Content-Type: application/json" -d '{ "initialText": "dev-start-and-e2e" }')"
+if [[ "$HAS_JQ" -eq 1 ]]; then echo "$LEAD_JSON" | jq; else echo "$LEAD_JSON"; fi
+LEAD_ID="$(echo "$LEAD_JSON" | python3 -c "import sys,json; print(json.load(sys.stdin)['id'])")"
+
+NQ="$(curl -sS -X POST "$BASE_URL/leads/$LEAD_ID/wizard/next-question")"
+DEAL_ID="$(echo "$NQ" | python3 -c "import sys,json; print(json.load(sys.stdin)['dealId'])")"
+
+curl -sS -X POST "$BASE_URL/leads/$LEAD_ID/wizard/answer" -H "Content-Type: application/json" -d '{ "answer": "Konya" }' >/dev/null
+curl -sS -X POST "$BASE_URL/leads/$LEAD_ID/wizard/answer" -H "Content-Type: application/json" -d '{ "answer": "Selçuklu" }' >/dev/null
+curl -sS -X POST "$BASE_URL/leads/$LEAD_ID/wizard/answer" -H "Content-Type: application/json" -d '{ "answer": "SATILIK" }' >/dev/null
+curl -sS -X POST "$BASE_URL/leads/$LEAD_ID/wizard/answer" -H "Content-Type: application/json" -d '{ "answer": "2+1" }' >/dev/null
+
+DEAL_JSON="$(curl -sS "$BASE_URL/deals/$DEAL_ID")"
+if [[ "$HAS_JQ" -eq 1 ]]; then echo "$DEAL_JSON" | jq; else echo "$DEAL_JSON"; fi
+STATUS="$(echo "$DEAL_JSON" | python3 -c "import sys,json; print(json.load(sys.stdin).get('status'))")"
+echo "STATUS=$STATUS"
+echo
+
+if [[ "$STATUS" == "READY_FOR_MATCHING" ]]; then
+  echo "-> match()"
+  MATCH_JSON="$(curl -sS -X POST "$BASE_URL/deals/$DEAL_ID/match")"
+  if [[ "$HAS_JQ" -eq 1 ]]; then echo "$MATCH_JSON" | jq; else echo "$MATCH_JSON"; fi
+else
+  echo "⚠️ Status READY_FOR_MATCHING değil; match guard'ı test etmek için önce status akışını düzeltmemiz gerekir."
+fi
+
+echo
+echo
+echo
+echo "==> 5) Listing create -> link -> verify"
+
+# Deal'den consultantId çek; listing işlemlerini o user olarak yapacağız.
+DEAL_AFTER_MATCH="$(curl -sS "$BASE_URL/deals/$DEAL_ID")"
+ACTOR_ID="$(echo "$DEAL_AFTER_MATCH" | python3 -c 'import sys,json; print(json.load(sys.stdin).get("consultantId",""))')"
+
+if [ -z "${ACTOR_ID:-}" ]; then
+  echo "⚠️ consultantId boş (match başarısız/çalışmadı). Listing adımı atlanıyor."
+else
+  echo "✅ ACTOR_ID=$ACTOR_ID"
+  echo
+
+  echo "==> Listing create"
+  CREATE_RESP="$(curl -sS -X POST "$BASE_URL/listings" \
+    -H "Content-Type: application/json" \
+    -H "x-user-id: $ACTOR_ID" \
+    -d '{"title":"Test Listing - ","city":"Konya","district":"Selçuklu","type":"SATILIK","rooms":"2+1"}'
+  )"
+  if [[ "$HAS_JQ" -eq 1 ]]; then echo "$CREATE_RESP" | jq; else echo "$CREATE_RESP"; fi
+
+  LISTING_ID="$(echo "$CREATE_RESP" | python3 -c 'import sys,json; print(json.load(sys.stdin).get("id",""))')"
+  if [ -z "${LISTING_ID:-}" ]; then
+    echo "❌ LISTING_ID parse edilemedi."
+    exit 1
+  fi
+  echo "✅ LISTING_ID=$LISTING_ID"
+  echo
+
+  echo "==> Link listing to deal"
+  LINK_RESP="$(curl -sS -X POST "$BASE_URL/deals/$DEAL_ID/link-listing/$LISTING_ID" \
+    -H "Content-Type: application/json" \
+    -H "x-user-id: $ACTOR_ID"
+  )"
+  if [[ "$HAS_JQ" -eq 1 ]]; then echo "$LINK_RESP" | jq; else echo "$LINK_RESP"; fi
+  echo
+
+  echo "==> Verify deal"
+  curl -sS "$BASE_URL/deals/$DEAL_ID" | ( [[ "$HAS_JQ" -eq 1 ]] && jq || cat )
+  echo
+  echo "==> Verify listing"
+  curl -sS "$BASE_URL/listings/$LISTING_ID" -H "x-user-id: $ACTOR_ID" | ( [[ "$HAS_JQ" -eq 1 ]] && jq || cat )
+  echo
+fi
+
+echo "Özet:"
+echo "- LEAD_ID=$LEAD_ID"
+echo "- DEAL_ID=$DEAL_ID"
+echo "- STATUS=$STATUS"
+echo
+echo "Durdurmak için:"
+echo "  kill $PID"

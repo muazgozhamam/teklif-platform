@@ -1,0 +1,295 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+DASH_DIR="$ROOT/apps/dashboard"
+
+FILE="$DASH_DIR/app/wizard/page.tsx"
+if [[ -f "$DASH_DIR/src/app/wizard/page.tsx" ]]; then
+  FILE="$DASH_DIR/src/app/wizard/page.tsx"
+fi
+
+echo "==> Rewrite: $FILE"
+mkdir -p "$(dirname "$FILE")"
+
+cat > "$FILE" <<'TSX'
+'use client';
+
+import React, { useState } from 'react';
+import { http } from '@/src/lib/api';
+
+type NextQ = {
+  done: boolean;
+  dealId?: string;
+  key?: string;
+  question?: string;
+};
+
+function normalizeNextQ(raw: any): NextQ {
+  if (!raw) return { done: false };
+
+  // Direct
+  if ((raw.key || raw.field) && raw.question) {
+    return { done: !!raw.done, dealId: raw.dealId, key: raw.key || raw.field, question: raw.question };
+  }
+
+  // Nested next
+  if (raw.next && (raw.next.key || raw.next.field) && raw.next.question) {
+    return {
+      done: !!raw.done,
+      dealId: raw.dealId || raw.next.dealId,
+      key: raw.next.key || raw.next.field,
+      question: raw.next.question,
+    };
+  }
+
+  // Wrapped data
+  if (raw.data) return normalizeNextQ(raw.data);
+
+  // Only done
+  if (typeof raw.done === 'boolean') return { done: raw.done };
+
+  return { done: false };
+}
+
+async function createLead(initialText: string) {
+  return http.req('/leads', {
+    method: 'POST',
+    body: JSON.stringify({ initialText }),
+  });
+}
+
+async function getDealByLead(leadId: string) {
+  return http.req(`/deals/by-lead/${leadId}`, { method: 'GET' });
+}
+
+async function getNextQuestion(leadId: string): Promise<NextQ> {
+  const raw = await http.req(`/leads/${leadId}/next`, { method: 'GET' });
+  return normalizeNextQ(raw);
+}
+
+async function answerQuestion(leadId: string, key: string, answer: string) {
+  // API: "key" + "answer" zorunlu
+  return http.req(`/leads/${leadId}/answer`, {
+    method: 'POST',
+    body: JSON.stringify({ key, answer }),
+  });
+}
+
+async function matchDeal(dealId: string) {
+  return http.req(`/deals/${dealId}/match`, { method: 'POST' });
+}
+
+export default function WizardPage() {
+  const [initialText, setInitialText] = useState('Sancak mahallesinde 2+1 evim var ve acil satmak istiyorum');
+
+  const [leadId, setLeadId] = useState<string | null>(null);
+  const [dealId, setDealId] = useState<string | null>(null);
+
+  const [q, setQ] = useState<NextQ | null>(null);
+  const [answer, setAnswer] = useState('');
+
+  const [status, setStatus] = useState<'INIT' | 'ASKING' | 'READY_FOR_MATCHING' | 'ASSIGNED'>('INIT');
+  const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const [debug, setDebug] = useState<any>(null);
+
+  async function start() {
+    setErr(null);
+    setLoading(true);
+    try {
+      const lead = await createLead(initialText);
+      const id = lead?.id || lead?.data?.id;
+      if (!id) throw new Error('POST /leads response içinde id yok.');
+
+      setLeadId(id);
+
+      const deal = await getDealByLead(id);
+      const did = deal?.id || deal?.data?.id || deal?.deal?.id;
+      if (!did) throw new Error('GET /deals/by-lead response içinde deal id yok.');
+      setDealId(did);
+
+      const nq = await getNextQuestion(id);
+      setQ(nq);
+      setStatus('ASKING');
+      setDebug({ lead, deal, nq });
+    } catch (e: any) {
+      setErr(e?.message || String(e));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function submit() {
+    if (!leadId) return;
+    if (!q?.key) return;
+
+    const a = answer.trim();
+    if (!a) return;
+
+    setErr(null);
+    setLoading(true);
+    try {
+      const out = await answerQuestion(leadId, q.key, a);
+      setAnswer('');
+
+      // Response farklı olabilir: { done, next, deal } vs.
+      const done = !!out?.done;
+      const deal = out?.deal || out?.data?.deal || out?.data;
+      const dealStatus = deal?.status;
+
+      // next normalize
+      const next = normalizeNextQ(out?.next ?? out?.data?.next ?? out);
+
+      setDebug((prev: any) => ({ ...(prev || {}), lastAnswerOut: out, next }));
+
+      if (done || dealStatus === 'READY_FOR_MATCHING') {
+        setStatus('READY_FOR_MATCHING');
+        return;
+      }
+
+      if (next?.key && next?.question) {
+        setQ(next);
+        setStatus('ASKING');
+        return;
+      }
+
+      // fallback tekrar /next
+      const nq = await getNextQuestion(leadId);
+      setQ(nq);
+      setStatus('ASKING');
+    } catch (e: any) {
+      setErr(e?.message || String(e));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function doMatch() {
+    if (!dealId) return;
+
+    setErr(null);
+    setLoading(true);
+    try {
+      const out = await matchDeal(dealId);
+      setStatus('ASSIGNED');
+      setDebug((prev: any) => ({ ...(prev || {}), matchOut: out }));
+    } catch (e: any) {
+      setErr(e?.message || String(e));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div style={{ maxWidth: 900, margin: '40px auto', padding: 16, fontFamily: 'ui-sans-serif, system-ui' }}>
+      <h1 style={{ fontSize: 34, marginBottom: 10 }}>Wizard → Match</h1>
+
+      <div style={{ fontSize: 12, color: '#666', marginBottom: 14, lineHeight: 1.6 }}>
+        <div><code>POST /leads</code></div>
+        <div><code>GET /leads/:id/next</code> (response: <code>{'{done,key,question}'}</code>)</div>
+        <div><code>POST /leads/:id/answer</code> (body: <code>{'{key,answer}'}</code>)</div>
+        <div><code>GET /deals/by-lead/:leadId</code></div>
+        <div><code>POST /deals/:id/match</code></div>
+      </div>
+
+      {err && (
+        <div style={{ background: '#fee', border: '1px solid #f99', padding: 12, borderRadius: 10, marginBottom: 12 }}>
+          <b>Hata</b>
+          <div style={{ whiteSpace: 'pre-wrap' }}>{err}</div>
+        </div>
+      )}
+
+      {status === 'INIT' && (
+        <>
+          <label>
+            Başlangıç metni
+            <textarea
+              value={initialText}
+              onChange={(e) => setInitialText(e.target.value)}
+              rows={5}
+              style={{ width: '100%', padding: 10, borderRadius: 10, border: '1px solid #ddd', marginTop: 8 }}
+            />
+          </label>
+
+          <button
+            onClick={start}
+            disabled={loading}
+            style={{ marginTop: 14, width: '100%', padding: '12px 14px', borderRadius: 10, border: '1px solid #111', background: '#111', color: '#fff' }}
+          >
+            {loading ? '...' : 'Lead oluştur ve wizard başlat'}
+          </button>
+        </>
+      )}
+
+      {status !== 'INIT' && (
+        <div style={{ marginTop: 14, padding: 14, border: '1px solid #eee', borderRadius: 12 }}>
+          <div>Lead: <code>{leadId}</code></div>
+          <div>Deal: <code>{dealId || '(yok)'}</code></div>
+          <div>Status: <b>{status}</b></div>
+        </div>
+      )}
+
+      {status === 'ASKING' && q?.key && (
+        <>
+          <div style={{ marginTop: 14, padding: 14, border: '1px solid #eee', borderRadius: 12 }}>
+            <div style={{ fontSize: 22 }}>{q.question || 'Soru'}</div>
+            <div style={{ fontSize: 12, color: '#666', marginTop: 6 }}>key: <code>{q.key}</code></div>
+          </div>
+
+          <input
+            value={answer}
+            onChange={(e) => setAnswer(e.target.value)}
+            placeholder="Cevap..."
+            style={{ marginTop: 10, width: '100%', padding: 12, borderRadius: 10, border: '1px solid #ddd' }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') submit();
+            }}
+          />
+
+          <button
+            onClick={submit}
+            disabled={loading || !answer.trim()}
+            style={{ marginTop: 10, width: '100%', padding: '12px 14px', borderRadius: 10, border: '1px solid #111', background: '#fff' }}
+          >
+            {loading ? '...' : 'Gönder'}
+          </button>
+        </>
+      )}
+
+      {status === 'READY_FOR_MATCHING' && (
+        <button
+          onClick={doMatch}
+          disabled={loading || !dealId}
+          style={{ marginTop: 14, width: '100%', padding: '12px 14px', borderRadius: 10, border: '1px solid #111', background: '#111', color: '#fff' }}
+        >
+          {loading ? '...' : 'Match çalıştır'}
+        </button>
+      )}
+
+      {status === 'ASSIGNED' && (
+        <div style={{ marginTop: 14, padding: 14, border: '1px solid #9ee29e', background: '#f4fff4', borderRadius: 12 }}>
+          <b>ASSIGNED</b>
+          <div>Deal: <code>{dealId}</code></div>
+        </div>
+      )}
+
+      <details style={{ marginTop: 14 }}>
+        <summary>Debug JSON</summary>
+        <pre style={{ whiteSpace: 'pre-wrap' }}>{JSON.stringify(debug, null, 2)}</pre>
+      </details>
+    </div>
+  );
+}
+TSX
+
+echo "✅ Rewritten wizard page."
+
+echo
+echo "✅ DONE."
+echo "Şimdi dashboard'u restart et:"
+echo "  (dashboard terminalinde) CTRL+C"
+echo "  cd $DASH_DIR && pnpm dev"
+echo
+echo "Wizard:"
+echo "  http://localhost:3000/wizard (veya terminalde yazan port)"

@@ -1,0 +1,306 @@
+import { DealStatus } from '@prisma/client';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
+import { DealsService } from '../deals/deals.service';
+import { LEAD_QUESTIONS } from './lead.questions';
+
+@Injectable()
+export class LeadsService {
+  constructor(private prisma: PrismaService, private dealsService: DealsService) {}
+
+  async create(initialText: string) {
+    const txt = (initialText ?? '').trim();
+    if (!txt) throw new BadRequestException('initialText is required');
+
+    const lead = await this.prisma.lead.create({
+      data: { initialText: txt, status: 'OPEN' },
+      select: { id: true, status: true, createdAt: true },
+    });
+    await this.dealsService.ensureForLead(lead.id);
+    return lead;
+  }
+
+  async getLead(id: string) {
+    const lead = await this.prisma.lead.findUnique({
+      where: { id },
+      include: { answers: { orderBy: { createdAt: 'asc' } } },
+    });
+    if (!lead) throw new NotFoundException('Lead not found');
+    return lead;
+  }
+
+  async nextQuestion(id: string) {
+    const lead = await this.getLead(id);
+    const answeredKeys = new Set(lead.answers.map(a => a.key));
+    const next = LEAD_QUESTIONS.find(q => !answeredKeys.has(q.key));
+
+    if (!next) {
+      // tamamlandı
+      if (lead.status !== 'COMPLETED') {
+        await this.prisma.lead.update({ where: { id }, data: { status: 'COMPLETED' } });
+      }
+      await this.ensureDealForCompletedLead(id);
+      await this.dealsService.ensureForLead(id);
+return { done: true };
+    }
+
+    // süreç başladı
+    if (lead.status === 'OPEN') {
+      await this.prisma.lead.update({ where: { id }, data: { status: 'IN_PROGRESS' } });
+    }
+
+    return { done: false, ...next };
+  }
+
+  /**
+   * Upsert: aynı key varsa update, yoksa create.
+   * Controller hem POST hem PUT ile burayı çağıracak.
+   */
+  async upsertAnswer(id: string, key: string, answer: string) {
+    const k = (key ?? '').trim();
+    const a = (answer ?? '').trim();
+
+    if (!k) throw new BadRequestException('key is required');
+    if (!a) throw new BadRequestException('answer is required');
+
+    // lead var mı?
+    const leadExists = await this.prisma.lead.findUnique({
+      where: { id },
+      select: { id: true },
+    });
+    if (!leadExists) throw new NotFoundException('Lead not found');
+
+    // key tanımlı mı?
+    const q = LEAD_QUESTIONS.find(x => x.key === k);
+    if (!q) throw new NotFoundException('Unknown question key');
+
+    // Aynı key daha önce cevaplandıysa update
+    const existing = await this.prisma.leadAnswer.findFirst({
+      where: { leadId: id, key: k },
+      select: { id: true },
+    });
+
+    if (existing) {
+      return this.prisma.leadAnswer.update({
+        where: { id: existing.id },
+        data: { answer: a },
+      });
+    }
+
+    return this.prisma.leadAnswer.create({
+      data: { leadId: id, key: k, question: q.question, answer: a },
+    });
+  }
+
+  /**
+   * Geriye dönük uyumluluk: eski controller "answer" çağırıyorsa bozulmasın.
+   */
+  async answer(id: string, key: string, answer: string) {
+    return this.upsertAnswer(id, key, answer);
+  }
+
+  private async ensureDealForCompletedLead(leadId: string) {
+    // Deal zaten varsa tekrar oluşturma
+    const existing = await this.prisma.deal.findUnique({ where: { leadId } });
+    if (existing) return existing;
+
+    // Lead var mı?
+    const lead = await this.prisma.lead.findUnique({ where: { id: leadId } });
+    if (!lead) throw new NotFoundException('Lead not found');
+
+    // Basit başlangıç: status NEW, title initialText'ten türet
+    const title = (lead.initialText ?? '').slice(0, 120) || 'Yeni Deal';
+
+    return this.prisma.deal.create({
+      data: {
+        leadId,
+        status: 'OPEN',
+        },
+    });
+  }
+
+
+
+
+  /**
+   * Sprint-1: Deal alanlarına göre sıradaki soruyu döndürür.
+   * Sıra: city -> district -> type -> rooms
+   */
+  async wizardNextQuestion(leadId: string) {
+    const deal = await this.dealsService.ensureForLead(leadId);
+
+    const next =
+      !deal.city ? { field: 'city', question: 'Hangi şehir?' } :
+      !deal.district ? { field: 'district', question: 'Hangi ilçe?' } :
+      !deal.type ? { field: 'type', question: 'Emlak türü nedir? (Satılık/Kiralık/Dükkan/Arsa vb.)' } :
+      !deal.rooms ? { field: 'rooms', question: 'Kaç oda? (örn: 2+1, 3+1)' } :
+      null;
+
+    if (!next) {
+      // Wizard tamamlandı: match'e hazır hale getir
+
+      await this.prisma.deal.update({
+
+        where: { id: deal.id },
+
+        data: { status: DealStatus.READY_FOR_MATCHING },
+
+      });
+
+      // Wizard tamamlandı: match'e hazır hale getir (DONE_TRUE_PATCH)
+      await this.prisma.deal.update({
+        where: { id: deal.id },
+        data: { status: DealStatus.READY_FOR_MATCHING },
+      });
+
+      await this.prisma.deal.update({
+
+        where: { id: deal.id },
+
+        data: { status: DealStatus.READY_FOR_MATCHING },
+
+      });
+      await this.prisma.deal.update({
+        where: { id: deal.id },
+        data: { status: DealStatus.READY_FOR_MATCHING },
+      });
+      return { done: true, dealId: deal.id };
+    }
+
+    return { done: false, dealId: deal.id, ...next };
+  }
+
+  /**
+   * Sprint-1: answer alır, sıradaki boş alana yazar.
+   * Not: stateless; "sıradaki" alanı mevcut deal'den hesaplar.
+   */
+  async wizardAnswer(leadId: string, answer?: string) {
+    if (!answer || !String(answer).trim()) {
+      return { ok: false, message: 'answer boş olamaz' };
+    }
+
+    const deal = await this.dealsService.ensureForLead(leadId);
+
+    const field =
+      !deal.city ? 'city' :
+      !deal.district ? 'district' :
+      !deal.type ? 'type' :
+      !deal.rooms ? 'rooms' :
+      null;
+
+    if (!field) {
+      // Wizard tamamlandı: match'e hazır hale getir
+
+      await this.prisma.deal.update({
+
+        where: { id: deal.id },
+
+        data: { status: DealStatus.READY_FOR_MATCHING },
+
+      });
+
+      // Wizard tamamlandı: match'e hazır hale getir (DONE_TRUE_PATCH)
+      await this.prisma.deal.update({
+        where: { id: deal.id },
+        data: { status: DealStatus.READY_FOR_MATCHING },
+      });
+
+      await this.prisma.deal.update({
+
+        where: { id: deal.id },
+
+        data: { status: DealStatus.READY_FOR_MATCHING },
+
+      });
+      await this.prisma.deal.update({
+        where: { id: deal.id },
+        data: { status: DealStatus.READY_FOR_MATCHING },
+      });
+      return { ok: true, done: true, dealId: deal.id };
+    }
+
+    const value = this.normalizeWizardValue(field, String(answer));
+
+    const data: any = {};
+    data[field] = value;
+
+    const updated = await this.dealsService['prisma'].deal.update({
+      where: { id: deal.id },
+      data,
+      include: { lead: true, consultant: true },
+    });
+
+    
+const done = !!(updated.city && updated.district && updated.type && updated.rooms);
+
+    if (done) {
+      await this.markDealReadyForMatching(deal.id);
+    }
+
+
+const dealFinal = done
+  ? await this.prisma.deal.update({
+      where: { id: deal.id },
+      data: { status: DealStatus.READY_FOR_MATCHING },
+      include: { lead: true, consultant: true },
+    })
+  : updated;
+// READY_FOR_MATCHING_ON_DONE
+return {
+      ok: true,
+      done,
+      filled: field,
+      deal: dealFinal,
+      next: done ? null : await this.wizardNextQuestion(leadId),
+    };
+  }
+
+
+
+  private async markDealReadyForMatching(dealId: string) {
+    await this.prisma.deal.update({
+      where: { id: dealId },
+      data: { status: DealStatus.READY_FOR_MATCHING },
+    });
+  }
+  private normalizeWizardValue(field: string, raw: string) {
+    const v = String(raw ?? '').trim();
+    if (!v) throw new BadRequestException('answer boş olamaz');
+
+    if (field === 'city' || field === 'district') {
+      return v
+        .toLocaleLowerCase('tr-TR')
+        .split(' ')
+        .filter(Boolean)
+        .map(w => w.charAt(0).toLocaleUpperCase('tr-TR') + w.slice(1))
+        .join(' ');
+    }
+
+    if (field === 'type') {
+      const t = v.toUpperCase();
+      const allowed = new Set(['SATILIK', 'KIRALIK', 'DUKKAN', 'ARSA']);
+      if (!allowed.has(t)) {
+        throw new BadRequestException(`Geçersiz type: ${t}. Allowed: SATILIK|KIRALIK|DUKKAN|ARSA`);
+      }
+      return t;
+    }
+
+    if (field === 'rooms') {
+      if (!/^\d+\+\d+$/.test(v)) {
+        throw new BadRequestException(`Geçersiz rooms: ${v}. Örn: 2+1`);
+      }
+      return v;
+    }
+
+    return v;
+  }
+
+  private async markDealReadyForMatching(dealId: string) {
+    await this.prisma.deal.update({
+      where: { id: dealId },
+      data: { status: DealStatus.READY_FOR_MATCHING },
+    });
+  }
+
+
+}

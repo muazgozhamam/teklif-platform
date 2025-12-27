@@ -1,0 +1,155 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# nounset safety init
+adv_body=""
+adv_code=""
+
+# Nerede çalıştırılacak:
+#   cd ~/Desktop/teklif-platform/apps/api
+#   ./e2e-managed-advance.sh
+#
+# Opsiyonlar:
+#   AUTO_STOP=1 ./e2e-managed-advance.sh
+#   EXPECT_STATUS=READY_FOR_OFFERS ./e2e-managed-advance.sh
+
+BASE="${BASE:-http://localhost:3001}"
+LOG="${LOG:-.tmp-api-dist.log}"
+AUTO_STOP="${AUTO_STOP:-0}"
+EXPECT_STATUS="${EXPECT_STATUS:-}" # boş bırakılırsa assertion yapmaz
+
+API_PID=""
+
+cleanup() {
+  if [[ "${AUTO_STOP}" == "1" && -n "${API_PID}" ]]; then
+    echo
+    echo "==> AUTO_STOP=1: API kapatılıyor (kill ${API_PID})"
+    kill "${API_PID}" >/dev/null 2>&1 || true
+    echo "   OK"
+  fi
+}
+trap cleanup EXIT
+
+fail_with_log_tail() {
+  echo
+  echo "❌ ERROR: $1" >&2
+  if [[ -f "${LOG}" ]]; then
+    echo
+    echo "==> ${LOG} (tail -n 120)"
+    tail -n 120 "${LOG}" || true
+  fi
+  exit 1
+}
+
+http_json() {
+  # usage: http_json METHOD URL [JSON_BODY]
+  local method="$1"
+  local url="$2"
+  local body="${3:-}"
+
+  if [[ -n "${body}" ]]; then
+    curl -sS -X "${method}" "${url}" \
+      -H "Content-Type: application/json" \
+      -d "${body}" \
+      -w "\n__HTTP_CODE__:%{http_code}\n"
+  else
+    curl -sS -X "${method}" "${url}" \
+      -w "\n__HTTP_CODE__:%{http_code}\n"
+  fi
+}
+
+extract_code() {
+  awk -F: '/__HTTP_CODE__/{print $2}' | tr -d '\r'
+}
+
+extract_body() {
+  sed '/__HTTP_CODE__:/d'
+}
+
+wait_health() {
+  echo "==> Health bekle (max 8sn)"
+  for i in {1..16}; do
+    set +e
+    out="$(http_json GET "${BASE}/health" 2>/dev/null)"
+    set -e
+    code="$(printf "%s" "${out}" | extract_code || true)"
+    if [[ "${code}" == "200" ]]; then
+      echo "   OK"
+      return 0
+    fi
+    sleep 0.5
+  done
+  return 1
+}
+
+echo "==> 1) Build"
+pnpm -s build
+
+echo
+echo "==> 2) 3001 portunu boşalt (varsa kill)"
+PIDS="$(lsof -nP -t -iTCP:3001 -sTCP:LISTEN 2>/dev/null || true)"
+if [[ -n "${PIDS}" ]]; then
+  echo "   - Killing PID(s): ${PIDS}"
+  kill -9 ${PIDS} >/dev/null 2>&1 || true
+fi
+
+echo
+echo "==> 3) dist'ten API'yi background başlat"
+rm -f "${LOG}"
+PORT=3001 node dist/src/main.js >"${LOG}" 2>&1 &
+API_PID="$!"
+echo "   - API_PID=${API_PID}"
+echo "   - Log: ${LOG}"
+
+echo
+wait_health || fail_with_log_tail "Health check başarısız (BASE=${BASE})."
+
+echo
+echo "==> 4) Lead create"
+lead_out="$(http_json POST "${BASE}/leads" '{"initialText":"E2E advance test"}')"
+lead_code="$(printf "%s" "${lead_out}" | extract_code)"
+lead_body="$(printf "%s" "${lead_out}" | extract_body)"
+[[ "${lead_code}" == "201" || "${lead_code}" == "200" ]] || fail_with_log_tail "Lead create HTTP ${lead_code}: ${lead_body}"
+
+LEAD_ID="$(node -e 'const j=JSON.parse(process.argv[1]); process.stdout.write(j.id)' "${lead_body}")"
+[[ -n "${LEAD_ID}" ]] || fail_with_log_tail "LEAD_ID parse edilemedi. Body=${lead_body}"
+echo "   LEAD_ID=${LEAD_ID}"
+
+echo
+echo "==> 5) Deal by lead"
+deal_out="$(http_json GET "${BASE}/deals/by-lead/${LEAD_ID}")"
+deal_code="$(printf "%s" "${deal_out}" | extract_code)"
+deal_body="$(printf "%s" "${deal_out}" | extract_body)"
+[[ "${deal_code}" == "200" ]] || fail_with_log_tail "Deal by lead HTTP ${deal_code}: ${deal_body}"
+
+DEAL_ID="$(node -e 'const j=JSON.parse(process.argv[1]); process.stdout.write((j.deal||j).id)' "${deal_body}")"
+[[ -n "${DEAL_ID}" ]] || fail_with_log_tail "DEAL_ID parse edilemedi. Body=${deal_body}"
+echo "   DEAL_ID=${DEAL_ID}"
+echo "   Deal: ${deal_body}"
+
+echo
+echo "==> 6) Advance QUESTIONS_COMPLETED"
+adv_out="$(http_json POST "${BASE}/deals/${DEAL_ID}/advance" '{"event":"QUESTIONS_COMPLETED"}')"
+adv_code="$(printf "%s" "${adv_out}" | extract_code)"
+  # accept 200/201 for advance
+  [[ "${adv_code}" == "200" || "${adv_code}" == "201" ]] || fail_with_log_tail "Advance HTTP ${adv_code}: ${adv_body:-}"
+
+adv_body="$(printf "%s" "${adv_out}" | extract_body)"
+echo "   Advance: ${adv_body:-}"
+
+if [[ -n "${EXPECT_STATUS}" ]]; then
+  echo
+  echo "==> 7) Assert status == ${EXPECT_STATUS}"
+  got_status="$(node -e 'const j=JSON.parse(process.argv[1]); const d=(j.deal||j); process.stdout.write(d.status||"")' "${DEAL_JSON}")"
+  if [[ "${got_status}" != "${EXPECT_STATUS}" ]]; then
+    fail_with_log_tail "Status beklenenden farklı. got='${got_status}' expected='${EXPECT_STATUS}'."
+  fi
+  echo "   OK"
+fi
+
+echo
+echo "✅ DONE"
+if [[ "${AUTO_STOP}" != "1" ]]; then
+  echo "API background çalışmaya devam ediyor."
+  echo "Kapatmak için: kill ${API_PID}"
+fi

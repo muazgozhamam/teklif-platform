@@ -1,0 +1,22 @@
+import { Controller, Get, Post, Param } from '@nestjs/common';
+import { DealsService } from './deals.service';
+
+@Controller('deals')
+export class DealsController {
+  constructor(private readonly deals: DealsService) {}
+
+  @Get(':id')
+  getById(@Param('id') id: string) {
+    return this.deals.getById(id);
+  }
+
+  @Get('by-lead/:leadId')
+  getByLead(@Param('leadId') leadId: string) {
+    return this.deals.getByLeadId(leadId);
+  }
+
+  @Post(':id/match')
+  match(@Param('id') id: string) {
+    return this.deals.matchDeal(id);
+  }
+}

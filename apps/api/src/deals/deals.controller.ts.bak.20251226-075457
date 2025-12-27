@@ -1,0 +1,31 @@
+import { Controller, Get, Param, Body, Post } from '@nestjs/common';
+import { DealsService } from './deals.service';
+
+import { DealEvent } from './deals.engine';
+@Controller('deals')
+export class DealsController {
+  constructor(private deals: DealsService) {}
+
+  @Get('by-lead/:leadId')
+  getByLead(@Param('leadId') leadId: string) {
+    return this.deals.getByLeadId(leadId);
+  }
+
+
+  @Post(':id/advance')
+  async advance(@Param('id') id: string, @Body() body: { event: DealEvent }) {
+    const result = await this.deals.advanceDeal(id, body.event);
+
+    if ((body.event as any) === 'QUESTIONS_COMPLETED') {
+      // DealsService içinde daha önce eklediğimiz helper
+      return this.deals.ensureStatusReadyForMatching(id);
+    }
+
+    return result;
+  }
+
+  @Post(':id/match')
+  match(@Param('id') id: string) {
+    return this.deals.matchDeal(id);
+  }
+}

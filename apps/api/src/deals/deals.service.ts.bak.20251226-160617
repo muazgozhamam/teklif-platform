@@ -1,0 +1,109 @@
+import { Injectable, ConflictException, NotFoundException, BadRequestException} from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
+import { Role } from '@prisma/client';
+
+@Injectable()
+export class DealsService {
+  constructor(private prisma: PrismaService) {}
+
+  // ======================
+  // READ
+  // ======================
+
+  async getById(id: string) {
+    const deal = await this.prisma.deal.findUnique({
+      where: { id },
+      include: {
+        lead: true,
+        consultant: true,
+      },
+    });
+
+    if (!deal) {
+      throw new NotFoundException('Deal not found');
+    }
+
+    return deal;
+  }
+
+  async getByLeadId(leadId: string) {
+    return this.prisma.deal.findFirst({
+      where: { leadId },
+      include: {
+        lead: true,
+        consultant: true,
+      },
+    });
+  }
+
+  // ======================
+  // CREATE / ENSURE
+  // ======================
+
+  async ensureForLead(leadId: string) {
+    const existing = await this.prisma.deal.findFirst({
+      where: { leadId },
+    });
+
+    if (existing) return existing;
+
+    return this.prisma.deal.create({
+      data: {
+        leadId,
+        status: 'OPEN',
+      },
+    });
+  }
+
+  // ======================
+  // MATCHING
+  // ======================
+
+  async matchDeal(id: string) {
+    const deal = await this.prisma.deal.findUnique({
+      where: { id },
+    });
+
+    if (!deal) {
+      throw new NotFoundException('Deal not found');
+    }
+
+    // idempotent
+    if (deal.status === 'ASSIGNED') {
+      return deal;
+    }
+
+    const consultant = await this.prisma.user.findFirst({
+      where: { role: Role.CONSULTANT },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    if (!consultant) {
+      throw new ConflictException('No consultant available');
+    }
+
+    return this.prisma.deal.update({
+      where: { id },
+      data: {
+        consultantId: consultant.id,
+        status: 'ASSIGNED',
+      },
+    });
+  }
+
+  // ======================
+  // STATE CONTROL (MINIMAL)
+  // ======================
+
+  async ensureStatusOpen(id: string) {
+    const deal = await this.prisma.deal.findUnique({ where: { id } });
+    if (!deal) return null;
+
+    if (deal.status === 'OPEN') return deal;
+
+    return this.prisma.deal.update({
+      where: { id },
+      data: { status: 'OPEN' },
+    });
+  }
+}
