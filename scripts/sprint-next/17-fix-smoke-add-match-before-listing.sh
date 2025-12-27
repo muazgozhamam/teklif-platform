@@ -56,7 +56,9 @@ PY
 
 echo
 echo "==> Quick verify"
-rg -n 'POST /deals/:dealId/match|/deals/\$DEAL_ID/match' \"$FILE\" || true
+SMOKE="$ROOT/scripts/sprint-next/04-smoke-deal-listing-runtime.sh"
+test -f "$SMOKE" && echo "OK: smoke file exists: $SMOKE" || echo "ERR: smoke file missing: $SMOKE"
+rg -n 'POST /deals/:dealId/match|/deals/\$DEAL_ID/match' "$SMOKE" || true
 
 echo
 echo "✅ ADIM 17 TAMAM (smoke patch)"
