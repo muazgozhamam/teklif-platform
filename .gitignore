@@ -17,3 +17,6 @@ dist/
 
 # --- prisma ---
 apps/api/prisma/dev.db-journal
+
+# sprint-next local archive
+scripts/sprint-next/_archive/

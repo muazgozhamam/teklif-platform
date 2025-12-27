@@ -1,45 +1,47 @@
-import { Controller, Get, Post, Param, Put, Body, Query, Req, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Put, Param, Body, Res, Query} from '@nestjs/common';
+import type { Response } from 'express';
 import { ListingsService } from './listings.service';
-import { ConsultantGuard } from './consultant.guard';
-import * as ListingDto from './listings.dto';
-import { ListingStatus } from '@prisma/client';
 
 @Controller('listings')
 export class ListingsController {
   constructor(private readonly listings: ListingsService) {}
 
   @Get(':id')
-  getById(@Param('id') id: string) {
+  async getOne(@Param('id') id: string) {
     return this.listings.getById(id);
   }
 
+  
   @Get()
-  list(@Query('consultantId') consultantId?: string, @Query('status') status?: ListingStatus) {
-    return this.listings.list({ consultantId, status });
+  async   list(@Query() query: any) {
+    return this.listings.list(query as any);
   }
 
-  @UseGuards(ConsultantGuard)
+
   @Post()
-  create(@Req() req: any, @Body() dto: ListingDto.CreateListingDto) {
-    const userId = String(req.headers['x-user-id']);
-    return this.listings.create(userId, dto);
+  async create(@Body() dto: any) {
+    return this.listings.create(dto);
   }
 
-  @UseGuards(ConsultantGuard)
   @Put(':id')
-  update(@Req() req: any, @Param('id') id: string, @Body() dto: ListingDto.UpdateListingDto) {
-    const userId = String(req.headers['x-user-id']);
-    return this.listings.update(id, userId, dto);
+  async update(@Param('id') id: string, @Body() dto: any) {
+    return this.listings.update(id, dto);
   }
 
   @Get('/deals/:dealId/listing')
-  getByDeal(@Param('dealId') dealId: string) {
+  async getByDealId(@Param('dealId') dealId: string) {
     return this.listings.getByDealId(dealId);
   }
 
   @Post('/deals/:dealId/listing')
-  upsertFromDeal(@Param('dealId') dealId: string) {
-    return this.listings.upsertFromDeal(dealId);
+  async upsertFromDeal(@Param('dealId') dealId: string, @Res({ passthrough: true }) res: Response) {
+    const r = await this.listings.upsertFromDealMeta(dealId);
+    res.status(r.created ? 201 : 200);
+    return r.listing;
+  }
+  @Post(':id/publish')
+  async publish(@Param('id') id: string) {
+    return this.listings.publish(id);
   }
 
 }
