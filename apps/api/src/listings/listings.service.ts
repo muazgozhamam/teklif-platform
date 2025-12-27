@@ -160,23 +160,20 @@ export class ListingsService {
                                 async list(filters: any = {}) {
                   const where: any = {};
 
-                  // status-based publishing:
+                  
+    // Default feed behavior: if caller doesn't specify status, show only PUBLISHED
+    if ((filters as any)?.status) {
+      where.status = (filters as any).status;
+    } else {
+      where.status = 'PUBLISHED';
+    }
+// status-based publishing:
                   // default: only PUBLISHED
                   // published=false: include drafts too
-                  const publishedRaw: any = (filters as any)?.published;
-                  const publishedFalse =
-                    publishedRaw === false ||
-                    publishedRaw === 'false' ||
-                    publishedRaw === 0 ||
-                    publishedRaw === '0';
-
-                  if ((filters as any)?.status) {
+if ((filters as any)?.status) {
                     where.status = (filters as any).status;
-                  } else if (!publishedFalse) {
-                    where.status = 'PUBLISHED';
                   }
-
-                  if ((filters as any)?.city) where.city = (filters as any).city;
+if ((filters as any)?.city) where.city = (filters as any).city;
                   if ((filters as any)?.district) where.district = (filters as any).district;
                   if ((filters as any)?.type) where.type = (filters as any).type;
                   if ((filters as any)?.rooms) where.rooms = (filters as any).rooms;
