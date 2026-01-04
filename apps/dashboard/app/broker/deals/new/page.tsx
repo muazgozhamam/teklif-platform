@@ -1,5 +1,15 @@
 'use client';
 
+function getApiMsg(e: unknown, fallback: string) {
+  if (typeof e === 'string') return e;
+  if (e && typeof e === 'object') {
+    const msg = (e as Record<string, unknown>)['message'];
+    if (typeof msg === 'string') return msg;
+  }
+  return fallback;
+}
+
+
 import { useEffect, useMemo, useState } from 'react';
 import { api } from '@/lib/api';
 import { requireAuth } from '@/lib/auth';
@@ -12,9 +22,6 @@ export default function NewDealPage() {
 
   useEffect(() => {
     requireAuth();
-    const url = new URL(window.location.href);
-    const qLeadId = url.searchParams.get('leadId');
-    if (qLeadId) setLeadId(qLeadId);
   }, []);
 
   const commissionTotal = useMemo(() => Number((salePrice * commissionRate).toFixed(2)), [salePrice, commissionRate]);
@@ -25,8 +32,8 @@ export default function NewDealPage() {
       const res = await api.post('/broker/deals', { leadId, salePrice, commissionRate });
       setMsg(`Deal created: ${res.data.id}`);
       window.location.href = `/broker/deals/${res.data.id}/ledger`;
-    } catch (err: any) {
-      setMsg(err?.response?.data?.message ?? 'Create deal failed');
+    } catch (err: unknown) {
+      setMsg(getApiMsg(err, 'Create deal failed'));
     }
   }
 

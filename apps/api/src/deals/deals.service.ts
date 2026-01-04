@@ -1,4 +1,4 @@
-import { Injectable, ConflictException, NotFoundException, BadRequestException} from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException, NotImplementedException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { MatchingService } from './matching.service';
 import { Role, DealStatus } from '@prisma/client';
@@ -140,5 +140,76 @@ export class DealsService {
       data: { listingId },
     });
   }
+
+
+
+
+  // Assign an OPEN deal to a consultant (used by inbox)
+  async assignToMe(dealId: string, userId: string) {
+    if (!userId) throw new BadRequestException('Missing x-user-id header');
+
+    // Optional safety: only allow if currently unassigned + OPEN
+    const deal = await (this.prisma as any).deal.findUnique({
+      where: { id: dealId },
+      select: { id: true, status: true, consultantId: true },
+    });
+
+    if (!deal) throw new NotFoundException('Deal not found');
+    if (deal.status !== 'OPEN') throw new BadRequestException('Deal is not OPEN');
+    if (deal.consultantId) throw new BadRequestException('Deal is already assigned');
+
+    return await (this.prisma as any).deal.update({
+      where: { id: dealId },
+      data: { consultantId: userId },
+      select: { id: true, status: true, consultantId: true, updatedAt: true, createdAt: true, leadId: true },
+    });
+  }
+
+
+  // DEV helper: list user ids (avoid selecting unknown columns; only id)
+  async devListUserIds(take: number = 20) {
+    const t = Math.min(Math.max(take ?? 20, 0), 50);
+    return await (this.prisma as any).user.findMany({
+      take: t,
+      select: { id: true },
+    });
+  }
+
+  // ===== Consultant Inbox =====
+  // Auto-generated from prisma/schema.prisma (model Deal fields)
+  // Detected fields:
+  // - statusField      : status
+  // - consultantField  : consultantId
+  // - createdField     : createdAt
+
+  async listPendingInbox(paging: { take: number; skip: number }) {
+    const take = Math.min(Math.max(paging?.take ?? 20, 0), 50);
+    const skip = Math.max(paging?.skip ?? 0, 0);
+
+    return await (this.prisma as any).deal.findMany({
+      where: { status: 'OPEN', consultantId: null },
+      orderBy: { createdAt: 'desc' },
+      take,
+      skip,
+      select: { id: true, status: true, createdAt: true, updatedAt: true, city: true, district: true, type: true, rooms: true, consultantId: true, listingId: true, leadId: true },
+    });
+  }
+
+
+  async listMineInbox(userId: string, paging: { take: number; skip: number }) {
+    if (!userId) throw new BadRequestException('Missing x-user-id header');
+
+    const take = Math.min(Math.max(paging?.take ?? 20, 0), 50);
+    const skip = Math.max(paging?.skip ?? 0, 0);
+
+    return await (this.prisma as any).deal.findMany({
+      where: { status: 'OPEN', consultantId: userId },
+      orderBy: { createdAt: 'desc' },
+      take,
+      skip,
+      select: { id: true, status: true, createdAt: true, updatedAt: true, city: true, district: true, type: true, rooms: true, consultantId: true, listingId: true, leadId: true },
+    });
+  }
+
 
 }

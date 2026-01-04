@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import ClientErrorOverlay from './_components/ClientErrorOverlay';
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -24,9 +25,20 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${geistSans.variable} ${geistMono.variable}`}>
-        {children}
-      </body>
+      <body className={`${geistSans.variable} ${geistMono.variable}`}> {/* ui-mini-70 */} <div className="min-h-screen">
+          <header className="sticky top-0 z-10 border-b border-slate-200 bg-white/80 backdrop-blur">
+            <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
+              <div className="text-sm font-semibold tracking-tight">Teklif Platform • Dashboard</div>
+              <div className="text-xs text-slate-500">Consultant</div>
+            </div>
+          </header>
+          <main className="mx-auto max-w-6xl px-4 py-6">
+            {children}
+          </main>
+        </div>
+
+            <ClientErrorOverlay />
+    </body>
     </html>
   );
 }

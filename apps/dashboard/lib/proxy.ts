@@ -1,8 +1,14 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextRequest, NextResponse } from 'next/server';
 import { headers, cookies } from 'next/headers';
 
 function resolveApiBase() {
-  return (process.env.NEXT_PUBLIC_API_URL || process.env.API_URL || '').replace(/\/+$/, '');
+  const base =
+    process.env.NEXT_PUBLIC_API_BASE_URL ||
+    process.env.NEXT_PUBLIC_API_URL ||
+    process.env.API_URL ||
+    'http://localhost:3001';
+  return base.replace(/\/+$/, '');
 }
 
 export async function proxyToApi(req: Request | NextRequest, path: string) {

@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Post, UseGuards } from '@nestjs/common';
+import {Body, Controller, Delete, Get, Param, Post, UseGuards, BadRequestException} from '@nestjs/common';
 import { Roles } from '../../common/roles/roles.decorator';
 import { RolesGuard } from '../../common/roles/roles.guard';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
@@ -23,5 +23,14 @@ export class AdminUsersController {
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.users.remove(id);
+  }
+
+  @Post(':id/set-password')
+  async setPassword(@Param('id') id: string, @Body() body: { password: string }) {
+    const pw = (body?.password ?? '').toString().trim();
+    if (!pw) {
+      throw new BadRequestException('password is required');
+    }
+    return this.users.setPassword(id, pw);
   }
 }

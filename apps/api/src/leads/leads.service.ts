@@ -40,10 +40,9 @@ export class LeadsService {
         await this.prisma.lead.update({ where: { id }, data: { status: 'COMPLETED' } });
       }
       await this.ensureDealForCompletedLead(id);
-      await this.dealsService.ensureForLead(id);
-const d = await this.dealsService.ensureForLead(id);
+      const d = await this.dealsService.ensureForLead(id);
       await this.markDealReadyForMatching(d.id);
-      return { done: true };
+      return { done: true, dealId: d.id };
     }
 
     // süreç başladı
@@ -71,11 +70,11 @@ const d = await this.dealsService.ensureForLead(id);
       select: { id: true },
     });
     if (!leadExists) throw new NotFoundException('Lead not found');
-
     // key tanımlı mı?
-    const q = LEAD_QUESTIONS.find(x => x.key === k);
+    // NOTE: phone, wizard sorusu değil; contact info. Bu yüzden LEAD_QUESTIONS whitelist'ine bağlı değil.
+    const isPhone = k === 'phone';
+    const q = isPhone ? { question: 'Telefon' } : LEAD_QUESTIONS.find(x => x.key === k);
     if (!q) throw new NotFoundException('Unknown question key');
-
     // Aynı key daha önce cevaplandıysa update
     const existing = await this.prisma.leadAnswer.findFirst({
       where: { leadId: id, key: k },
@@ -255,8 +254,7 @@ private normalizeType(v?: string | null) {
     // rooms zorunlu OLMAYAN tipler (arsa/tarla vb.)
     const noRooms = new Set([
       'ARSA','TARLA','BAHCE','BAHÇE','KAPALI ARSA','IMARLI ARSA','İMARLI ARSA',
-      'DÜKKAN','DUKKAN','İŞYERİ','ISYERI','OFIS','OFİS','DEPO'
-    ]);
+      'DÜKKAN','DUKKAN','İŞYERİ','ISYERI','OFIS','OFİS','DEPO']);
 
     if (noRooms.has(t)) {
       return ['city','district','type'];

@@ -1,8 +1,35 @@
 'use client';
 
+
+function getApiMsg(e: unknown, fallback: string) {
+  if (typeof e === 'string') return e;
+  if (e && typeof e === 'object') {
+    const ro = e as Record<string, unknown>;
+    const m = ro['message'];
+    if (typeof m === 'string') return m;
+    const resp = ro['response'];
+    if (resp && typeof resp === 'object') {
+      const data = (resp as Record<string, unknown>)['data'];
+      if (data && typeof data === 'object') {
+        const dm = (data as Record<string, unknown>)['message'];
+        if (typeof dm === 'string') return dm;
+      }
+    }
+  }
+  return fallback;
+}
+
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 import { requireAuth } from '@/lib/auth';
+
+type Deal = {
+  id: string;
+  leadId: string;
+  salePrice: number;
+  commissionRate: number;
+  commissionTotal: number;
+};
 
 type LedgerRow = {
   id: string;
@@ -16,7 +43,7 @@ type LedgerRow = {
 
 export default function LedgerPage({ params }: { params: { id: string } }) {
   const [rows, setRows] = useState<LedgerRow[]>([]);
-  const [deal, setDeal] = useState<any>(null);
+  const [deal, setDeal] = useState<Deal | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   async function load() {
@@ -25,17 +52,20 @@ export default function LedgerPage({ params }: { params: { id: string } }) {
       const res = await api.get(`/broker/deals/${params.id}/ledger`);
       setDeal(res.data.deal);
       setRows(res.data.ledger);
-    } catch (err: any) {
-      setError(err?.response?.data?.message ?? 'Failed to load ledger');
+    } catch (err: unknown) {
+      setError(getApiMsg(err, 'Failed to load ledger'));
     }
   }
 
   useEffect(() => {
-    requireAuth();
-    load();
-  }, []);
-
-  return (
+  requireAuth();
+  const t = window.setTimeout(() => {
+    void load();
+  }, 0);
+  return () => window.clearTimeout(t);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [params.id]);
+return (
     <div style={{ maxWidth: 980, margin: '24px auto', fontFamily: 'system-ui' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <h1>Deal Ledger</h1>

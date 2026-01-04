@@ -22,36 +22,37 @@ function loadEnv(envPath) {
 
 loadEnv(path.join(__dirname, '.env'));
 loadEnv(path.join(__dirname, '..', '..', '.env'));
-
-const { PrismaClient } = require('@prisma/client');
-const bcrypt = require('bcryptjs');
+const { Pool } = require("pg");
+const { PrismaClient } = require("@prisma/client");
+const { PrismaPg } = require("@prisma/adapter-pg");
+const bcrypt = require("bcryptjs");
 
 (async () => {
-  const email = process.env.ADMIN_EMAIL || 'admin@local.test';
-  const pass  = process.env.ADMIN_PASS  || 'Admin12345!';
+  const email = process.env.ADMIN_EMAIL || "admin@local.test";
+  const pass  = process.env.ADMIN_PASS  || "Admin12345!";
   const dbUrl = process.env.DATABASE_URL;
 
   if (!dbUrl) {
-    console.error('ERROR: DATABASE_URL not found. Check apps/api/.env (or repo root .env).');
+    console.error("ERROR: DATABASE_URL not found. Check apps/api/.env (or repo root .env).");
     process.exit(1);
   }
 
-  const prisma = new PrismaClient({
-    datasources: {
-      db: { url: dbUrl },
-    },
-  });
+  const pool = new Pool({ connectionString: dbUrl });
+  const adapter = new PrismaPg(pool);
+  const prisma = new PrismaClient({ adapter });
 
   const hash = await bcrypt.hash(pass, 10);
 
   const user = await prisma.user.upsert({
     where: { email },
-    update: { password: hash, role: 'ADMIN', name: 'Local Admin' },
-    create: { email, password: hash, role: 'ADMIN', name: 'Local Admin' },
+    update: { password: hash, role: "ADMIN", name: "Local Admin" },
+    create: { email, password: hash, role: "ADMIN", name: "Local Admin" },
   });
 
-  console.log('OK admin ready:', { id: user.id, email: user.email, role: user.role });
+  console.log("OK admin ready:", { id: user.id, email: user.email, role: user.role });
+
   await prisma.$disconnect();
+  await pool.end();
 })().catch((e) => {
   console.error(e);
   process.exit(1);

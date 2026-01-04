@@ -23,4 +23,17 @@ export class AdminUsersService {
   remove(id: string) {
     return this.prisma.user.delete({ where: { id } });
   }
+
+  async setPassword(id: string, password: string) {
+    const pw = (password ?? '').toString().trim();
+    if (!pw) {
+      throw new Error('password is required');
+    }
+    const hash = await bcrypt.hash(pw, 10);
+    await this.prisma.user.update({
+      where: { id },
+      data: { password: hash },
+    });
+    return { ok: true };
+  }
 }

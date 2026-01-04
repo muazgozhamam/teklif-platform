@@ -1,7 +1,39 @@
 'use client';
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { useState } from 'react';
 import { api, setToken } from '@/lib/api';
+
+const API_BASE = (
+  process.env.NEXT_PUBLIC_API_BASE_URL?.trim() ||
+  process.env.NEXT_PUBLIC_API_BASE_URL ||
+  process.env.NEXT_PUBLIC_API_URL ||
+  process.env.NEXT_PUBLIC_API_BASE ||
+  'http://localhost:3001'
+).replace(/\/+$/, '');
+
+
+
+type Role = 'HUNTER' | 'BROKER' | 'CONSULTANT' | 'ADMIN' | string;
+
+function roleHome(role: Role) {
+  const r = (role || '').toUpperCase();
+  if (r === 'HUNTER') return '/hunter';
+  if (r === 'CONSULTANT') return '/consultant';
+  if (r === 'BROKER') return '/broker';
+  if (r === 'ADMIN') return '/broker';
+  return '/login';
+}
+
+async function fetchMeRole(apiBase: string, token: string): Promise<Role> {
+  const r = await fetch(`${apiBase}/auth/me`, {
+    headers: { Authorization: `Bearer ${token}` },
+    cache: 'no-store',
+  });
+  if (!r.ok) return '';
+  const me = (await r.json()) as { role?: Role };
+  return (me?.role || '') as Role;
+}
 
 export default function LoginPage() {
   const [email, setEmail] = useState('admin@teklif.local');
@@ -15,8 +47,13 @@ export default function LoginPage() {
     setLoading(true);
     try {
       const res = await api.post('/auth/login', { email, password });
-      setToken(res.data.accessToken);
-      window.location.href = '/broker/leads/pending';
+      const token = ((res.data as any).access_token ?? (res.data as any).accessToken) as string;
+      setToken(token);
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem('accessToken', token);
+        document.cookie = `accessToken=${encodeURIComponent(token)}; Path=/; SameSite=Lax`;
+      }
+      window.location.href = roleHome(await fetchMeRole(API_BASE as any, token));
     } catch (err: any) {
       setError(err?.response?.data?.message ?? 'Login failed');
     } finally {

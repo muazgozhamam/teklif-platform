@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * Dashboard HTTP client
  * - `api<T>(path, init?)` callable fetch wrapper
@@ -11,24 +12,32 @@ export type ApiResponse<T = unknown> = {
   headers: Headers;
 };
 
+
+export type ApiInit = RequestInit & {
+  params?: Record<string, unknown>;
+};
 export type ApiClient = {
-  <T = any>(path: string, init?: RequestInit): Promise<T>;
-  get<T = any>(path: string, init?: RequestInit): Promise<ApiResponse<T>>;
-  post<T = any>(path: string, body?: any, init?: RequestInit): Promise<ApiResponse<T>>;
-  patch<T = any>(path: string, body?: any, init?: RequestInit): Promise<ApiResponse<T>>;
-  delete<T = any>(path: string, init?: RequestInit): Promise<ApiResponse<T>>;
+  <T = any>(path: string, init?: ApiInit): Promise<T>;
+  get<T = any>(path: string, init?: ApiInit): Promise<ApiResponse<T>>;
+  post<T = any>(path: string, body?: any, init?: ApiInit): Promise<ApiResponse<T>>;
+  patch<T = any>(path: string, body?: any, init?: ApiInit): Promise<ApiResponse<T>>;
+  delete<T = any>(path: string, init?: ApiInit): Promise<ApiResponse<T>>;
 };
 
-const TOKEN_KEY = 'teklif_token';
+const TOKEN_KEY = 'accessToken';
 
 export function setToken(token: string) {
   if (typeof window === 'undefined') return;
   window.localStorage.setItem(TOKEN_KEY, token);
+
+  if (typeof document !== 'undefined') document.cookie = `accessToken=${encodeURIComponent(token)}; Path=/; SameSite=Lax`;
 }
 
 export function clearToken() {
   if (typeof window === 'undefined') return;
   window.localStorage.removeItem(TOKEN_KEY);
+
+  if (typeof document !== 'undefined') document.cookie = "accessToken=; Path=/; Max-Age=0; SameSite=Lax";
 }
 
 export function getToken(): string | null {
@@ -37,17 +46,47 @@ export function getToken(): string | null {
 }
 
 function resolveBaseUrl() {
-  // Prefer explicit env, fallback to same-origin
-  return process.env.NEXT_PUBLIC_API_URL?.replace(/\/+$/, '') || '';
+  // Prefer explicit env, fallback to localhost API for dev
+  const base =
+    process.env.NEXT_PUBLIC_API_BASE_URL ||
+    process.env.NEXT_PUBLIC_API_URL ||
+    process.env.API_URL ||
+    'http://localhost:3001';
+  return base.replace(/\/+$/, '');
 }
 
-function withAuth(init?: RequestInit): RequestInit {
+function withAuth(init?: ApiInit): RequestInit {
   const token = getToken();
   const headers = new Headers(init?.headers || {});
   if (token && !headers.has('Authorization')) headers.set('Authorization', `Bearer ${token}`);
   if (!headers.has('Accept')) headers.set('Accept', 'application/json');
   return { ...init, headers };
 }
+
+
+function appendParamsToUrl(url: string, init?: ApiInit): { url: string; init: ApiInit | undefined } {
+  const anyInit = (init || {}) as any;
+  const params = anyInit.params as Record<string, unknown> | undefined;
+  if (!params || typeof params !== 'object') return { url, init };
+
+  const usp = new URLSearchParams();
+  for (const [k, v] of Object.entries(params)) {
+    if (v === undefined || v === null) continue;
+    usp.set(k, String(v));
+  }
+  const qs = usp.toString();
+  if (!qs) {
+    const { params: _p, ...rest } = anyInit;
+    return { url, init: rest as RequestInit };
+  }
+
+  const joiner = url.includes('?') ? '&' : '?';
+  const nextUrl = url + joiner + qs;
+
+  const { params: _p, ...rest } = anyInit;
+  return { url: nextUrl, init: rest as RequestInit };
+}
+
 
 async function parseBody(res: Response) {
   const ct = res.headers.get('content-type') || '';
@@ -64,7 +103,7 @@ async function requestJson<T = any>(
   method: string,
   path: string,
   body?: any,
-  init: RequestInit = {},
+  init: ApiInit = {},
 ): Promise<ApiResponse<T>> {
   const headers = new Headers(init.headers || {});
   let finalBody: BodyInit | undefined = init.body as any;
@@ -79,12 +118,18 @@ async function requestJson<T = any>(
   }
 
   const base = resolveBaseUrl();
-  const url = path.startsWith('http') ? path : `${base}${path}`;
+  const rawUrl = path.startsWith('http') ? path : `${base}${path}`;
+  const { url, init: init2 } = appendParamsToUrl(rawUrl, init);
 
-  const res = await fetch(url, withAuth({ ...init, method, headers, body: finalBody }));
+  const res = await fetch(url, withAuth({ ...(init2 || init), method, headers, body: finalBody }));
   const data = (await parseBody(res)) as T;
 
   if (!res.ok) {
+    if (res.status === 401) {
+      try { clearToken(); } catch {}
+      if (typeof window !== 'undefined') window.location.href = '/login';
+    }
+
     throw Object.assign(new Error('API request failed'), { status: res.status, data });
   }
 
@@ -92,12 +137,18 @@ async function requestJson<T = any>(
 }
 
 // callable base (generic fetch wrapper)
-const baseCallable = async function apiCallable<T = any>(path: string, init: RequestInit = {}): Promise<T> {
+const baseCallable = async function apiCallable<T = any>(path: string, init: ApiInit = {}): Promise<T> {
   const base = resolveBaseUrl();
-  const url = path.startsWith('http') ? path : `${base}${path}`;
-  const res = await fetch(url, withAuth(init));
+  const rawUrl = path.startsWith('http') ? path : `${base}${path}`;
+  const { url, init: init2 } = appendParamsToUrl(rawUrl, init);
+  const res = await fetch(url, withAuth(init2 || init));
 
   if (!res.ok) {
+    if (res.status === 401) {
+      try { clearToken(); } catch {}
+      if (typeof window !== 'undefined') window.location.href = '/login';
+    }
+
     const body = await parseBody(res);
     throw Object.assign(new Error('API request failed'), { status: res.status, body });
   }
@@ -106,16 +157,16 @@ const baseCallable = async function apiCallable<T = any>(path: string, init: Req
 
 // Final exported client with correct TS shape
 export const api: ApiClient = Object.assign(baseCallable, {
-  get<T = any>(path: string, init?: RequestInit) {
+  get<T = any>(path: string, init?: ApiInit) {
     return requestJson<T>('GET', path, undefined, init);
   },
-  post<T = any>(path: string, body?: any, init?: RequestInit) {
+  post<T = any>(path: string, body?: any, init?: ApiInit) {
     return requestJson<T>('POST', path, body, init);
   },
-  patch<T = any>(path: string, body?: any, init?: RequestInit) {
+  patch<T = any>(path: string, body?: any, init?: ApiInit) {
     return requestJson<T>('PATCH', path, body, init);
   },
-  delete<T = any>(path: string, init?: RequestInit) {
+  delete<T = any>(path: string, init?: ApiInit) {
     return requestJson<T>('DELETE', path, undefined, init);
   },
 });

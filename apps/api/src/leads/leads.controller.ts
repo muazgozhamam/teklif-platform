@@ -64,4 +64,19 @@ export class LeadsController {
     return this.leads.wizardAnswer(id, body?.key, body?.answer);
   }
 
+
+  // Public: lead iletişim bilgisi kaydet (şimdilik LeadAnswer key=phone olarak saklıyoruz)
+  @Post(':id/contact')
+  async contact(@Param('id') id: string, @Body() body: any) {
+    const raw = String(body?.phone ?? body?.phoneNumber ?? body?.tel ?? '').trim();
+    const digits = raw.replace(/\D/g, '');
+    if (!digits) throw new BadRequestException('phone is required');
+    // TR için 10/11 hane toleranslı
+    if (digits.length < 10) throw new BadRequestException('phone is invalid');
+
+    // LeadAnswer upsert ile sakla (DB şeması gerektirmez)
+    await this.leads.upsertAnswer(id, 'phone', digits);
+    return { ok: true };
+  }
+
 }

@@ -20,3 +20,13 @@ apps/api/prisma/dev.db-journal
 
 # sprint-next local archive
 scripts/sprint-next/_archive/
+
+# Backup artifacts
+*.bak.*
+
+# Backup/save artifacts (generated)
+*.bak
+*.bak.*
+*.bak_*
+*.sh.save
+*.save
