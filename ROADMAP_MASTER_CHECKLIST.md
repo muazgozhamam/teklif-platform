@@ -50,3 +50,4 @@
 | 10.2 Frontend global loading/error/not-found | DONE |  | `apps/dashboard/app/loading.tsx`, `apps/dashboard/app/global-error.tsx`, `apps/dashboard/app/not-found.tsx` | Global fallback states standardized |
 | 10.3 Frontend role landing + KPI read-only | DONE |  | `apps/dashboard/app/admin/page.tsx`, `apps/dashboard/app/broker/page.tsx`, `apps/dashboard/app/consultant/page.tsx` | Admin/Broker/Consultant landing pages show role metrics from `/stats/me` |
 | 10.4 Frontend smoke + demo pack | DONE |  | `scripts/smoke-frontend-phase1.sh`, `FRONTEND_PHASE1_DEMO.md` | Runtime smoke passed on local (`smoke-frontend-phase1 OK`) |
+| 12.1 Phase 3 readiness gate (build/env/health) | DONE |  | `scripts/smoke-phase3-readiness.sh`, `PHASE3_PROD_READINESS.md` | Tek komutla pre-prod teknik kapilar kontrol ediliyor |
