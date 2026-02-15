@@ -131,6 +131,9 @@ jobs:
       - name: Run migrations
         run: pnpm -C apps/api exec prisma migrate deploy
 
+      - name: Sync schema for CI ephemeral DB
+        run: pnpm -C apps/api exec prisma db push
+
       - name: Seed demo users
         run: pnpm -C apps/api db:seed
 
