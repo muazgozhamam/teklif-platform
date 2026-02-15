@@ -50,3 +50,11 @@
 | 10.2 Frontend global loading/error/not-found | DONE |  | `apps/dashboard/app/loading.tsx`, `apps/dashboard/app/global-error.tsx`, `apps/dashboard/app/not-found.tsx` | Global fallback states standardized |
 | 10.3 Frontend role landing + KPI read-only | DONE |  | `apps/dashboard/app/admin/page.tsx`, `apps/dashboard/app/broker/page.tsx`, `apps/dashboard/app/consultant/page.tsx` | Admin/Broker/Consultant landing pages show role metrics from `/stats/me` |
 | 10.4 Frontend smoke + demo pack | DONE |  | `scripts/smoke-frontend-phase1.sh`, `FRONTEND_PHASE1_DEMO.md` | Runtime smoke passed on local (`smoke-frontend-phase1 OK`) |
+| 10.5 Frontend Phase 1 signoff runner | DONE |  | `scripts/smoke-frontend-phase2-signoff.sh`, `FRONTEND_PHASE2_DEMO.md` | Tek komutluk signoff akisi eklendi |
+| 11.1 Phase 2 role landing deepening | DONE |  | `apps/dashboard/app/admin/page.tsx`, `apps/dashboard/app/broker/page.tsx`, `apps/dashboard/app/consultant/page.tsx` | Landing sayfalarinda operasyonel geri bildirim ve tazeleme netligi eklendi |
+| 11.2 Public listings UX upgrade | DONE |  | `apps/dashboard/app/listings/page.tsx` | Query/filter/pagination/empty state iyilestirmeleri |
+| 11.3 Admin ops filter expansion | DONE |  | `apps/dashboard/app/admin/users/page.tsx`, `apps/dashboard/app/admin/audit/page.tsx` | Admin users ve audit filtreleri genislestirildi |
+| 11.4 Broker/Consultant handoff polish | DONE |  | `apps/dashboard/app/consultant/inbox/page.tsx`, `apps/dashboard/app/broker/leads/pending/page.tsx` | Handoff akisinda `dealId` odagi guclendirildi |
+| 11.5 Phase 2 signoff pack | DONE |  | `scripts/smoke-frontend-phase2-signoff.sh`, `FRONTEND_PHASE2_DEMO.md` | Final signoff runner + demo dokumani |
+| 12.1 Phase 3 readiness gate (build/env/health) | DONE |  | `scripts/smoke-phase3-readiness.sh`, `PHASE3_PROD_READINESS.md` | Tek komutta pre-prod teknik kapilar kontrol edilir |
+| 12.2 Phase 3 go-live signoff runner | DONE |  | `scripts/smoke-phase3-signoff.sh`, `scripts/smoke-phase3-readiness.sh` | Readiness + opsiyonel query-plan diag tek komutta calisir |
