@@ -58,3 +58,4 @@
 | 11.5 Phase 2 signoff pack | DONE |  | `scripts/smoke-frontend-phase2-signoff.sh`, `FRONTEND_PHASE2_DEMO.md` | Final signoff runner + demo dokumani |
 | 12.1 Phase 3 readiness gate (build/env/health) | DONE |  | `scripts/smoke-phase3-readiness.sh`, `PHASE3_PROD_READINESS.md` | Tek komutta pre-prod teknik kapilar kontrol edilir |
 | 12.2 Phase 3 go-live signoff runner | DONE |  | `scripts/smoke-phase3-signoff.sh`, `scripts/smoke-phase3-readiness.sh` | Readiness + opsiyonel query-plan diag tek komutta calisir |
+| 12.3 satdedi.com domain go-live checklist | DONE |  | `scripts/ops/satdedi-domain-readiness.sh`, `SATDEDI_DOMAIN_GO_LIVE.md` | Domain/API host + SSL + health kontrolleri tek akista dogrulanir |
