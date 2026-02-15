@@ -1,0 +1,142 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.26.1
+
+      - name: Install deps
+        run: pnpm install --frozen-lockfile
+
+      - name: API tests
+        run: pnpm -C apps/api test
+
+      - name: API build
+        run: pnpm -C apps/api build
+
+      - name: Dashboard lint
+        run: pnpm -C apps/dashboard lint
+
+      - name: Dashboard build
+        run: pnpm -C apps/dashboard build
+
+  integration-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    needs: [quality]
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: teklif
+          POSTGRES_USER: teklif
+          POSTGRES_PASSWORD: teklif
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U teklif -d teklif"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.26.1
+
+      - name: Install deps
+        run: pnpm install --frozen-lockfile
+
+      - name: Prepare API env
+        run: |
+          cat > apps/api/.env <<'ENV'
+          DATABASE_URL=postgresql://teklif:teklif@localhost:5432/teklif?schema=public
+          PORT=3001
+          JWT_SECRET=ci-jwt-secret
+          JWT_REFRESH_SECRET=ci-jwt-refresh-secret
+          ACCESS_TOKEN_EXPIRES_IN=15m
+          REFRESH_TOKEN_EXPIRES_IN=7d
+          VALIDATION_STRICT_ENABLED=1
+          RATE_LIMIT_ENABLED=1
+          RATE_LIMIT_WINDOW_MS=60000
+          RATE_LIMIT_MAX=500
+          RATE_LIMIT_AUTH_MAX=100
+          DEV_SEED=1
+          NETWORK_COMMISSIONS_ENABLED=0
+          COMMISSION_ALLOCATION_ENABLED=0
+          DASHBOARD_STATS_CACHE_TTL_MS=5000
+          BACKGROUND_JOB_RETRY_BASE_MS=100
+          ENV
+
+      - name: Run migrations
+        run: pnpm -C apps/api exec prisma migrate deploy
+
+      - name: Seed demo users
+        run: pnpm -C apps/api db:seed
+
+      - name: Start API
+        run: |
+          mkdir -p .tmp
+          pnpm -C apps/api start:dev > .tmp/api-ci.log 2>&1 &
+          echo $! > .tmp/api-ci.pid
+
+      - name: Wait for API health
+        run: |
+          for i in $(seq 1 90); do
+            if curl -fsS http://localhost:3001/health >/dev/null; then
+              echo "API is ready"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "API did not become ready"
+          tail -n 200 .tmp/api-ci.log || true
+          exit 1
+
+      - name: Smoke admin users
+        run: BASE_URL=http://localhost:3001 ./scripts/smoke-admin-users.sh
+
+      - name: Smoke stats
+        run: BASE_URL=http://localhost:3001 ./scripts/smoke-stats.sh
+
+      - name: Smoke commission won
+        run: BASE_URL=http://localhost:3001 ./scripts/smoke-commission-won.sh
+
+      - name: Smoke background jobs
+        run: BASE_URL=http://localhost:3001 ./scripts/smoke-background-jobs.sh
+
+      - name: Upload API log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-ci-log
+          path: .tmp/api-ci.log
