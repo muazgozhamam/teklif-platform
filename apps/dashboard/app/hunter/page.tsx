@@ -57,7 +57,7 @@ export default function HunterDashboardPage() {
 
         const me = (await r.json()) as Me;
         if ((me?.role || '').toUpperCase() !== 'HUNTER') {
-          window.location.href = roleHome((me?.role || '') as any);
+          window.location.href = roleHome((me?.role || '') as Role);
           return;
         }
 
