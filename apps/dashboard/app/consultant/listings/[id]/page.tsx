@@ -95,7 +95,7 @@ function Field({ label, children, hint }: { label: string; children: React.React
 export default function ConsultantListingEditPage() {
   const params = useParams<{ id: string }>();
   const id = String((params as unknown as JsonObject)?.id ?? '').trim();
-  const [allowed, setAllowed] = useState(false);
+  const [allowed] = useState(() => requireRole(['CONSULTANT']));
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -163,10 +163,6 @@ export default function ConsultantListingEditPage() {
       setAuditLoading(false);
     }
   }
-
-  useEffect(() => {
-    setAllowed(requireRole(['CONSULTANT']));
-  }, []);
 
   useEffect(() => {
     if (!allowed) return;
