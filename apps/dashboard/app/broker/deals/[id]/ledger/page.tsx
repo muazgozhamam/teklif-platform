@@ -1,5 +1,10 @@
 'use client';
-
+import { useEffect, useState } from 'react';
+import { useParams } from 'next/navigation';
+import RoleShell from '@/app/_components/RoleShell';
+import { AlertMessage } from '@/app/_components/UiFeedback';
+import { api } from '@/lib/api';
+import { requireRole } from '@/lib/auth';
 
 function getApiMsg(e: unknown, fallback: string) {
   if (typeof e === 'string') return e;
@@ -18,11 +23,6 @@ function getApiMsg(e: unknown, fallback: string) {
   }
   return fallback;
 }
-
-import { useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
-import { api } from '@/lib/api';
-import { requireRole } from '@/lib/auth';
 
 type Deal = {
   id: string;
@@ -54,12 +54,14 @@ type AuditRow = {
 export default function LedgerPage() {
   const params = useParams<{ id: string }>();
   const dealId = String(params?.id ?? '');
+  const [allowed] = useState(() => requireRole(['BROKER', 'ADMIN']));
   const [rows, setRows] = useState<LedgerRow[]>([]);
   const [deal, setDeal] = useState<Deal | null>(null);
   const [auditRows, setAuditRows] = useState<AuditRow[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   async function load() {
+    if (!dealId) return;
     setError(null);
     try {
       const res = await api.get(`/broker/deals/${dealId}/ledger`);
@@ -72,22 +74,42 @@ export default function LedgerPage() {
     }
   }
 
-useEffect(() => {
-  requireRole(['BROKER', 'ADMIN']);
-  const t = window.setTimeout(() => {
-    void load();
-  }, 0);
-  return () => window.clearTimeout(t);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-}, [dealId]);
-return (
-    <div style={{ maxWidth: 980, margin: '24px auto', fontFamily: 'system-ui' }}>
+  useEffect(() => {
+    if (!allowed) return;
+    const t = window.setTimeout(() => {
+      void load();
+    }, 0);
+    return () => window.clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allowed, dealId]);
+
+  if (!allowed) {
+    return (
+      <main style={{ padding: 24, maxWidth: 960, margin: '0 auto', opacity: 0.8 }}>
+        <div>Yükleniyor…</div>
+      </main>
+    );
+  }
+
+  return (
+    <RoleShell
+      role="BROKER"
+      title="Deal Defteri"
+      subtitle="Deal dağılım ve audit kayıtlarını incele."
+      nav={[
+        { href: '/broker', label: 'Panel' },
+        { href: '/broker/leads/pending', label: 'Bekleyen Leadler' },
+        { href: '/broker/deals/new', label: 'Yeni Deal' },
+        { href: '/broker/hunter-applications', label: 'Hunter Başvuruları' },
+      ]}
+    >
+      <div style={{ maxWidth: 980, margin: '0 auto' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <h1>Deal Defteri</h1>
         <button onClick={() => (window.location.href = '/broker/leads/pending')}>Bekleyenlere Dön</button>
       </div>
 
-      {error && <p style={{ color: 'crimson' }}>{error}</p>}
+      {error ? <AlertMessage type="error" message={error} /> : null}
 
       {deal && (
         <div style={{ border: '1px solid #ddd', borderRadius: 10, padding: 12, marginBottom: 12 }}>
@@ -130,6 +152,7 @@ return (
           </div>
         )}
       </div>
-    </div>
+      </div>
+    </RoleShell>
   );
 }

@@ -50,6 +50,7 @@
 | 10.2 Frontend global loading/error/not-found | DONE |  | `apps/dashboard/app/loading.tsx`, `apps/dashboard/app/global-error.tsx`, `apps/dashboard/app/not-found.tsx` | Global fallback states standardized |
 | 10.3 Frontend role landing + KPI read-only | DONE |  | `apps/dashboard/app/admin/page.tsx`, `apps/dashboard/app/broker/page.tsx`, `apps/dashboard/app/consultant/page.tsx` | Admin/Broker/Consultant landing pages show role metrics from `/stats/me` |
 | 10.4 Frontend smoke + demo pack | DONE |  | `scripts/smoke-frontend-phase1.sh`, `FRONTEND_PHASE1_DEMO.md` | Runtime smoke passed on local (`smoke-frontend-phase1 OK`) |
+| 10.5 Frontend Phase 1 signoff runner | DONE |  | `scripts/smoke-frontend-phase1-signoff.sh`, `FRONTEND_PHASE1_DEMO.md` | Tek komutluk signoff akışı eklendi (dev-up + smoke + health checks) |
 | 11.1 Phase 2 role landing deepening | DONE |  | `apps/dashboard/app/admin/page.tsx`, `apps/dashboard/app/broker/page.tsx`, `apps/dashboard/app/consultant/page.tsx` | Landing pages gained refresh control + last updated operational hint |
 | 11.2 Public listings UX upgrade | DONE |  | `apps/dashboard/app/listings/page.tsx` | Query-based filter, pagination, empty/error handling, card layout |
 | 11.3 Admin ops filter expansion | DONE |  | `apps/dashboard/app/admin/users/page.tsx`, `apps/dashboard/app/admin/audit/page.tsx` | Users role/active filters and audit from/to filters added |

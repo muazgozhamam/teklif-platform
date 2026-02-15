@@ -14,6 +14,12 @@ cd /Users/muazgozhamam/Desktop/teklif-platform
 API_BASE_URL=http://localhost:3001 DASHBOARD_BASE_URL=http://localhost:3000 ./scripts/smoke-frontend-phase1.sh
 ```
 
+## Tek Komut Signoff
+```bash
+cd /Users/muazgozhamam/Desktop/teklif-platform
+API_BASE_URL=http://localhost:3001 DASHBOARD_BASE_URL=http://localhost:3000 ./scripts/smoke-frontend-phase1-signoff.sh
+```
+
 ## Demo Hesapları
 - Admin: `admin@local.dev / admin123`
 - Consultant: `consultant1@test.com / pass123`

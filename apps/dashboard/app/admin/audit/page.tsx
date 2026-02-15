@@ -39,7 +39,7 @@ async function api<T>(path: string): Promise<T> {
 }
 
 export default function AdminAuditPage() {
-  const [allowed, setAllowed] = React.useState(false);
+  const [allowed] = React.useState(() => requireRole(['ADMIN']));
   const [rows, setRows] = React.useState<AuditItem[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
@@ -47,6 +47,8 @@ export default function AdminAuditPage() {
   const [q, setQ] = React.useState('');
   const [action, setAction] = React.useState('');
   const [entityType, setEntityType] = React.useState('');
+  const [from, setFrom] = React.useState('');
+  const [to, setTo] = React.useState('');
   const [take, setTake] = React.useState(20);
   const [skip, setSkip] = React.useState(0);
   const [total, setTotal] = React.useState(0);
@@ -61,6 +63,8 @@ export default function AdminAuditPage() {
       if (q.trim()) p.set('q', q.trim());
       if (action.trim()) p.set('action', action.trim());
       if (entityType.trim()) p.set('entityType', entityType.trim());
+      if (from.trim()) p.set('from', from.trim());
+      if (to.trim()) p.set('to', to.trim());
       const data = await api<AuditListResponse>(`/api/admin/audit?${p.toString()}`);
       setRows(Array.isArray(data.items) ? data.items : []);
       setTotal(Number(data.total || 0));
@@ -69,11 +73,7 @@ export default function AdminAuditPage() {
     } finally {
       setLoading(false);
     }
-  }, [action, entityType, q, skip, take]);
-
-  React.useEffect(() => {
-    setAllowed(requireRole(['ADMIN']));
-  }, []);
+  }, [action, entityType, from, q, skip, take, to]);
 
   React.useEffect(() => {
     if (!allowed) return;
@@ -132,6 +132,24 @@ export default function AdminAuditPage() {
           placeholder="Entity filtresi"
           style={{ padding: 10, borderRadius: 10, border: '1px solid #ddd' }}
         />
+        <input
+          value={from}
+          onChange={(e) => {
+            setFrom(e.target.value);
+            setSkip(0);
+          }}
+          placeholder="from (ISO)"
+          style={{ padding: 10, borderRadius: 10, border: '1px solid #ddd' }}
+        />
+        <input
+          value={to}
+          onChange={(e) => {
+            setTo(e.target.value);
+            setSkip(0);
+          }}
+          placeholder="to (ISO)"
+          style={{ padding: 10, borderRadius: 10, border: '1px solid #ddd' }}
+        />
         <select
           value={String(take)}
           onChange={(e) => {
@@ -146,6 +164,20 @@ export default function AdminAuditPage() {
         </select>
         <button onClick={load} style={{ padding: '10px 12px', borderRadius: 10, border: '1px solid #ddd', background: '#fff' }} disabled={loading}>
           Yenile
+        </button>
+        <button
+          onClick={() => {
+            setQ('');
+            setAction('');
+            setEntityType('');
+            setFrom('');
+            setTo('');
+            setSkip(0);
+          }}
+          style={{ padding: '10px 12px', borderRadius: 10, border: '1px solid #ddd', background: '#fff' }}
+          type="button"
+        >
+          Filtreyi Sıfırla
         </button>
       </div>
 

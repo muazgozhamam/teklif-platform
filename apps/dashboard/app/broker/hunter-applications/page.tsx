@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '@/lib/api';
 import RoleShell from '@/app/_components/RoleShell';
+import { AlertMessage } from '@/app/_components/UiFeedback';
 import { requireRole } from '@/lib/auth';
 
 type Status = 'PENDING' | 'APPROVED' | 'REJECTED';
@@ -42,7 +43,7 @@ function fmtDate(iso?: string | null) {
 }
 
 export default function BrokerHunterApplicationsPage() {
-  const [allowed, setAllowed] = useState(false);
+  const [allowed] = useState(() => requireRole(['BROKER']));
   const [status, setStatus] = useState<Status>('PENDING');
   const [items, setItems] = useState<HunterApplication[]>([]);
   const [loading, setLoading] = useState(false);
@@ -117,10 +118,6 @@ export default function BrokerHunterApplicationsPage() {
   }
 
   useEffect(() => {
-    setAllowed(requireRole(['BROKER']));
-  }, []);
-
-  useEffect(() => {
     if (!allowed) return;
     void load(status);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -186,9 +183,7 @@ export default function BrokerHunterApplicationsPage() {
           </div>
         </div>
 
-        {error ? (
-          <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</div>
-        ) : null}
+        {error ? <AlertMessage type="error" message={error} /> : null}
 
         {actionMsg ? (
           <div className="rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">
