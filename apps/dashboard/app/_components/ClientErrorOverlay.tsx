@@ -21,7 +21,7 @@ export default function ClientErrorOverlay() {
         typeof reason === 'string'
           ? reason
           : ((anyReason && typeof anyReason['message'] === 'string' ? (anyReason['message'] as string) : undefined) || (() => { try { return JSON.stringify(reason, null, 2); } catch { return String(reason); } })() || 'Unhandled promise rejection');
-      const stack = (anyReason && typeof anyReason['stack'] === 'string') ? String((anyReason as any)['stack']) : undefined;
+      const stack = anyReason && typeof anyReason['stack'] === 'string' ? String(anyReason['stack']) : undefined;
       setErr({ type: 'rejection', message, stack });
     };
 

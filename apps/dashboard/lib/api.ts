@@ -20,6 +20,7 @@ export type ApiClient = {
   <T = any>(path: string, init?: ApiInit): Promise<T>;
   get<T = any>(path: string, init?: ApiInit): Promise<ApiResponse<T>>;
   post<T = any>(path: string, body?: any, init?: ApiInit): Promise<ApiResponse<T>>;
+  put<T = any>(path: string, body?: any, init?: ApiInit): Promise<ApiResponse<T>>;
   patch<T = any>(path: string, body?: any, init?: ApiInit): Promise<ApiResponse<T>>;
   delete<T = any>(path: string, init?: ApiInit): Promise<ApiResponse<T>>;
 };
@@ -76,14 +77,16 @@ function appendParamsToUrl(url: string, init?: ApiInit): { url: string; init: Ap
   }
   const qs = usp.toString();
   if (!qs) {
-    const { params: _p, ...rest } = anyInit;
+    const rest = { ...anyInit } as ApiInit;
+    delete rest.params;
     return { url, init: rest as RequestInit };
   }
 
   const joiner = url.includes('?') ? '&' : '?';
   const nextUrl = url + joiner + qs;
 
-  const { params: _p, ...rest } = anyInit;
+  const rest = { ...anyInit } as ApiInit;
+  delete rest.params;
   return { url: nextUrl, init: rest as RequestInit };
 }
 
@@ -163,6 +166,9 @@ export const api: ApiClient = Object.assign(baseCallable, {
   post<T = any>(path: string, body?: any, init?: ApiInit) {
     return requestJson<T>('POST', path, body, init);
   },
+  put<T = any>(path: string, body?: any, init?: ApiInit) {
+    return requestJson<T>('PUT', path, body, init);
+  },
   patch<T = any>(path: string, body?: any, init?: ApiInit) {
     return requestJson<T>('PATCH', path, body, init);
   },
@@ -174,5 +180,6 @@ export const api: ApiClient = Object.assign(baseCallable, {
 // Optional named helpers if needed elsewhere
 export const apiGet = api.get;
 export const apiPost = api.post;
+export const apiPut = api.put;
 export const apiPatch = api.patch;
 export const apiDelete = api.delete;

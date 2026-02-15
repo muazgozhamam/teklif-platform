@@ -6,7 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint \"{app,src,lib}/**/*.{js,jsx,ts,tsx}\" --ignore-pattern .next/** --ignore-pattern .cache/** --ignore-pattern apps/dashboard/** --max-warnings 0"
+    "lint": "eslint \"app/**/*.{js,jsx,ts,tsx}\" \"src/**/*.{js,jsx,ts,tsx}\" \"lib/**/*.{js,jsx,ts,tsx}\" --ignore-pattern \".next/**\" --ignore-pattern \".cache/**\" --max-warnings 0 --no-warn-ignored --ignore-pattern \"**/*.bak.ts\""
   },
   "dependencies": {
     "axios": "^1.13.2",

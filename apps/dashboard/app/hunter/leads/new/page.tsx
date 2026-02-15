@@ -89,7 +89,7 @@ ${t.slice(0, 200)}`);
       }
 
       setResult({ leadId });
-    } catch (err) {
+    } catch {
       alert('Lead gönderilemedi (network).');
     } finally {
       setSubmitting(false);
