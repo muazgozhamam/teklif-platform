@@ -3,6 +3,8 @@
 
 import React from 'react';
 import RoleShell from '@/app/_components/RoleShell';
+import { AlertMessage } from '@/app/_components/UiFeedback';
+import { requireRole } from '@/lib/auth';
 
 type OnboardingItem = {
   user: {
@@ -48,6 +50,7 @@ async function api<T>(path: string): Promise<T> {
 }
 
 export default function AdminOnboardingPage() {
+  const [allowed, setAllowed] = React.useState(false);
   const [rows, setRows] = React.useState<OnboardingItem[]>([]);
   const [role, setRole] = React.useState<string>('ALL');
   const [take, setTake] = React.useState<number>(20);
@@ -75,8 +78,21 @@ export default function AdminOnboardingPage() {
   }, [role, skip, take]);
 
   React.useEffect(() => {
+    setAllowed(requireRole(['ADMIN']));
+  }, []);
+
+  React.useEffect(() => {
+    if (!allowed) return;
     load();
-  }, [load]);
+  }, [allowed, load]);
+
+  if (!allowed) {
+    return (
+      <main style={{ padding: 24, maxWidth: 960, margin: '0 auto', opacity: 0.8 }}>
+        <div>Yükleniyor…</div>
+      </main>
+    );
+  }
 
   const pageIndex = Math.floor(skip / take) + 1;
   const totalPages = Math.max(1, Math.ceil(total / take));
@@ -144,11 +160,7 @@ export default function AdminOnboardingPage() {
         </div>
       </div>
 
-      {error && (
-        <div style={{ marginTop: 12, padding: 12, borderRadius: 12, background: '#fff5f5', border: '1px solid #ffd6d6' }}>
-          <strong>Hata:</strong> {error}
-        </div>
-      )}
+      {error ? <AlertMessage type="error" message={error} /> : null}
 
       <div style={{ marginTop: 16, border: '1px solid #eee', borderRadius: 14, overflow: 'hidden' }}>
         <div style={{ padding: 12, borderBottom: '1px solid #eee', background: '#fafafa', fontWeight: 600 }}>

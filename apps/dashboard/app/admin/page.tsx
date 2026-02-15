@@ -2,7 +2,9 @@
 
 import React from 'react';
 import RoleShell from '@/app/_components/RoleShell';
+import { AlertMessage } from '@/app/_components/UiFeedback';
 import { api } from '@/lib/api';
+import { requireRole } from '@/lib/auth';
 
 type AdminStats = {
   role: 'ADMIN';
@@ -13,11 +15,17 @@ type AdminStats = {
 };
 
 export default function AdminHomePage() {
+  const [allowed, setAllowed] = React.useState(false);
   const [stats, setStats] = React.useState<AdminStats | null>(null);
   const [statsLoading, setStatsLoading] = React.useState(true);
   const [statsErr, setStatsErr] = React.useState<string | null>(null);
 
   React.useEffect(() => {
+    setAllowed(requireRole(['ADMIN']));
+  }, []);
+
+  React.useEffect(() => {
+    if (!allowed) return;
     let mounted = true;
     async function loadStats() {
       setStatsLoading(true);
@@ -43,7 +51,15 @@ export default function AdminHomePage() {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [allowed]);
+
+  if (!allowed) {
+    return (
+      <main style={{ padding: 24, maxWidth: 960, margin: '0 auto', opacity: 0.8 }}>
+        <div>Yükleniyor…</div>
+      </main>
+    );
+  }
 
   return (
     <RoleShell
@@ -87,7 +103,7 @@ export default function AdminHomePage() {
           </>
         )}
       </div>
-      {statsErr ? <div style={{ marginBottom: 12, color: 'crimson' }}>{statsErr}</div> : null}
+      {statsErr ? <AlertMessage type="error" message={statsErr} /> : null}
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))', gap: 12 }}>
         <a href="/admin/users" style={{ textDecoration: 'none', color: '#1f1b16', border: '1px solid #e2dbd1', borderRadius: 14, padding: 16, background: '#fff' }}>
