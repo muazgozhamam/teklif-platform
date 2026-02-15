@@ -56,3 +56,4 @@
 | 11.3 Admin ops filter expansion | DONE |  | `apps/dashboard/app/admin/users/page.tsx`, `apps/dashboard/app/admin/audit/page.tsx` | Users role/active filters and audit from/to filters added |
 | 11.4 Broker/Consultant handoff polish | DONE |  | `apps/dashboard/app/consultant/inbox/page.tsx`, `apps/dashboard/app/broker/leads/pending/page.tsx` | `dealId` query focus and handoff UX improved |
 | 11.5 Phase 2 signoff pack | DONE |  | `scripts/smoke-frontend-phase2-signoff.sh`, `FRONTEND_PHASE2_DEMO.md` | Final signoff runner + demo document added |
+| 12.1 Phase 3 readiness gate (build/env/health) | DONE |  | `scripts/smoke-phase3-readiness.sh`, `PHASE3_PROD_READINESS.md` | Tek komutla pre-prod teknik kapilar kontrol ediliyor |
