@@ -27,9 +27,28 @@ jobs:
       - name: Install deps
         run: pnpm install --frozen-lockfile
 
+      - name: Prepare API env
+        run: |
+          cat > apps/api/.env <<'ENV'
+          DATABASE_URL=postgresql://teklif:teklif@localhost:5432/teklif?schema=public
+          PORT=3001
+          JWT_SECRET=ci-jwt-secret
+          JWT_REFRESH_SECRET=ci-jwt-refresh-secret
+          ACCESS_TOKEN_EXPIRES_IN=15m
+          REFRESH_TOKEN_EXPIRES_IN=7d
+          VALIDATION_STRICT_ENABLED=1
+          RATE_LIMIT_ENABLED=1
+          RATE_LIMIT_WINDOW_MS=60000
+          RATE_LIMIT_MAX=500
+          RATE_LIMIT_AUTH_MAX=100
+          DEV_SEED=1
+          NETWORK_COMMISSIONS_ENABLED=0
+          COMMISSION_ALLOCATION_ENABLED=0
+          DASHBOARD_STATS_CACHE_TTL_MS=5000
+          BACKGROUND_JOB_RETRY_BASE_MS=100
+          ENV
+
       - name: Prisma generate
-        env:
-          DATABASE_URL: postgresql://teklif:teklif@localhost:5432/teklif?schema=public
         run: pnpm -C apps/api exec prisma generate
 
       - name: API tests
@@ -81,9 +100,6 @@ jobs:
       - name: Install deps
         run: pnpm install --frozen-lockfile
 
-      - name: Prisma generate
-        run: pnpm -C apps/api exec prisma generate
-
       - name: Prepare API env
         run: |
           cat > apps/api/.env <<'ENV'
@@ -104,6 +120,9 @@ jobs:
           DASHBOARD_STATS_CACHE_TTL_MS=5000
           BACKGROUND_JOB_RETRY_BASE_MS=100
           ENV
+
+      - name: Prisma generate
+        run: pnpm -C apps/api exec prisma generate
 
       - name: Run migrations
         run: pnpm -C apps/api exec prisma migrate deploy
