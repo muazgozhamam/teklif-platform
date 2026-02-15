@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState, useRef } from 'react';
 import { api } from '@/lib/api';
 import RoleShell from '@/app/_components/RoleShell';
+import { AlertMessage } from '@/app/_components/UiFeedback';
 import { requireRole } from '@/lib/auth';
 function getErrMsg(e: unknown, fallback: string) {
   try {
@@ -31,7 +32,7 @@ type Lead = {
 };
 
 export default function PendingLeadsPage() {
-  const [allowed, setAllowed] = useState(false);
+  const [allowed] = useState(() => requireRole(['BROKER']));
   const [items, setItems] = useState<Lead[]>([]);
   const [total, setTotal] = useState<number>(0);
 
@@ -201,10 +202,6 @@ const [lastDealId, setLastDealId] = useState<string | null>(null);
   }
 
   useEffect(() => {
-    setAllowed(requireRole(['BROKER']));
-  }, []);
-
-  useEffect(() => {
     if (!allowed) return;
     void load(page, pageSize);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -280,9 +277,7 @@ const [lastDealId, setLastDealId] = useState<string | null>(null);
           </div>
         </div>
 
-        {error ? (
-          <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</div>
-        ) : null}
+        {error ? <AlertMessage type="error" message={error} /> : null}
 
         {actionMsg ? (
           <div className="rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">
