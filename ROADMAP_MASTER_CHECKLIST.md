@@ -65,3 +65,4 @@
 | 12.7 PR/merge hizlandirma standardi | DONE |  | `.github/pull_request_template.md`, `PR_WORKFLOW_SATDEDI.md` | PR metni ve merge akisi tek formatta standardize edildi |
 | 12.8 GitHub auto-merge setup standardi | DONE |  | `GITHUB_AUTOMERGE_SETUP.md` | Branch protection + required checks + auto-merge akisi dokumante edildi |
 | 12.9 satdedi cutover verification pack | DONE |  | `scripts/ops/satdedi-cutover-verify.sh`, `SATDEDI_CUTOVER_CHECKLIST.md` | Domain gecis aninda yeni host sagligi tek komutta dogrulanir |
+| 13.1 Frontend Phase 3 operasyon gorunurlugu | DONE |  | `apps/dashboard/app/_components/RoleShell.tsx` | Tum rol ekranlarina Ortam etiketi + operasyon durumu mikro-bileseni eklendi |
