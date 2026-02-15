@@ -2,7 +2,9 @@
 
 import React from 'react';
 import RoleShell from '@/app/_components/RoleShell';
+import { AlertMessage } from '@/app/_components/UiFeedback';
 import { api } from '@/lib/api';
+import { requireRole } from '@/lib/auth';
 
 type BrokerStats = {
   role: 'BROKER';
@@ -12,11 +14,13 @@ type BrokerStats = {
 };
 
 export default function BrokerRootPage() {
+  const [allowed] = React.useState(() => requireRole(['BROKER']));
   const [stats, setStats] = React.useState<BrokerStats | null>(null);
   const [statsLoading, setStatsLoading] = React.useState(true);
   const [statsErr, setStatsErr] = React.useState<string | null>(null);
 
   React.useEffect(() => {
+    if (!allowed) return;
     let mounted = true;
     async function loadStats() {
       setStatsLoading(true);
@@ -42,7 +46,15 @@ export default function BrokerRootPage() {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [allowed]);
+
+  if (!allowed) {
+    return (
+      <main style={{ padding: 24, maxWidth: 960, margin: '0 auto', opacity: 0.8 }}>
+        <div>Yükleniyor…</div>
+      </main>
+    );
+  }
 
   return (
     <RoleShell
@@ -80,7 +92,7 @@ export default function BrokerRootPage() {
           </>
         )}
       </div>
-      {statsErr ? <div style={{ marginBottom: 12, color: 'crimson' }}>{statsErr}</div> : null}
+      {statsErr ? <AlertMessage type="error" message={statsErr} /> : null}
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))', gap: 12 }}>
         <a href="/broker/leads/pending" style={{ textDecoration: 'none', color: '#1f1b16', border: '1px solid #e2dbd1', borderRadius: 14, padding: 16, background: '#fff' }}>
