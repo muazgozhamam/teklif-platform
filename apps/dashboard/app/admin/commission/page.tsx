@@ -88,7 +88,9 @@ export default function AdminCommissionPage() {
       title="Komisyon Yapılandırması"
       subtitle="Temel oran ve dağılım yüzdeleri."
       nav={[
+        { href: '/admin', label: 'Panel' },
         { href: '/admin/users', label: 'Kullanıcılar' },
+        { href: '/admin/audit', label: 'Denetim' },
         { href: '/admin/onboarding', label: 'Uyum Süreci' },
         { href: '/admin/commission', label: 'Komisyon' },
       ]}
