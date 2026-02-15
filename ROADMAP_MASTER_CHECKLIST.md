@@ -61,3 +61,4 @@
 | 12.3 satdedi.com domain go-live checklist | DONE |  | `scripts/ops/satdedi-domain-readiness.sh`, `SATDEDI_DOMAIN_GO_LIVE.md` | Domain/API host + SSL + health kontrolleri tek akista dogrulanir |
 | 12.4 satdedi.com post go-live smoke | DONE |  | `scripts/ops/satdedi-post-go-live-smoke.sh`, `SATDEDI_POST_GO_LIVE.md` | Canli sonrasi ilk 5 dakikada public + auth + health dogrulamasi |
 | 12.5 satdedi.com operations handover | DONE |  | `SATDEDI_OPS_HANDOVER.md` | Gunluk/haftalik runbook ve deploy/incident akisi tek referansta toplandi |
+| 12.6 satdedi.com release-day one-shot | DONE |  | `scripts/ops/satdedi-release-day.sh`, `SATDEDI_RELEASE_DAY.md` | Signoff + domain readiness + post-go-live smoke tek komutta toplandi |
