@@ -4,6 +4,7 @@
 import React from 'react';
 import RoleShell from '@/app/_components/RoleShell';
 import { AlertMessage } from '@/app/_components/UiFeedback';
+import { requireRole } from '@/lib/auth';
 
 type AuditItem = {
   id: string;
@@ -38,6 +39,7 @@ async function api<T>(path: string): Promise<T> {
 }
 
 export default function AdminAuditPage() {
+  const [allowed, setAllowed] = React.useState(false);
   const [rows, setRows] = React.useState<AuditItem[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
@@ -70,8 +72,21 @@ export default function AdminAuditPage() {
   }, [action, entityType, q, skip, take]);
 
   React.useEffect(() => {
+    setAllowed(requireRole(['ADMIN']));
+  }, []);
+
+  React.useEffect(() => {
+    if (!allowed) return;
     load();
-  }, [load]);
+  }, [allowed, load]);
+
+  if (!allowed) {
+    return (
+      <main style={{ padding: 24, maxWidth: 960, margin: '0 auto', opacity: 0.8 }}>
+        <div>Yükleniyor…</div>
+      </main>
+    );
+  }
 
   const page = Math.floor(skip / take) + 1;
   const totalPages = Math.max(1, Math.ceil(total / take));
