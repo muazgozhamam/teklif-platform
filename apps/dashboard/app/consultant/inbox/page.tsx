@@ -2,6 +2,9 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { api } from '@/lib/api';
+import RoleShell from '@/app/_components/RoleShell';
+import { AlertMessage } from '@/app/_components/UiFeedback';
+import { requireRole } from '@/lib/auth';
 
 type JsonObject = Record<string, unknown>;
 
@@ -114,6 +117,7 @@ function getLocalUserId() {
 }
 
 export default function ConsultantInboxPage() {
+  const [allowed, setAllowed] = useState(false);
   const [tab, setTab] = useState<'pending' | 'mine'>('pending');
   const [pending, setPending] = useState<Deal[]>([]);
   const [mine, setMine] = useState<Deal[]>([]);
@@ -131,6 +135,7 @@ export default function ConsultantInboxPage() {
   useEffect(() => {
     // Hydration-safe: read localStorage after mount
     setUid(getLocalUserId());
+    setAllowed(requireRole(['CONSULTANT']));
   }, []);
 
   const listRaw = useMemo(() => (tab === 'pending' ? pending : mine), [tab, pending, mine]);
@@ -201,8 +206,9 @@ export default function ConsultantInboxPage() {
   }
 
   useEffect(() => {
+    if (!allowed) return;
     refresh();
-  }, []);
+  }, [allowed]);
 
   useEffect(() => {
     let mounted = true;
@@ -269,8 +275,26 @@ export default function ConsultantInboxPage() {
       setBusyId(null);
     }
   }
+  if (!allowed) {
+    return (
+      <main style={{ padding: 24, maxWidth: 960, margin: '0 auto', opacity: 0.8 }}>
+        <div>Yükleniyor…</div>
+      </main>
+    );
+  }
+
   return (
-    <div style={{ padding: 20, maxWidth: 1100, margin: '0 auto' }}>
+    <RoleShell
+      role="CONSULTANT"
+      title="Danışman Gelen Kutusu"
+      subtitle="Atanmış deal’leri sahiplen, ilan üret ve akışı yönet."
+      nav={[
+        { href: '/consultant', label: 'Panel' },
+        { href: '/consultant/inbox', label: 'Gelen Kutusu' },
+        { href: '/consultant/listings', label: 'İlanlar' },
+      ]}
+    >
+    <div style={{ padding: 2, maxWidth: 1100, margin: '0 auto' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
         <div>
           <div style={{ fontSize: 20, fontWeight: 900 }}>Danışman Gelen Kutusu</div>
@@ -360,7 +384,7 @@ export default function ConsultantInboxPage() {
       </div>
 
       {loading && <div style={{ marginTop: 12 }}>Yükleniyor...</div>}
-      {err && <div style={{ marginTop: 12, color: 'crimson' }}>{err}</div>}
+      {err ? <AlertMessage type="error" message={err} /> : null}
 
       <div style={{ marginTop: 16 }}>
         {list.length === 0 && !loading && !err && (
@@ -463,5 +487,6 @@ export default function ConsultantInboxPage() {
         })}
       </div>
     </div>
+    </RoleShell>
   );
 }
