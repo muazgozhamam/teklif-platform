@@ -16,14 +16,10 @@ type ConsultantStats = {
 };
 
 export default function ConsultantHome() {
-  const [allowed, setAllowed] = React.useState(false);
+  const [allowed] = React.useState(() => requireRole(['CONSULTANT']));
   const [stats, setStats] = React.useState<ConsultantStats | null>(null);
   const [statsLoading, setStatsLoading] = React.useState(true);
   const [statsErr, setStatsErr] = React.useState<string | null>(null);
-
-  React.useEffect(() => {
-    setAllowed(requireRole(['CONSULTANT']));
-  }, []);
 
   React.useEffect(() => {
     if (!allowed) return;

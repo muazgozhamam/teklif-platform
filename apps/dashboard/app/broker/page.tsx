@@ -14,14 +14,10 @@ type BrokerStats = {
 };
 
 export default function BrokerRootPage() {
-  const [allowed, setAllowed] = React.useState(false);
+  const [allowed] = React.useState(() => requireRole(['BROKER']));
   const [stats, setStats] = React.useState<BrokerStats | null>(null);
   const [statsLoading, setStatsLoading] = React.useState(true);
   const [statsErr, setStatsErr] = React.useState<string | null>(null);
-
-  React.useEffect(() => {
-    setAllowed(requireRole(['BROKER']));
-  }, []);
 
   React.useEffect(() => {
     if (!allowed) return;
