@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { api } from '@/lib/api';
 import RoleShell from '@/app/_components/RoleShell';
 import { AlertMessage } from '@/app/_components/UiFeedback';
@@ -117,6 +118,7 @@ function getLocalUserId() {
 }
 
 export default function ConsultantInboxPage() {
+  const searchParams = useSearchParams();
   const [allowed] = useState(() => requireRole(['CONSULTANT']));
   const [tab, setTab] = useState<'pending' | 'mine'>('pending');
   const [pending, setPending] = useState<Deal[]>([]);
@@ -129,6 +131,7 @@ export default function ConsultantInboxPage() {
   const [stats, setStats] = useState<ConsultantStats | null>(null);
   const [statsLoading, setStatsLoading] = useState(true);
   const [statsErr, setStatsErr] = useState<string | null>(null);
+  const [focusedDealId, setFocusedDealId] = useState('');
 
   const [uid, setUid] = useState<string>('');
 
@@ -136,6 +139,18 @@ export default function ConsultantInboxPage() {
     // Hydration-safe: read localStorage after mount
     setUid(getLocalUserId());
   }, []);
+
+  useEffect(() => {
+    const dealId = String(searchParams.get('dealId') || '').trim();
+    const requestedTab = String(searchParams.get('tab') || '').trim().toLowerCase();
+    if (dealId) {
+      setFocusedDealId(dealId);
+      setQ(dealId);
+    }
+    if (requestedTab === 'mine' || requestedTab === 'pending') {
+      setTab(requestedTab);
+    }
+  }, [searchParams]);
 
   const listRaw = useMemo(() => (tab === 'pending' ? pending : mine), [tab, pending, mine]);
 
@@ -175,6 +190,14 @@ export default function ConsultantInboxPage() {
     });
   }, [listActiveRaw, q]);
 
+  useEffect(() => {
+    if (!focusedDealId) return;
+    const inMine = mine.some((d) => d.id === focusedDealId);
+    const inPending = pending.some((d) => d.id === focusedDealId);
+    if (inMine && tab !== 'mine') setTab('mine');
+    if (!inMine && inPending && tab !== 'pending') setTab('pending');
+  }, [focusedDealId, mine, pending, tab]);
+
   async function refresh() {
     setLoading(true);
     setErr(null);
@@ -210,7 +233,6 @@ export default function ConsultantInboxPage() {
   }, [allowed]);
 
   useEffect(() => {
-    if (!allowed) return;
     let mounted = true;
     async function loadStats() {
       setStatsLoading(true);
@@ -236,7 +258,7 @@ export default function ConsultantInboxPage() {
     return () => {
       mounted = false;
     };
-  }, [allowed]);
+  }, []);
 
   async function assignToMe(dealId: string) {
     const uid = getLocalUserId();
@@ -355,7 +377,7 @@ export default function ConsultantInboxPage() {
             </div>
           </div>
         )}
-        {statsErr ? <AlertMessage type="error" message={statsErr} /> : null}
+        {statsErr ? <div style={{ marginTop: 8, color: 'crimson' }}>{statsErr}</div> : null}
       </div>
 
       <div style={{ marginTop: 12, display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
@@ -380,6 +402,18 @@ export default function ConsultantInboxPage() {
           />
           Tamamlananları göster (WON/LOST)
         </label>
+        {focusedDealId ? (
+          <button
+            type="button"
+            onClick={() => {
+              setFocusedDealId('');
+              setQ('');
+            }}
+            style={{ padding: '8px 10px', border: '1px solid #ddd', borderRadius: 10, background: '#fff', fontSize: 12 }}
+          >
+            Hedef Deal Temizle
+          </button>
+        ) : null}
 
       </div>
 
@@ -401,6 +435,7 @@ export default function ConsultantInboxPage() {
               key={d.id}
               style={{
                 border: '1px solid #eee',
+                outline: focusedDealId && d.id === focusedDealId ? '2px solid #2563eb' : 'none',
                 borderRadius: 14,
                 padding: 14,
                 marginBottom: 12,
