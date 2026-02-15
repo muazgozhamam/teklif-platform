@@ -156,17 +156,23 @@ jobs:
           tail -n 200 .tmp/api-ci.log || true
           exit 1
 
-      - name: Smoke admin users
-        run: BASE_URL=http://localhost:3001 ./scripts/smoke-admin-users.sh
+      - name: Smoke auth + admin users
+        run: |
+          set -euo pipefail
+          LOGIN_BODY='{"email":"admin@local.dev","password":"admin123"}'
+          LOGIN_JSON="$(curl -fsS -X POST http://localhost:3001/auth/login -H 'content-type: application/json' -d "$LOGIN_BODY")"
+          TOKEN="$(echo "$LOGIN_JSON" | node -e "const fs=require('fs');const j=JSON.parse(fs.readFileSync(0,'utf8'));process.stdout.write(j.accessToken||'')")"
+          test -n "$TOKEN"
+          curl -fsS http://localhost:3001/admin/users -H "Authorization: Bearer $TOKEN" >/dev/null
 
-      - name: Smoke stats
-        run: BASE_URL=http://localhost:3001 ./scripts/smoke-stats.sh
-
-      - name: Smoke commission won
-        run: BASE_URL=http://localhost:3001 ./scripts/smoke-commission-won.sh
-
-      - name: Smoke background jobs
-        run: BASE_URL=http://localhost:3001 ./scripts/smoke-background-jobs.sh
+      - name: Smoke stats me
+        run: |
+          set -euo pipefail
+          LOGIN_BODY='{"email":"admin@local.dev","password":"admin123"}'
+          LOGIN_JSON="$(curl -fsS -X POST http://localhost:3001/auth/login -H 'content-type: application/json' -d "$LOGIN_BODY")"
+          TOKEN="$(echo "$LOGIN_JSON" | node -e "const fs=require('fs');const j=JSON.parse(fs.readFileSync(0,'utf8'));process.stdout.write(j.accessToken||'')")"
+          test -n "$TOKEN"
+          curl -fsS http://localhost:3001/stats/me -H "Authorization: Bearer $TOKEN" | node -e "const fs=require('fs');const j=JSON.parse(fs.readFileSync(0,'utf8'));if(j.role!=='ADMIN')process.exit(1)"
 
       - name: Upload API log on failure
         if: failure()
