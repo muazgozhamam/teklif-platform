@@ -49,6 +49,8 @@ jobs:
           ENV
 
       - name: Prisma generate
+        env:
+          DATABASE_URL: postgresql://teklif:teklif@localhost:5432/teklif?schema=public
         run: pnpm -C apps/api exec prisma generate
 
       - name: API tests
@@ -122,6 +124,8 @@ jobs:
           ENV
 
       - name: Prisma generate
+        env:
+          DATABASE_URL: postgresql://teklif:teklif@localhost:5432/teklif?schema=public
         run: pnpm -C apps/api exec prisma generate
 
       - name: Run migrations
