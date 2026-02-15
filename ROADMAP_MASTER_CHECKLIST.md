@@ -51,3 +51,8 @@
 | 10.3 Frontend role landing + KPI read-only | DONE |  | `apps/dashboard/app/admin/page.tsx`, `apps/dashboard/app/broker/page.tsx`, `apps/dashboard/app/consultant/page.tsx` | Admin/Broker/Consultant landing pages show role metrics from `/stats/me` |
 | 10.4 Frontend smoke + demo pack | DONE |  | `scripts/smoke-frontend-phase1.sh`, `FRONTEND_PHASE1_DEMO.md` | Runtime smoke passed on local (`smoke-frontend-phase1 OK`) |
 | 10.5 Frontend Phase 1 signoff runner | DONE |  | `scripts/smoke-frontend-phase1-signoff.sh`, `FRONTEND_PHASE1_DEMO.md` | Tek komutluk signoff akışı eklendi (dev-up + smoke + health checks) |
+| 11.1 Phase 2 role landing deepening | DONE |  | `apps/dashboard/app/admin/page.tsx`, `apps/dashboard/app/broker/page.tsx`, `apps/dashboard/app/consultant/page.tsx` | Landing pages gained refresh control + last updated operational hint |
+| 11.2 Public listings UX upgrade | DONE |  | `apps/dashboard/app/listings/page.tsx` | Query-based filter, pagination, empty/error handling, card layout |
+| 11.3 Admin ops filter expansion | DONE |  | `apps/dashboard/app/admin/users/page.tsx`, `apps/dashboard/app/admin/audit/page.tsx` | Users role/active filters and audit from/to filters added |
+| 11.4 Broker/Consultant handoff polish | DONE |  | `apps/dashboard/app/consultant/inbox/page.tsx`, `apps/dashboard/app/broker/leads/pending/page.tsx` | `dealId` query focus and handoff UX improved |
+| 11.5 Phase 2 signoff pack | DONE |  | `scripts/smoke-frontend-phase2-signoff.sh`, `FRONTEND_PHASE2_DEMO.md` | Final signoff runner + demo document added |
