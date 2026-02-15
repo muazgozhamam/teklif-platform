@@ -117,7 +117,7 @@ function getLocalUserId() {
 }
 
 export default function ConsultantInboxPage() {
-  const [allowed, setAllowed] = useState(false);
+  const [allowed] = useState(() => requireRole(['CONSULTANT']));
   const [tab, setTab] = useState<'pending' | 'mine'>('pending');
   const [pending, setPending] = useState<Deal[]>([]);
   const [mine, setMine] = useState<Deal[]>([]);
@@ -135,7 +135,6 @@ export default function ConsultantInboxPage() {
   useEffect(() => {
     // Hydration-safe: read localStorage after mount
     setUid(getLocalUserId());
-    setAllowed(requireRole(['CONSULTANT']));
   }, []);
 
   const listRaw = useMemo(() => (tab === 'pending' ? pending : mine), [tab, pending, mine]);
@@ -211,6 +210,7 @@ export default function ConsultantInboxPage() {
   }, [allowed]);
 
   useEffect(() => {
+    if (!allowed) return;
     let mounted = true;
     async function loadStats() {
       setStatsLoading(true);
@@ -236,7 +236,7 @@ export default function ConsultantInboxPage() {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [allowed]);
 
   async function assignToMe(dealId: string) {
     const uid = getLocalUserId();
@@ -355,7 +355,7 @@ export default function ConsultantInboxPage() {
             </div>
           </div>
         )}
-        {statsErr ? <div style={{ marginTop: 8, color: 'crimson' }}>{statsErr}</div> : null}
+        {statsErr ? <AlertMessage type="error" message={statsErr} /> : null}
       </div>
 
       <div style={{ marginTop: 12, display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>

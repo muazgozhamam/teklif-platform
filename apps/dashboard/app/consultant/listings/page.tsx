@@ -107,7 +107,7 @@ function titleFrom(l: Listing) {
 type Tab = 'all' | 'draft' | 'published';
 
 export default function ConsultantListingsPage() {
-  const [allowed, setAllowed] = useState(false);
+  const [allowed] = useState(() => requireRole(['CONSULTANT']));
   const [tab, setTab] = useState<Tab>('all');
   const [q, setQ] = useState('');
   const [loading, setLoading] = useState(false);
@@ -157,10 +157,6 @@ export default function ConsultantListingsPage() {
       setLoading(false);
     }
   }
-
-  useEffect(() => {
-    setAllowed(requireRole(['CONSULTANT']));
-  }, []);
 
   useEffect(() => {
     if (!allowed) return;

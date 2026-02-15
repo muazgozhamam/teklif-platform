@@ -9,20 +9,18 @@ function getApiMsg(e: unknown, fallback: string) {
   return fallback;
 }
 
-
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
+import RoleShell from '@/app/_components/RoleShell';
+import { AlertMessage } from '@/app/_components/UiFeedback';
 import { api } from '@/lib/api';
 import { requireRole } from '@/lib/auth';
 
 export default function NewDealPage() {
+  const [allowed] = useState(() => requireRole(['BROKER', 'ADMIN']));
   const [leadId, setLeadId] = useState('');
   const [salePrice, setSalePrice] = useState<number>(5000000);
   const [commissionRate, setCommissionRate] = useState<number>(0.04);
-  const [msg, setMsg] = useState<string | null>(null);
-
-  useEffect(() => {
-    requireRole(['BROKER', 'ADMIN']);
-  }, []);
+  const [msg, setMsg] = useState<{ type: 'error' | 'success'; text: string } | null>(null);
 
   const commissionTotal = useMemo(() => Number((salePrice * commissionRate).toFixed(2)), [salePrice, commissionRate]);
 
@@ -30,56 +28,74 @@ export default function NewDealPage() {
     setMsg(null);
     try {
       const res = await api.post('/broker/deals', { leadId, salePrice, commissionRate });
-      setMsg(`Deal oluşturuldu: ${res.data.id}`);
+      setMsg({ type: 'success', text: `Deal oluşturuldu: ${res.data.id}` });
       window.location.href = `/broker/deals/${res.data.id}/ledger`;
     } catch (err: unknown) {
-      setMsg(getApiMsg(err, 'Deal oluşturma başarısız'));
+      setMsg({ type: 'error', text: getApiMsg(err, 'Deal oluşturma başarısız') });
     }
   }
 
+  if (!allowed) {
+    return (
+      <main style={{ padding: 24, maxWidth: 960, margin: '0 auto', opacity: 0.8 }}>
+        <div>Yükleniyor…</div>
+      </main>
+    );
+  }
+
   return (
-    <div style={{ maxWidth: 680, margin: '24px auto', fontFamily: 'system-ui' }}>
-      <h1>Deal Oluştur</h1>
+    <RoleShell
+      role="BROKER"
+      title="Deal Oluştur"
+      subtitle="Lead üzerinden manuel deal aç."
+      nav={[
+        { href: '/broker', label: 'Panel' },
+        { href: '/broker/leads/pending', label: 'Bekleyen Leadler' },
+        { href: '/broker/deals/new', label: 'Yeni Deal' },
+        { href: '/broker/hunter-applications', label: 'Hunter Başvuruları' },
+      ]}
+    >
+      <div style={{ maxWidth: 680, margin: '0 auto' }}>
+        <div style={{ display: 'grid', gap: 10 }}>
+          <label>
+            Lead ID
+            <input value={leadId} onChange={(e) => setLeadId(e.target.value)} style={{ width: '100%', padding: 10 }} />
+          </label>
 
-      <div style={{ display: 'grid', gap: 10 }}>
-        <label>
-          Lead ID
-          <input value={leadId} onChange={(e) => setLeadId(e.target.value)} style={{ width: '100%', padding: 10 }} />
-        </label>
+          <label>
+            Satış Fiyatı
+            <input
+              type="number"
+              value={salePrice}
+              onChange={(e) => setSalePrice(Number(e.target.value))}
+              style={{ width: '100%', padding: 10 }}
+            />
+          </label>
 
-        <label>
-          Satış Fiyatı
-          <input
-            type="number"
-            value={salePrice}
-            onChange={(e) => setSalePrice(Number(e.target.value))}
-            style={{ width: '100%', padding: 10 }}
-          />
-        </label>
+          <label>
+            Komisyon Oranı (örn: 0.04)
+            <input
+              type="number"
+              step="0.001"
+              value={commissionRate}
+              onChange={(e) => setCommissionRate(Number(e.target.value))}
+              style={{ width: '100%', padding: 10 }}
+            />
+          </label>
 
-        <label>
-          Komisyon Oranı (örn: 0.04)
-          <input
-            type="number"
-            step="0.001"
-            value={commissionRate}
-            onChange={(e) => setCommissionRate(Number(e.target.value))}
-            style={{ width: '100%', padding: 10 }}
-          />
-        </label>
+          <div style={{ color: '#666' }}>Toplam Komisyon: {commissionTotal}</div>
 
-        <div style={{ color: '#666' }}>Toplam Komisyon: {commissionTotal}</div>
+          <button onClick={createDeal} style={{ padding: 12 }}>
+            Deal Oluştur
+          </button>
 
-        <button onClick={createDeal} style={{ padding: 12 }}>
-          Deal Oluştur
-        </button>
+          <button onClick={() => (window.location.href = '/broker/leads/pending')} style={{ padding: 12 }}>
+            Geri
+          </button>
 
-        <button onClick={() => (window.location.href = '/broker/leads/pending')} style={{ padding: 12 }}>
-          Geri
-        </button>
-
-        {msg && <div style={{ color: msg.startsWith('Deal oluşturuldu') ? 'green' : 'crimson' }}>{msg}</div>}
+          {msg ? <AlertMessage type={msg.type} message={msg.text} /> : null}
+        </div>
       </div>
-    </div>
+    </RoleShell>
   );
 }
