@@ -2,6 +2,9 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { api } from '@/lib/api';
+import RoleShell from '@/app/_components/RoleShell';
+import { AlertMessage, ToastView, useToast } from '@/app/_components/UiFeedback';
+import { requireRole } from '@/lib/auth';
 
 type JsonObject = Record<string, unknown>;
 
@@ -104,6 +107,7 @@ function titleFrom(l: Listing) {
 type Tab = 'all' | 'draft' | 'published';
 
 export default function ConsultantListingsPage() {
+  const [allowed, setAllowed] = useState(false);
   const [tab, setTab] = useState<Tab>('all');
   const [q, setQ] = useState('');
   const [loading, setLoading] = useState(false);
@@ -114,6 +118,7 @@ export default function ConsultantListingsPage() {
 
   const [page, setPage] = useState(1);
   const pageSize = 12;
+  const { toast, show } = useToast();
 
   const userId =
     typeof window !== 'undefined' && window.localStorage
@@ -154,9 +159,14 @@ export default function ConsultantListingsPage() {
   }
 
   useEffect(() => {
+    setAllowed(requireRole(['CONSULTANT']));
+  }, []);
+
+  useEffect(() => {
+    if (!allowed) return;
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [allowed]);
 
   const all = useMemo(() => {
     const m = new Map<string, Listing>();
@@ -199,8 +209,26 @@ export default function ConsultantListingsPage() {
     window.location.href = `/consultant/listings/${id}`;
   }
 
+  if (!allowed) {
+    return (
+      <main style={{ padding: 24, maxWidth: 960, margin: '0 auto', opacity: 0.8 }}>
+        <div>Yükleniyor…</div>
+      </main>
+    );
+  }
+
   return (
-    <div style={{ padding: 22, maxWidth: 1150, margin: '0 auto' }}>
+    <RoleShell
+      role="CONSULTANT"
+      title="İlanlarım"
+      subtitle="Danışman olarak oluşturduğun ilanları durum bazlı yönet."
+      nav={[
+        { href: '/consultant', label: 'Panel' },
+        { href: '/consultant/inbox', label: 'Gelen Kutusu' },
+        { href: '/consultant/listings', label: 'İlanlar' },
+      ]}
+    >
+    <div style={{ padding: 2, maxWidth: 1150, margin: '0 auto' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
         <div>
           <div style={{ fontSize: 22, fontWeight: 950, letterSpacing: -0.2 }}>İlanlarım</div>
@@ -245,22 +273,7 @@ export default function ConsultantListingsPage() {
         />
       </div>
 
-      {err && (
-        <div
-          style={{
-            marginTop: 14,
-            padding: 12,
-            borderRadius: 14,
-            border: '1px solid #FECACA',
-            background: '#FEF2F2',
-            color: '#991B1B',
-            fontSize: 13,
-            fontWeight: 800,
-          }}
-        >
-          {err}
-        </div>
-      )}
+      {err ? <AlertMessage type="error" message={err} /> : null}
 
       <div style={{ marginTop: 14, color: '#6B7280', fontSize: 13 }}>
         Gösterilen <b>{view.length}</b> / <b>{list.length}</b> • Sayfa <b>{pageSafe}</b>/<b>{totalPages}</b>
@@ -314,9 +327,9 @@ export default function ConsultantListingsPage() {
                 onClick={async () => {
                   try {
                     await navigator.clipboard.writeText(l.id);
-                    alert('✅ İlan ID kopyalandı');
+                    show('success', 'İlan ID kopyalandı');
                   } catch {
-                    alert(l.id);
+                    show('info', l.id);
                   }
                 }}
               >
@@ -345,6 +358,8 @@ export default function ConsultantListingsPage() {
       <div style={{ marginTop: 10, color: '#6B7280', fontSize: 12 }}>
         Not: “Tümü” sekmesi DRAFT + PUBLISHED ayrı çekilip birleştirilir (API varsayılanı yalnızca PUBLISHED döndürebilir).
       </div>
+      <ToastView toast={toast} />
     </div>
+    </RoleShell>
   );
 }

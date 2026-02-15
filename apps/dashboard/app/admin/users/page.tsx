@@ -3,6 +3,8 @@
 
 import React from 'react';
 import RoleShell from '@/app/_components/RoleShell';
+import { AlertMessage } from '@/app/_components/UiFeedback';
+import { requireRole } from '@/lib/auth';
 
 type Role = 'USER' | 'BROKER' | 'ADMIN' | 'CONSULTANT' | 'HUNTER';
 
@@ -36,11 +38,16 @@ async function api<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export default function AdminUsersPage() {
+  const [allowed, setAllowed] = React.useState(false);
   const [rows, setRows] = React.useState<AdminUser[]>([]);
   const [q, setQ] = React.useState('');
   const [loading, setLoading] = React.useState(true);
   const [savingId, setSavingId] = React.useState<string | null>(null);
   const [error, setError] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    setAllowed(requireRole(['ADMIN']));
+  }, []);
 
   const load = React.useCallback(async () => {
     setLoading(true);
@@ -57,8 +64,17 @@ export default function AdminUsersPage() {
   }, [q]);
 
   React.useEffect(() => {
+    if (!allowed) return;
     load();
-  }, [load]);
+  }, [allowed, load]);
+
+  if (!allowed) {
+    return (
+      <main style={{ padding: 24, maxWidth: 960, margin: '0 auto', opacity: 0.8 }}>
+        <div>Yükleniyor…</div>
+      </main>
+    );
+  }
 
   async function patchUser(userId: string, patch: { role?: Role; isActive?: boolean }) {
     setSavingId(userId);
@@ -86,7 +102,9 @@ export default function AdminUsersPage() {
       title="Yönetici Kullanıcıları"
       subtitle="Kullanıcıları listele ve rol güncelle."
       nav={[
+        { href: '/admin', label: 'Panel' },
         { href: '/admin/users', label: 'Kullanıcılar' },
+        { href: '/admin/audit', label: 'Denetim' },
         { href: '/admin/onboarding', label: 'Uyum Süreci' },
         { href: '/admin/commission', label: 'Komisyon' },
       ]}
@@ -110,11 +128,7 @@ export default function AdminUsersPage() {
         />
       </div>
 
-      {error && (
-        <div style={{ marginTop: 12, padding: 12, borderRadius: 12, background: '#fff5f5', border: '1px solid #ffd6d6' }}>
-          <strong>Hata:</strong> {error}
-        </div>
-      )}
+      {error ? <AlertMessage type="error" message={error} /> : null}
 
       <div style={{ marginTop: 16, border: '1px solid #eee', borderRadius: 14, overflow: 'hidden' }}>
         <div style={{ padding: 12, borderBottom: '1px solid #eee', background: '#fafafa', fontWeight: 600 }}>

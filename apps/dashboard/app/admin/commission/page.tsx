@@ -3,6 +3,8 @@
 
 import React from 'react';
 import RoleShell from '@/app/_components/RoleShell';
+import { AlertMessage } from '@/app/_components/UiFeedback';
+import { requireRole } from '@/lib/auth';
 
 type Config = {
   id: string;
@@ -31,6 +33,7 @@ async function api<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export default function AdminCommissionPage() {
+  const [allowed, setAllowed] = React.useState(false);
   const [cfg, setCfg] = React.useState<Config | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [saving, setSaving] = React.useState(false);
@@ -50,8 +53,21 @@ export default function AdminCommissionPage() {
   }
 
   React.useEffect(() => {
-    load();
+    setAllowed(requireRole(['ADMIN']));
   }, []);
+
+  React.useEffect(() => {
+    if (!allowed) return;
+    load();
+  }, [allowed]);
+
+  if (!allowed) {
+    return (
+      <main style={{ padding: 24, maxWidth: 960, margin: '0 auto', opacity: 0.8 }}>
+        <div>Yükleniyor…</div>
+      </main>
+    );
+  }
 
   async function save() {
     if (!cfg) return;
@@ -88,17 +104,15 @@ export default function AdminCommissionPage() {
       title="Komisyon Yapılandırması"
       subtitle="Temel oran ve dağılım yüzdeleri."
       nav={[
+        { href: '/admin', label: 'Panel' },
         { href: '/admin/users', label: 'Kullanıcılar' },
+        { href: '/admin/audit', label: 'Denetim' },
         { href: '/admin/onboarding', label: 'Uyum Süreci' },
         { href: '/admin/commission', label: 'Komisyon' },
       ]}
     >
 
-      {err && (
-        <div style={{ marginTop: 12, padding: 12, borderRadius: 12, background: '#fff5f5', border: '1px solid #ffd6d6' }}>
-          <strong>Hata:</strong> {err}
-        </div>
-      )}
+      {err ? <AlertMessage type="error" message={err} /> : null}
 
       {loading && <div style={{ marginTop: 16 }}>Yükleniyor…</div>}
 

@@ -1,6 +1,9 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import RoleShell from '@/app/_components/RoleShell';
+import { AlertMessage, ToastView, useToast } from '@/app/_components/UiFeedback';
+import { requireRole } from '@/lib/auth';
 const API_BASE = (
   process.env.NEXT_PUBLIC_API_BASE_URL?.trim() ||
   process.env.NEXT_PUBLIC_API_BASE_URL ||
@@ -19,6 +22,7 @@ type DraftLead = {
 };
 
 export default function HunterNewLeadPage() {
+  const [allowed, setAllowed] = useState(false);
   const [draft, setDraft] = useState<DraftLead>({
     title: '',
     city: '',
@@ -30,6 +34,15 @@ export default function HunterNewLeadPage() {
 
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<{ leadId: string } | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const { toast, show } = useToast();
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setAllowed(requireRole(['HUNTER']));
+    }
+  }, []);
+
   const canSubmit = useMemo(() => {
     return draft.title.trim().length >= 3 && draft.city.trim().length >= 2;
   }, [draft.title, draft.city]);
@@ -40,6 +53,7 @@ export default function HunterNewLeadPage() {
 
     setSubmitting(true);
     setResult(null);
+    setError(null);
 
     // Hunter formunu şimdilik /leads initialText'e serialize ediyoruz.
     const initialText = [
@@ -68,8 +82,7 @@ export default function HunterNewLeadPage() {
 
       if (!r.ok) {
         const t = await r.text().catch(() => '');
-        alert(`Lead gönderilemedi. HTTP ${r.status}
-${t.slice(0, 200)}`);
+        setError(`Lead gönderilemedi. HTTP ${r.status} ${t.slice(0, 120)}`);
         return;
       }
 
@@ -84,30 +97,40 @@ ${t.slice(0, 200)}`);
       }
 
       if (!leadId) {
-        alert('Lead oluşturuldu ama leadId dönmedi. Response formatını kontrol etmemiz gerekiyor.');
+        setError('Lead oluşturuldu ama leadId dönmedi.');
         return;
       }
 
       setResult({ leadId });
-    } catch (err) {
-      alert('Lead gönderilemedi (network).');
+      show('success', 'Lead başarıyla gönderildi');
+    } catch {
+      setError('Lead gönderilemedi (ağ hatası).');
     } finally {
       setSubmitting(false);
     }
   }
 
-  return (
-    <main style={{ padding: 24, maxWidth: 960, margin: '0 auto' }}>
-      <div style={{ marginBottom: 16 }}>
-        <a href="/hunter" style={{ textDecoration: 'none', opacity: 0.85 }}>
-          ← Hunter Dashboard
-        </a>
-      </div>
+  if (!allowed) {
+    return (
+      <main style={{ padding: 24, maxWidth: 960, margin: '0 auto', opacity: 0.8 }}>
+        <div>Yükleniyor…</div>
+      </main>
+    );
+  }
 
-      <h1 style={{ fontSize: 24, fontWeight: 700, marginBottom: 8 }}>Lead Gönder</h1>
-      <p style={{ opacity: 0.8, marginBottom: 16 }}>
-        Bu ekran skeleton. Sonraki adımda API’ye bağlayıp lead’i sisteme düşüreceğiz.
-      </p>
+  return (
+    <RoleShell
+      role="HUNTER"
+      title="Yeni Lead Gönder"
+      subtitle="Satdedi ağına yeni müşteri talebini ekle."
+      nav={[
+        { href: '/hunter', label: 'Panel' },
+        { href: '/hunter/leads', label: 'Leadlerim' },
+        { href: '/hunter/leads/new', label: 'Yeni Lead' },
+      ]}
+    >
+
+      {error ? <AlertMessage type="error" message={error} /> : null}
 
       
       {result ? (
@@ -155,7 +178,7 @@ ${t.slice(0, 200)}`);
         </div>
       ) : null}
 
-<form
+      <form
         onSubmit={onSubmit}
         style={{
           border: '1px solid rgba(0,0,0,0.12)',
@@ -266,6 +289,7 @@ ${t.slice(0, 200)}`);
           </a>
         </div>
       </form>
-    </main>
+      <ToastView toast={toast} />
+    </RoleShell>
   );
 }

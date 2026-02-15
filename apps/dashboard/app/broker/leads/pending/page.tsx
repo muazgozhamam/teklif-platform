@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useState, useRef } from 'react';
 import { api } from '@/lib/api';
+import RoleShell from '@/app/_components/RoleShell';
+import { requireRole } from '@/lib/auth';
 function getErrMsg(e: unknown, fallback: string) {
   try {
     if (e instanceof Error && e.message) return e.message;
@@ -29,6 +31,7 @@ type Lead = {
 };
 
 export default function PendingLeadsPage() {
+  const [allowed, setAllowed] = useState(false);
   const [items, setItems] = useState<Lead[]>([]);
   const [total, setTotal] = useState<number>(0);
 
@@ -198,14 +201,38 @@ const [lastDealId, setLastDealId] = useState<string | null>(null);
   }
 
   useEffect(() => {
+    setAllowed(requireRole(['BROKER']));
+  }, []);
+
+  useEffect(() => {
+    if (!allowed) return;
     void load(page, pageSize);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, pageSize]);
+  }, [allowed, page, pageSize]);
 
   const totalPages = useMemo(() => Math.max(1, Math.ceil(total / pageSize)), [total, pageSize]);
 
+  if (!allowed) {
+    return (
+      <main style={{ padding: 24, maxWidth: 960, margin: '0 auto', opacity: 0.8 }}>
+        <div>Yükleniyor…</div>
+      </main>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-gray-50">
+    <RoleShell
+      role="BROKER"
+      title="Bekleyen Leadler"
+      subtitle="Onayla, reddet veya lead’den deal üret."
+      nav={[
+        { href: '/broker', label: 'Panel' },
+        { href: '/broker/leads/pending', label: 'Bekleyen Leadler' },
+        { href: '/broker/deals/new', label: 'Yeni Deal' },
+        { href: '/broker/hunter-applications', label: 'Hunter Başvuruları' },
+      ]}
+    >
+      <div className="min-h-screen bg-gray-50">
       <div className="mx-auto max-w-5xl space-y-4 px-4 py-6">
         <div className="flex items-start justify-between gap-3">
           <div>
@@ -362,6 +389,7 @@ const [lastDealId, setLastDealId] = useState<string | null>(null);
           </div>
         </div>
       </div>
-    </div>
+      </div>
+    </RoleShell>
   );
 }

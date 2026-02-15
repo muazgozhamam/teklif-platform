@@ -3,6 +3,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { api } from '@/lib/api';
+import RoleShell from '@/app/_components/RoleShell';
+import { AlertMessage, ToastView, useToast } from '@/app/_components/UiFeedback';
+import { requireRole } from '@/lib/auth';
 
 type JsonObject = Record<string, unknown>;
 
@@ -92,6 +95,7 @@ function Field({ label, children, hint }: { label: string; children: React.React
 export default function ConsultantListingEditPage() {
   const params = useParams<{ id: string }>();
   const id = String((params as unknown as JsonObject)?.id ?? '').trim();
+  const [allowed, setAllowed] = useState(false);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -111,6 +115,7 @@ export default function ConsultantListingEditPage() {
   const [status, setStatus] = useState('');
   const [auditRows, setAuditRows] = useState<AuditRow[]>([]);
   const [auditLoading, setAuditLoading] = useState(false);
+  const { toast, show } = useToast();
 
   const canPublish = useMemo(() => {
     const t = title.trim();
@@ -160,9 +165,14 @@ export default function ConsultantListingEditPage() {
   }
 
   useEffect(() => {
+    setAllowed(requireRole(['CONSULTANT']));
+  }, []);
+
+  useEffect(() => {
+    if (!allowed) return;
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
+  }, [allowed, id]);
 
   async function save() {
     if (!id) return;
@@ -199,6 +209,7 @@ export default function ConsultantListingEditPage() {
       const l = (r?.data ?? r) as unknown as JsonObject as Listing;
       setData(l);
       setStatus(String(l?.status ?? status));
+      show('success', 'İlan kaydedildi');
     } catch (e: unknown) {
       console.error('save listing failed:', e);
       setErr(getErrorMessage(e, 'Kaydetme başarısız'));
@@ -210,7 +221,7 @@ export default function ConsultantListingEditPage() {
   async function publish() {
     if (!id) return;
     if (!canPublish) {
-      alert('Yayınlamak için en az Başlık ve Fiyat gerekli.');
+      show('error', 'Yayınlamak için en az Başlık ve Fiyat gerekli.');
       return;
     }
     setPublishing(true);
@@ -221,7 +232,8 @@ export default function ConsultantListingEditPage() {
       const l = (r?.data ?? r) as unknown as JsonObject as Listing;
       setData(l);
       setStatus(String(l?.status ?? 'PUBLISHED'));
-      alert('✅ Yayına alındı');
+      show('success', 'İlan yayına alındı');
+      await loadAudit();
     } catch (e: unknown) {
       console.error('publish listing failed:', e);
       setErr(getErrorMessage(e, 'Yayına alma başarısız'));
@@ -230,8 +242,26 @@ export default function ConsultantListingEditPage() {
     }
   }
 
+  if (!allowed) {
+    return (
+      <main style={{ padding: 24, maxWidth: 960, margin: '0 auto', opacity: 0.8 }}>
+        <div>Yükleniyor…</div>
+      </main>
+    );
+  }
+
   return (
-    <div style={{ padding: 22, maxWidth: 980, margin: '0 auto' }}>
+    <RoleShell
+      role="CONSULTANT"
+      title="İlan Düzenle"
+      subtitle="Deal’den üretilen ilanı düzenle, yayınla ve zaman çizelgesini izle."
+      nav={[
+        { href: '/consultant', label: 'Panel' },
+        { href: '/consultant/inbox', label: 'Gelen Kutusu' },
+        { href: '/consultant/listings', label: 'İlanlar' },
+      ]}
+    >
+    <div style={{ padding: 2, maxWidth: 980, margin: '0 auto' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
         <div>
           <div style={{ fontSize: 22, fontWeight: 900, letterSpacing: -0.2 }}>İlan Düzenle</div>
@@ -254,22 +284,7 @@ export default function ConsultantListingEditPage() {
         </div>
       </div>
 
-      {err && (
-        <div
-          style={{
-            marginTop: 14,
-            padding: 12,
-            borderRadius: 14,
-            border: '1px solid #FECACA',
-            background: '#FEF2F2',
-            color: '#991B1B',
-            fontSize: 13,
-            fontWeight: 700,
-          }}
-        >
-          {err}
-        </div>
-      )}
+      {err ? <AlertMessage type="error" message={err} /> : null}
 
       <div style={{ marginTop: 16, display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: 14 }}>
         <div style={{ border: '1px solid #EEF2F7', borderRadius: 18, padding: 14, background: '#fff' }}>
@@ -395,6 +410,8 @@ export default function ConsultantListingEditPage() {
           createdAt: {data.createdAt || '—'} • updatedAt: {data.updatedAt || '—'} • consultantId: {data.consultantId || '—'}
         </div>
       )}
+      <ToastView toast={toast} />
     </div>
+    </RoleShell>
   );
 }

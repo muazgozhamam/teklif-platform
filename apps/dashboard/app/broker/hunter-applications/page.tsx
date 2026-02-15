@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '@/lib/api';
+import RoleShell from '@/app/_components/RoleShell';
+import { requireRole } from '@/lib/auth';
 
 type Status = 'PENDING' | 'APPROVED' | 'REJECTED';
 
@@ -40,6 +42,7 @@ function fmtDate(iso?: string | null) {
 }
 
 export default function BrokerHunterApplicationsPage() {
+  const [allowed, setAllowed] = useState(false);
   const [status, setStatus] = useState<Status>('PENDING');
   const [items, setItems] = useState<HunterApplication[]>([]);
   const [loading, setLoading] = useState(false);
@@ -114,16 +117,40 @@ export default function BrokerHunterApplicationsPage() {
   }
 
   useEffect(() => {
+    setAllowed(requireRole(['BROKER']));
+  }, []);
+
+  useEffect(() => {
+    if (!allowed) return;
     void load(status);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status]);
+  }, [allowed, status]);
 
   const counts = useMemo(() => {
     // lightweight UI hint only; not exact counts without extra endpoints
     return { shown: items.length };
   }, [items.length]);
 
+  if (!allowed) {
+    return (
+      <main style={{ padding: 24, maxWidth: 960, margin: '0 auto', opacity: 0.8 }}>
+        <div>Yükleniyor…</div>
+      </main>
+    );
+  }
+
   return (
+    <RoleShell
+      role="BROKER"
+      title="Hunter Başvuruları"
+      subtitle="Ağ başvurularını onayla veya reddet."
+      nav={[
+        { href: '/broker', label: 'Panel' },
+        { href: '/broker/leads/pending', label: 'Bekleyen Leadler' },
+        { href: '/broker/deals/new', label: 'Yeni Deal' },
+        { href: '/broker/hunter-applications', label: 'Hunter Başvuruları' },
+      ]}
+    >
     <div className="min-h-screen bg-gray-50">
       <div className="mx-auto max-w-6xl space-y-4 px-4 py-6">
         <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
@@ -298,5 +325,6 @@ export default function BrokerHunterApplicationsPage() {
         </div>
       </div>
     </div>
+    </RoleShell>
   );
 }
