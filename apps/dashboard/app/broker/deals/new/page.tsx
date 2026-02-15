@@ -12,7 +12,7 @@ function getApiMsg(e: unknown, fallback: string) {
 
 import { useEffect, useMemo, useState } from 'react';
 import { api } from '@/lib/api';
-import { requireAuth } from '@/lib/auth';
+import { requireRole } from '@/lib/auth';
 
 export default function NewDealPage() {
   const [leadId, setLeadId] = useState('');
@@ -21,7 +21,7 @@ export default function NewDealPage() {
   const [msg, setMsg] = useState<string | null>(null);
 
   useEffect(() => {
-    requireAuth();
+    requireRole(['BROKER', 'ADMIN']);
   }, []);
 
   const commissionTotal = useMemo(() => Number((salePrice * commissionRate).toFixed(2)), [salePrice, commissionRate]);
@@ -30,16 +30,16 @@ export default function NewDealPage() {
     setMsg(null);
     try {
       const res = await api.post('/broker/deals', { leadId, salePrice, commissionRate });
-      setMsg(`Deal created: ${res.data.id}`);
+      setMsg(`Deal oluşturuldu: ${res.data.id}`);
       window.location.href = `/broker/deals/${res.data.id}/ledger`;
     } catch (err: unknown) {
-      setMsg(getApiMsg(err, 'Create deal failed'));
+      setMsg(getApiMsg(err, 'Deal oluşturma başarısız'));
     }
   }
 
   return (
     <div style={{ maxWidth: 680, margin: '24px auto', fontFamily: 'system-ui' }}>
-      <h1>Create Deal</h1>
+      <h1>Deal Oluştur</h1>
 
       <div style={{ display: 'grid', gap: 10 }}>
         <label>
@@ -48,7 +48,7 @@ export default function NewDealPage() {
         </label>
 
         <label>
-          Sale Price
+          Satış Fiyatı
           <input
             type="number"
             value={salePrice}
@@ -58,7 +58,7 @@ export default function NewDealPage() {
         </label>
 
         <label>
-          Commission Rate (e.g. 0.04)
+          Komisyon Oranı (örn: 0.04)
           <input
             type="number"
             step="0.001"
@@ -68,17 +68,17 @@ export default function NewDealPage() {
           />
         </label>
 
-        <div style={{ color: '#666' }}>Commission Total: {commissionTotal}</div>
+        <div style={{ color: '#666' }}>Toplam Komisyon: {commissionTotal}</div>
 
         <button onClick={createDeal} style={{ padding: 12 }}>
-          Create Deal
+          Deal Oluştur
         </button>
 
         <button onClick={() => (window.location.href = '/broker/leads/pending')} style={{ padding: 12 }}>
-          Back
+          Geri
         </button>
 
-        {msg && <div style={{ color: msg.startsWith('Deal created') ? 'green' : 'crimson' }}>{msg}</div>}
+        {msg && <div style={{ color: msg.startsWith('Deal oluşturuldu') ? 'green' : 'crimson' }}>{msg}</div>}
       </div>
     </div>
   );

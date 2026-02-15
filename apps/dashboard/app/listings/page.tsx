@@ -1,8 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /**
- * SSR Listings page (Server Component)
- * - Fetches PUBLISHED listings from API on the server
- * - Renders listing IDs into HTML so e2e can assert them
+ * SSR İlanlar sayfası (Server Component)
+ * - API'den PUBLISHED ilanları sunucu tarafında çeker
+ * - Listing ID'lerini HTML'e basar (e2e doğrulaması için)
  */
 
 type Listing = {
@@ -27,16 +27,16 @@ const API_BASE =
   "http://localhost:3001";
 
 async function getListings(): Promise<Listing[]> {
-  // status=PUBLISHED filter (API zaten default PUBLISHED döndürüyorsa da sorun olmaz)
+  // status=PUBLISHED filtresi (API varsayılanı PUBLISHED ise de sorun olmaz)
   const url = `${API_BASE}/listings?status=PUBLISHED`;
   const res = await fetch(url, {
     cache: "no-store",
-    // Next 13/14: server fetch default cache olabilir; no-store ile HTML'e basılacak güncel data garanti
+    // Sunucu fetch önbelleğini atla; HTML'de güncel veri garanti
   });
 
   if (!res.ok) {
     const text = await res.text().catch(() => "");
-    throw new Error(`Failed to fetch listings (${res.status}) ${text}`);
+    throw new Error(`İlanlar alınamadı (${res.status}) ${text}`);
   }
 
   const payload = await res.json();
@@ -48,17 +48,17 @@ export default async function ListingsPage() {
 
   return (
     <main style={{ padding: 24 }}>
-      <h1>Listings</h1>
+      <h1>İlanlar</h1>
 
       {listings.length === 0 ? (
-        <p>No listings found.</p>
+        <p>İlan bulunamadı.</p>
       ) : (
         <ul>
           {listings.map((l) => (
             <li key={l.id}>
               {/* ID'yi text olarak basıyoruz: e2e HTML içinde görsün */}
               <span data-listing-id={l.id}>{l.id}</span>
-              {/* extra markers for e2e robustness */}
+              {/* e2e sağlamlığı için ek işaretleyiciler */}
               <span style={{ display: "none" }}>{`LISTING_ID:${l.id}`}</span>
               <span style={{ display: "none" }}>{`ID=${l.id}`}</span>
               {l.title ? ` — ${l.title}` : ""}

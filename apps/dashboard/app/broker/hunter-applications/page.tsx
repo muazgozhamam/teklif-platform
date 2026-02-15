@@ -50,7 +50,7 @@ export default function BrokerHunterApplicationsPage() {
 
   const reqSeq = useRef(0);
 
-  const title = useMemo(() => `Hunter Applications`, []);
+  const title = useMemo(() => `Hunter Başvuruları`, []);
 
   async function load(currentStatus = status) {
     const seq = ++reqSeq.current;
@@ -64,7 +64,7 @@ export default function BrokerHunterApplicationsPage() {
       const data = res.data as { items?: HunterApplication[] };
       setItems(Array.isArray(data?.items) ? data.items : []);
     } catch (err: unknown) {
-      setError(getErrMsg(err, 'Failed to load applications'));
+      setError(getErrMsg(err, 'Başvurular yüklenemedi'));
     } finally {
       setLoading(false);
     }
@@ -72,7 +72,7 @@ export default function BrokerHunterApplicationsPage() {
 
   async function approve(id: string) {
     if (busyId) return;
-    const reviewNote = window.prompt('Approve note (optional):', 'OK') ?? undefined;
+    const reviewNote = window.prompt('Onay notu (opsiyonel):', 'Uygun') ?? undefined;
 
     setBusyId(id);
     setActionMsg(null);
@@ -84,10 +84,10 @@ export default function BrokerHunterApplicationsPage() {
       const email = data?.user?.email ? String(data.user.email) : '';
       const tempPassword = data?.user?.tempPassword ? String(data.user.tempPassword) : undefined;
       if (email) setLastCred({ email, tempPassword });
-      setActionMsg(email ? `Approved. Credentials generated.` : 'Approved.');
+      setActionMsg(email ? `Onaylandı. Giriş bilgileri üretildi.` : 'Onaylandı.');
       await load(status);
     } catch (err: unknown) {
-      setError(getErrMsg(err, 'Approve failed'));
+      setError(getErrMsg(err, 'Onaylama başarısız'));
     } finally {
       setBusyId(null);
     }
@@ -95,7 +95,7 @@ export default function BrokerHunterApplicationsPage() {
 
   async function reject(id: string) {
     if (busyId) return;
-    const reviewNote = window.prompt('Reject reason (optional):', 'Not suitable') ?? undefined;
+    const reviewNote = window.prompt('Red nedeni (opsiyonel):', 'Uygun değil') ?? undefined;
 
     setBusyId(id);
     setActionMsg(null);
@@ -104,10 +104,10 @@ export default function BrokerHunterApplicationsPage() {
     try {
       await api.post(`/broker/hunter-applications/${id}/reject`, { reviewNote });
       setLastCred(null);
-      setActionMsg('Rejected.');
+      setActionMsg('Reddedildi.');
       await load(status);
     } catch (err: unknown) {
-      setError(getErrMsg(err, 'Reject failed'));
+      setError(getErrMsg(err, 'Reddetme başarısız'));
     } finally {
       setBusyId(null);
     }
@@ -154,7 +154,7 @@ export default function BrokerHunterApplicationsPage() {
               className="ml-2 rounded-md border bg-white px-3 py-2 text-sm disabled:opacity-50"
               disabled={loading}
             >
-              Refresh
+              Yenile
             </button>
           </div>
         </div>
@@ -171,20 +171,20 @@ export default function BrokerHunterApplicationsPage() {
 
         {lastCred ? (
           <div className="rounded-md border border-sky-200 bg-sky-50 p-3 text-sm text-sky-900">
-            <div className="font-medium">Login Credentials</div>
+            <div className="font-medium">Giriş Bilgileri</div>
             <div className="mt-2 space-y-1 text-xs">
-              <div><span className="font-semibold">Email:</span> {lastCred.email}</div>
-              <div><span className="font-semibold">Temp Password:</span> {lastCred.tempPassword ?? '— (user already existed)'}</div>
+              <div><span className="font-semibold">E-posta:</span> {lastCred.email}</div>
+              <div><span className="font-semibold">Geçici Şifre:</span> {lastCred.tempPassword ?? '— (kullanıcı zaten vardı)'}</div>
             </div>
             <div className="mt-3 flex flex-wrap gap-2">
               <button
                 type="button"
                 className="rounded-md border bg-white px-3 py-2 text-sm"
                 onClick={async () => {
-                  try { await navigator.clipboard.writeText(lastCred.email); setActionMsg('Copied Email.'); } catch { setActionMsg(lastCred.email); }
+                  try { await navigator.clipboard.writeText(lastCred.email); setActionMsg('E-posta kopyalandı.'); } catch { setActionMsg(lastCred.email); }
                 }}
               >
-                Copy Email
+                E-postayı Kopyala
               </button>
               <button
                 type="button"
@@ -192,27 +192,27 @@ export default function BrokerHunterApplicationsPage() {
                 disabled={!lastCred.tempPassword}
                 onClick={async () => {
                   if (!lastCred.tempPassword) return;
-                  try { await navigator.clipboard.writeText(lastCred.tempPassword); setActionMsg('Copied Password.'); } catch { setActionMsg(lastCred.tempPassword); }
+                  try { await navigator.clipboard.writeText(lastCred.tempPassword); setActionMsg('Şifre kopyalandı.'); } catch { setActionMsg(lastCred.tempPassword); }
                 }}
               >
-                Copy Password
+                Şifreyi Kopyala
               </button>
               <button
                 type="button"
                 className="rounded-md border bg-white px-3 py-2 text-sm"
                 onClick={async () => {
-                  const both = `Email: ${lastCred.email}\nPassword: ${lastCred.tempPassword ?? ''}`;
-                  try { await navigator.clipboard.writeText(both); setActionMsg('Copied Credentials.'); } catch { setActionMsg(both); }
+                  const both = `E-posta: ${lastCred.email}\nŞifre: ${lastCred.tempPassword ?? ''}`;
+                  try { await navigator.clipboard.writeText(both); setActionMsg('Bilgiler kopyalandı.'); } catch { setActionMsg(both); }
                 }}
               >
-                Copy Both
+                İkisini Kopyala
               </button>
               <button
                 type="button"
                 className="rounded-md border bg-white px-3 py-2 text-sm"
                 onClick={() => setLastCred(null)}
               >
-                Clear
+                Temizle
               </button>
             </div>
           </div>
@@ -221,13 +221,13 @@ export default function BrokerHunterApplicationsPage() {
 
         <div className="rounded-xl border bg-white">
           <div className="flex items-center justify-between border-b px-4 py-3 text-sm text-gray-600">
-            <div>{loading ? 'Loading…' : `${counts.shown} item(s)`}</div>
+            <div>{loading ? 'Yükleniyor…' : `${counts.shown} kayıt`}</div>
             <div className="text-xs text-gray-500">Route: /broker/hunter-applications</div>
           </div>
 
           <div className="divide-y">
             {items.length === 0 && !loading ? (
-              <div className="px-4 py-10 text-center text-sm text-gray-500">No applications.</div>
+              <div className="px-4 py-10 text-center text-sm text-gray-500">Başvuru bulunamadı.</div>
             ) : null}
 
             {items.map((a) => (
@@ -240,12 +240,12 @@ export default function BrokerHunterApplicationsPage() {
                   </div>
 
                   <div className="mt-1 text-xs text-gray-600">
-                    {(a.city || '-') + (a.district ? ` / ${a.district}` : '')} • Created: {fmtDate(a.createdAt)}
-                    {a.reviewedAt ? ` • Reviewed: ${fmtDate(a.reviewedAt)}` : ''}
+                    {(a.city || '-') + (a.district ? ` / ${a.district}` : '')} • Oluşturulma: {fmtDate(a.createdAt)}
+                    {a.reviewedAt ? ` • İncelenme: ${fmtDate(a.reviewedAt)}` : ''}
                   </div>
 
                   {a.note ? <div className="mt-2 text-sm text-gray-800">{a.note}</div> : null}
-                  {a.reviewNote ? <div className="mt-1 text-xs text-gray-600">Review: {a.reviewNote}</div> : null}
+                  {a.reviewNote ? <div className="mt-1 text-xs text-gray-600">İnceleme Notu: {a.reviewNote}</div> : null}
                   <div className="mt-2 text-xs text-gray-500">ID: {a.id}</div>
                 </div>
 
@@ -258,7 +258,7 @@ export default function BrokerHunterApplicationsPage() {
                         disabled={busyId === a.id}
                         className="rounded-md border bg-white px-3 py-2 text-sm disabled:opacity-50"
                       >
-                        {busyId === a.id ? 'Working…' : 'Approve'}
+                        {busyId === a.id ? 'İşleniyor…' : 'Onayla'}
                       </button>
 
                       <button
@@ -267,7 +267,7 @@ export default function BrokerHunterApplicationsPage() {
                         disabled={busyId === a.id}
                         className="rounded-md border bg-white px-3 py-2 text-sm disabled:opacity-50"
                       >
-                        {busyId === a.id ? 'Working…' : 'Reject'}
+                        {busyId === a.id ? 'İşleniyor…' : 'Reddet'}
                       </button>
                     </>
                   ) : null}
@@ -278,13 +278,13 @@ export default function BrokerHunterApplicationsPage() {
                     onClick={async () => {
                       try {
                         await navigator.clipboard.writeText(a.id);
-                        setActionMsg(`Copied Application ID: ${a.id}`);
+                        setActionMsg(`Başvuru ID kopyalandı: ${a.id}`);
                       } catch {
-                        setActionMsg(`Application ID: ${a.id}`);
+                        setActionMsg(`Başvuru ID: ${a.id}`);
                       }
                     }}
                   >
-                    Copy ID
+                    ID Kopyala
                   </button>
                 </div>
               </div>

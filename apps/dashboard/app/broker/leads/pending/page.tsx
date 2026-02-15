@@ -45,7 +45,7 @@ const [lastDealId, setLastDealId] = useState<string | null>(null);
 
   const [busy, setBusy] = useState<{ id: string; action: 'approve' | 'reject' | 'createDeal' } | null>(null);
 
-  const title = useMemo(() => `Pending Leads (${total})`, [total]);
+  const title = useMemo(() => `Bekleyen Leadler (${total})`, [total]);
 
   function getStatus(err: unknown): number | undefined {
     const e = err as { status?: number; response?: { status?: number } };
@@ -71,7 +71,7 @@ const [lastDealId, setLastDealId] = useState<string | null>(null);
     try {
       await navigator.clipboard.writeText(dealId);
       setLastDealId(dealId);
-      setActionMsg(`Copied Deal ID: ${dealId}`);
+      setActionMsg(`Deal ID kopyalandı: ${dealId}`);
     } catch {
       setLastDealId(dealId);
       setActionMsg(`Deal ID: ${dealId}`);
@@ -128,7 +128,7 @@ const [lastDealId, setLastDealId] = useState<string | null>(null);
       if (typeof data?.limit === 'number' && data.limit !== currentLimit) setPageSize(data.limit);
     } catch (err: unknown) {
       getStatus(err);
-      setError(getErrMsg(err, 'Failed to load'));
+      setError(getErrMsg(err, 'Yükleme başarısız'));
     } finally {
       setLoading(false);
     }
@@ -141,11 +141,11 @@ const [lastDealId, setLastDealId] = useState<string | null>(null);
 
     try {
       await api.post(`/broker/leads/${id}/approve`, { brokerNote: 'OK' });
-      setActionMsg('Approved.');
+      setActionMsg('Onaylandı.');
       await load(page, pageSize);
     } catch (err: unknown) {
       getStatus(err);
-      setError(getErrMsg(err, 'Approve failed'));
+      setError(getErrMsg(err, 'Onaylama başarısız'));
     } finally {
       setBusy(null);
     }
@@ -158,11 +158,11 @@ const [lastDealId, setLastDealId] = useState<string | null>(null);
 
     try {
       await api.post(`/broker/leads/${id}/reject`, { brokerNote: 'NO' });
-      setActionMsg('Rejected.');
+      setActionMsg('Reddedildi.');
       await load(page, pageSize);
     } catch (err: unknown) {
       getStatus(err);
-      setError(getErrMsg(err, 'Reject failed'));
+      setError(getErrMsg(err, 'Reddetme başarısız'));
     } finally {
       setBusy(null);
     }
@@ -174,7 +174,7 @@ const [lastDealId, setLastDealId] = useState<string | null>(null);
     const existing = createdDeals[id];
     if (existing) {
       setLastDealId(existing);
-      setActionMsg(`Deal already exists: ${existing}`);
+      setActionMsg(`Deal zaten mevcut: ${existing}`);
       return;
     }
 
@@ -186,12 +186,12 @@ const [lastDealId, setLastDealId] = useState<string | null>(null);
       const res = await api.post(`/broker/leads/${id}/deal`, {});
       const data = res.data as { ok?: boolean; dealId?: string; created?: boolean };
       if (data?.dealId) setCreatedDeals((prev) => ({ ...prev, [id]: String(data.dealId) }));
-      if (!data?.dealId) throw new Error('Deal id missing from response');
+      if (!data?.dealId) throw new Error('Yanıtta deal id yok');
       setLastDealId(data.dealId);
-      setActionMsg(data.created ? `Deal created: ${data.dealId}` : `Deal already exists: ${data.dealId}`);
+      setActionMsg(data.created ? `Deal oluşturuldu: ${data.dealId}` : `Deal zaten mevcut: ${data.dealId}`);
       await load(page, pageSize);
     } catch (err: unknown) {
-      setError(getErrMsg(err, 'Create deal failed'));
+      setError(getErrMsg(err, 'Deal oluşturma başarısız'));
     } finally {
       setBusy(null);
     }
@@ -210,7 +210,7 @@ const [lastDealId, setLastDealId] = useState<string | null>(null);
         <div className="flex items-start justify-between gap-3">
           <div>
             <h1 className="text-lg font-semibold tracking-tight text-gray-900">{title}</h1>
-            <p className="mt-1 text-sm text-gray-600">Onayla, reddet veya lead’den deal oluştur.</p>
+            <p className="mt-1 text-sm text-gray-600">Onayla, reddet veya lead’den deal üret.</p>
           </div>
 
           <div className="flex items-center gap-2">
@@ -219,11 +219,11 @@ const [lastDealId, setLastDealId] = useState<string | null>(null);
               disabled={page <= 1 || loading}
               className="rounded-md border bg-white px-3 py-2 text-sm disabled:opacity-50"
             >
-              Prev
+              Önceki
             </button>
 
             <div className="text-sm text-gray-600">
-              Page <span className="font-medium text-gray-900">{page}</span> / {totalPages}
+              Sayfa <span className="font-medium text-gray-900">{page}</span> / {totalPages}
             </div>
 
             <button
@@ -231,7 +231,7 @@ const [lastDealId, setLastDealId] = useState<string | null>(null);
               disabled={page >= totalPages || loading}
               className="rounded-md border bg-white px-3 py-2 text-sm disabled:opacity-50"
             >
-              Next
+              Sonraki
             </button>
 
             <select
@@ -246,7 +246,7 @@ const [lastDealId, setLastDealId] = useState<string | null>(null);
             >
               {[10, 20, 50, 100].map((n) => (
                 <option key={n} value={n}>
-                  {n}/page
+                  {n}/sayfa
                 </option>
               ))}
             </select>
@@ -270,7 +270,7 @@ const [lastDealId, setLastDealId] = useState<string | null>(null);
               className="rounded-md border bg-white px-3 py-2 text-sm"
               type="button"
             >
-              Open Deal
+              Deal Aç
             </button>
 
             <button
@@ -278,7 +278,7 @@ const [lastDealId, setLastDealId] = useState<string | null>(null);
               className="rounded-md border bg-white px-3 py-2 text-sm"
               type="button"
             >
-              Open JSON
+              JSON Aç
             </button>
 
             <button
@@ -286,17 +286,17 @@ const [lastDealId, setLastDealId] = useState<string | null>(null);
               className="rounded-md border bg-white px-3 py-2 text-sm"
               type="button"
             >
-              Copy Deal ID
+              Deal ID Kopyala
             </button>
           </div>
         ) : null}<div className="rounded-xl border bg-white">
           <div className="border-b px-4 py-3 text-sm text-gray-600">
-            {loading ? 'Loading…' : `${items.length} item(s) shown`}
+            {loading ? 'Yükleniyor…' : `${items.length} kayıt gösteriliyor`}
           </div>
 
           <div className="divide-y">
             {items.length === 0 && !loading ? (
-              <div className="px-4 py-8 text-center text-sm text-gray-500">No pending leads.</div>
+              <div className="px-4 py-8 text-center text-sm text-gray-500">Bekleyen lead yok.</div>
             ) : null}
 
             {items.map((l) => (
@@ -314,7 +314,7 @@ const [lastDealId, setLastDealId] = useState<string | null>(null);
                     disabled={busy?.id === l.id}
                     className="rounded-md border bg-white px-3 py-2 text-sm disabled:opacity-50"
                   >
-                    {busy?.id === l.id && busy?.action === 'approve' ? 'Working…' : 'Approve'}
+                    {busy?.id === l.id && busy?.action === 'approve' ? 'İşleniyor…' : 'Onayla'}
                   </button>
 
                   <button
@@ -324,10 +324,10 @@ const [lastDealId, setLastDealId] = useState<string | null>(null);
                     className="rounded-md border bg-white px-3 py-2 text-sm disabled:opacity-50"
                   >
                     {busy?.id === l.id && busy?.action === 'createDeal'
-                      ? 'Working…'
+                      ? 'İşleniyor…'
                       : createdDeals[l.id]
-                        ? 'Deal Ready'
-                        : 'Create Deal'}
+                        ? 'Deal Hazır'
+                        : 'Deal Oluştur'}
                   </button>
                   {createdDeals[l.id] ? (
                     <>
@@ -336,14 +336,14 @@ const [lastDealId, setLastDealId] = useState<string | null>(null);
                         onClick={() => openDealInInbox(String(createdDeals[l.id]))}
                         className="rounded-md border bg-white px-3 py-2 text-sm"
                       >
-                        Open Deal
+                        Deal Aç
                       </button>
                       <button
                         type="button"
                         onClick={() => void copyDealId(String(createdDeals[l.id]))}
                         className="rounded-md border bg-white px-3 py-2 text-sm"
                       >
-                        Copy Deal ID
+                        Deal ID Kopyala
                       </button>
                     </>
                   ) : null}
@@ -354,7 +354,7 @@ const [lastDealId, setLastDealId] = useState<string | null>(null);
                     disabled={busy?.id === l.id}
                     className="rounded-md border bg-white px-3 py-2 text-sm disabled:opacity-50"
                   >
-                    {busy?.id === l.id && busy?.action === 'reject' ? 'Working…' : 'Reject'}
+                    {busy?.id === l.id && busy?.action === 'reject' ? 'İşleniyor…' : 'Reddet'}
                   </button>
                 </div>
               </div>

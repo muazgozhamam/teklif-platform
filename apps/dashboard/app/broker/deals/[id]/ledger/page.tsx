@@ -20,8 +20,9 @@ function getApiMsg(e: unknown, fallback: string) {
 }
 
 import { useEffect, useState } from 'react';
+import { useParams } from 'next/navigation';
 import { api } from '@/lib/api';
-import { requireAuth } from '@/lib/auth';
+import { requireRole } from '@/lib/auth';
 
 type Deal = {
   id: string;
@@ -41,35 +42,49 @@ type LedgerRow = {
   beneficiaryUser?: { id: string; name: string; email: string; role: string } | null;
 };
 
-export default function LedgerPage({ params }: { params: { id: string } }) {
+type AuditRow = {
+  id: string;
+  createdAt: string;
+  action: string;
+  actorEmail?: string | null;
+  actorRole?: string | null;
+  metaJson?: Record<string, unknown> | null;
+};
+
+export default function LedgerPage() {
+  const params = useParams<{ id: string }>();
+  const dealId = String(params?.id ?? '');
   const [rows, setRows] = useState<LedgerRow[]>([]);
   const [deal, setDeal] = useState<Deal | null>(null);
+  const [auditRows, setAuditRows] = useState<AuditRow[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   async function load() {
     setError(null);
     try {
-      const res = await api.get(`/broker/deals/${params.id}/ledger`);
+      const res = await api.get(`/broker/deals/${dealId}/ledger`);
       setDeal(res.data.deal);
       setRows(res.data.ledger);
+      const audit = await api.get<AuditRow[]>(`/audit/entity/DEAL/${dealId}`);
+      setAuditRows(Array.isArray(audit.data) ? audit.data : []);
     } catch (err: unknown) {
-      setError(getApiMsg(err, 'Failed to load ledger'));
+      setError(getApiMsg(err, 'Defter yüklenemedi'));
     }
   }
 
-  useEffect(() => {
-  requireAuth();
+useEffect(() => {
+  requireRole(['BROKER', 'ADMIN']);
   const t = window.setTimeout(() => {
     void load();
   }, 0);
   return () => window.clearTimeout(t);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-}, [params.id]);
+}, [dealId]);
 return (
     <div style={{ maxWidth: 980, margin: '24px auto', fontFamily: 'system-ui' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h1>Deal Ledger</h1>
-        <button onClick={() => (window.location.href = '/broker/leads/pending')}>Back to Pending</button>
+        <h1>Deal Defteri</h1>
+        <button onClick={() => (window.location.href = '/broker/leads/pending')}>Bekleyenlere Dön</button>
       </div>
 
       {error && <p style={{ color: 'crimson' }}>{error}</p>}
@@ -78,9 +93,9 @@ return (
         <div style={{ border: '1px solid #ddd', borderRadius: 10, padding: 12, marginBottom: 12 }}>
           <div><b>Deal ID:</b> {deal.id}</div>
           <div><b>Lead ID:</b> {deal.leadId}</div>
-          <div><b>Sale Price:</b> {deal.salePrice}</div>
-          <div><b>Commission Rate:</b> {deal.commissionRate}</div>
-          <div><b>Commission Total:</b> {deal.commissionTotal}</div>
+          <div><b>Satış Fiyatı:</b> {deal.salePrice}</div>
+          <div><b>Komisyon Oranı:</b> {deal.commissionRate}</div>
+          <div><b>Toplam Komisyon:</b> {deal.commissionTotal}</div>
         </div>
       )}
 
@@ -91,11 +106,29 @@ return (
               {r.beneficiaryUser ? `${r.beneficiaryUser.name} (${r.beneficiaryUser.role})` : 'PLATFORM'}
             </div>
             <div style={{ color: '#666' }}>
-              role={r.beneficiaryRole} level={r.level ?? '-'} percent={r.percent} amount={r.amount}
+              rol={r.beneficiaryRole} seviye={r.level ?? '-'} yüzde={r.percent} tutar={r.amount}
             </div>
             {r.note && <div style={{ color: '#999' }}>{r.note}</div>}
           </div>
         ))}
+      </div>
+
+      <div style={{ marginTop: 16, border: '1px solid #ddd', borderRadius: 10, padding: 12 }}>
+        <div style={{ fontWeight: 700, marginBottom: 8 }}>Denetim Zaman Çizelgesi</div>
+        {auditRows.length === 0 ? (
+          <div style={{ color: '#666', fontSize: 13 }}>Audit kaydı bulunamadı.</div>
+        ) : (
+          <div style={{ display: 'grid', gap: 8 }}>
+            {auditRows.map((a) => (
+              <div key={a.id} style={{ border: '1px solid #eee', borderRadius: 8, padding: 10 }}>
+                <div style={{ fontSize: 12, color: '#666' }}>
+                  {new Date(a.createdAt).toLocaleString()} • {a.actorEmail || a.actorRole || 'system'}
+                </div>
+                <div style={{ marginTop: 2, fontWeight: 700 }}>{a.action}</div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
