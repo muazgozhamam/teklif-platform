@@ -5,11 +5,7 @@ import RoleShell from '@/app/_components/RoleShell';
 import { requireRole } from '@/lib/auth';
 
 export default function HunterDashboardPage() {
-  const [allowed, setAllowed] = React.useState(false);
-
-  React.useEffect(() => {
-    setAllowed(requireRole(['HUNTER']));
-  }, []);
+  const [allowed] = React.useState(() => requireRole(['HUNTER']));
 
   if (!allowed) {
     return (

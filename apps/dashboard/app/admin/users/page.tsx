@@ -38,16 +38,14 @@ async function api<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export default function AdminUsersPage() {
-  const [allowed, setAllowed] = React.useState(false);
+  const [allowed] = React.useState(() => requireRole(['ADMIN']));
   const [rows, setRows] = React.useState<AdminUser[]>([]);
   const [q, setQ] = React.useState('');
+  const [roleFilter, setRoleFilter] = React.useState<'ALL' | Role>('ALL');
+  const [activeFilter, setActiveFilter] = React.useState<'ALL' | 'ACTIVE' | 'INACTIVE'>('ALL');
   const [loading, setLoading] = React.useState(true);
   const [savingId, setSavingId] = React.useState<string | null>(null);
   const [error, setError] = React.useState<string | null>(null);
-
-  React.useEffect(() => {
-    setAllowed(requireRole(['ADMIN']));
-  }, []);
 
   const load = React.useCallback(async () => {
     setLoading(true);
@@ -67,6 +65,15 @@ export default function AdminUsersPage() {
     if (!allowed) return;
     load();
   }, [allowed, load]);
+
+  const filteredRows = React.useMemo(() => {
+    return rows.filter((u) => {
+      if (roleFilter !== 'ALL' && String(u.role) !== roleFilter) return false;
+      if (activeFilter === 'ACTIVE' && !u.isActive) return false;
+      if (activeFilter === 'INACTIVE' && u.isActive) return false;
+      return true;
+    });
+  }, [rows, roleFilter, activeFilter]);
 
   if (!allowed) {
     return (
@@ -119,20 +126,51 @@ export default function AdminUsersPage() {
         </button>
       </div>
 
-      <div style={{ marginTop: 12 }}>
+      <div style={{ marginTop: 12, display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
         <input
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder="Email/isim ara..."
           style={{ width: 320, maxWidth: '100%', padding: 10, borderRadius: 10, border: '1px solid #ddd' }}
         />
+        <select
+          value={roleFilter}
+          onChange={(e) => setRoleFilter(e.target.value as 'ALL' | Role)}
+          style={{ padding: 10, borderRadius: 10, border: '1px solid #ddd', background: '#fff' }}
+        >
+          <option value="ALL">Tüm Roller</option>
+          <option value="USER">USER</option>
+          <option value="BROKER">BROKER</option>
+          <option value="CONSULTANT">CONSULTANT</option>
+          <option value="HUNTER">HUNTER</option>
+          <option value="ADMIN">ADMIN</option>
+        </select>
+        <select
+          value={activeFilter}
+          onChange={(e) => setActiveFilter(e.target.value as 'ALL' | 'ACTIVE' | 'INACTIVE')}
+          style={{ padding: 10, borderRadius: 10, border: '1px solid #ddd', background: '#fff' }}
+        >
+          <option value="ALL">Tüm Durumlar</option>
+          <option value="ACTIVE">Aktif</option>
+          <option value="INACTIVE">Pasif</option>
+        </select>
+        <button
+          onClick={() => {
+            setRoleFilter('ALL');
+            setActiveFilter('ALL');
+          }}
+          style={{ padding: '10px 12px', borderRadius: 10, border: '1px solid #ddd', background: '#fff' }}
+          type="button"
+        >
+          Filtreyi Sıfırla
+        </button>
       </div>
 
       {error ? <AlertMessage type="error" message={error} /> : null}
 
       <div style={{ marginTop: 16, border: '1px solid #eee', borderRadius: 14, overflow: 'hidden' }}>
         <div style={{ padding: 12, borderBottom: '1px solid #eee', background: '#fafafa', fontWeight: 600 }}>
-          {loading ? 'Yükleniyor…' : `${rows.length} kullanıcı`}
+          {loading ? 'Yükleniyor…' : `${filteredRows.length} / ${rows.length} kullanıcı`}
         </div>
 
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -146,7 +184,7 @@ export default function AdminUsersPage() {
             </tr>
           </thead>
           <tbody>
-            {rows.map(u => (
+            {filteredRows.map(u => (
               <tr key={u.id}>
                 <td style={{ padding: 12, borderBottom: '1px solid #f1f1f1' }}>{u.email}</td>
                 <td style={{ padding: 12, borderBottom: '1px solid #f1f1f1' }}>{u.name || '-'}</td>
@@ -181,7 +219,7 @@ export default function AdminUsersPage() {
                 </td>
               </tr>
             ))}
-            {!loading && rows.length === 0 && (
+            {!loading && filteredRows.length === 0 && (
               <tr>
                 <td colSpan={5} style={{ padding: 16, opacity: 0.7 }}>
                   Kayıt yok.
