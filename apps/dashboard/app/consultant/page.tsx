@@ -2,7 +2,9 @@
 
 import React from 'react';
 import RoleShell from '@/app/_components/RoleShell';
+import { AlertMessage } from '@/app/_components/UiFeedback';
 import { api } from '@/lib/api';
+import { requireRole } from '@/lib/auth';
 
 type ConsultantStats = {
   role: 'CONSULTANT';
@@ -14,11 +16,17 @@ type ConsultantStats = {
 };
 
 export default function ConsultantHome() {
+  const [allowed, setAllowed] = React.useState(false);
   const [stats, setStats] = React.useState<ConsultantStats | null>(null);
   const [statsLoading, setStatsLoading] = React.useState(true);
   const [statsErr, setStatsErr] = React.useState<string | null>(null);
 
   React.useEffect(() => {
+    setAllowed(requireRole(['CONSULTANT']));
+  }, []);
+
+  React.useEffect(() => {
+    if (!allowed) return;
     let mounted = true;
     async function loadStats() {
       setStatsLoading(true);
@@ -44,7 +52,15 @@ export default function ConsultantHome() {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [allowed]);
+
+  if (!allowed) {
+    return (
+      <main style={{ padding: 24, maxWidth: 960, margin: '0 auto', opacity: 0.8 }}>
+        <div>Yükleniyor…</div>
+      </main>
+    );
+  }
 
   return (
     <RoleShell
@@ -86,7 +102,7 @@ export default function ConsultantHome() {
           </>
         )}
       </div>
-      {statsErr ? <div style={{ marginBottom: 12, color: 'crimson' }}>{statsErr}</div> : null}
+      {statsErr ? <AlertMessage type="error" message={statsErr} /> : null}
 
       <div style={{ marginTop: 16, display: 'flex', gap: 12, flexWrap: 'wrap' }}>
         <button
