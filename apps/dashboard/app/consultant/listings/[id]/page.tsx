@@ -3,7 +3,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { api } from '@/lib/api';
+import RoleShell from '@/app/_components/RoleShell';
 import { AlertMessage, ToastView, useToast } from '@/app/_components/UiFeedback';
+import { requireRole } from '@/lib/auth';
 
 type JsonObject = Record<string, unknown>;
 
@@ -93,6 +95,7 @@ function Field({ label, children, hint }: { label: string; children: React.React
 export default function ConsultantListingEditPage() {
   const params = useParams<{ id: string }>();
   const id = String((params as unknown as JsonObject)?.id ?? '').trim();
+  const [allowed, setAllowed] = useState(false);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -162,9 +165,14 @@ export default function ConsultantListingEditPage() {
   }
 
   useEffect(() => {
+    setAllowed(requireRole(['CONSULTANT']));
+  }, []);
+
+  useEffect(() => {
+    if (!allowed) return;
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
+  }, [allowed, id]);
 
   async function save() {
     if (!id) return;
@@ -234,8 +242,26 @@ export default function ConsultantListingEditPage() {
     }
   }
 
+  if (!allowed) {
+    return (
+      <main style={{ padding: 24, maxWidth: 960, margin: '0 auto', opacity: 0.8 }}>
+        <div>Yükleniyor…</div>
+      </main>
+    );
+  }
+
   return (
-    <div style={{ padding: 22, maxWidth: 980, margin: '0 auto' }}>
+    <RoleShell
+      role="CONSULTANT"
+      title="İlan Düzenle"
+      subtitle="Deal’den üretilen ilanı düzenle, yayınla ve zaman çizelgesini izle."
+      nav={[
+        { href: '/consultant', label: 'Panel' },
+        { href: '/consultant/inbox', label: 'Gelen Kutusu' },
+        { href: '/consultant/listings', label: 'İlanlar' },
+      ]}
+    >
+    <div style={{ padding: 2, maxWidth: 980, margin: '0 auto' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
         <div>
           <div style={{ fontSize: 22, fontWeight: 900, letterSpacing: -0.2 }}>İlan Düzenle</div>
@@ -386,5 +412,6 @@ export default function ConsultantListingEditPage() {
       )}
       <ToastView toast={toast} />
     </div>
+    </RoleShell>
   );
 }
