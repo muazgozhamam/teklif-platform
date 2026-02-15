@@ -96,7 +96,9 @@ export default function AdminOnboardingPage() {
       title="Yönetici Uyum Süreci"
       subtitle="Partner uyum süreci ilerlemesini rol bazlı takip et."
       nav={[
+        { href: '/admin', label: 'Panel' },
         { href: '/admin/users', label: 'Kullanıcılar' },
+        { href: '/admin/audit', label: 'Denetim' },
         { href: '/admin/onboarding', label: 'Uyum Süreci' },
         { href: '/admin/commission', label: 'Komisyon' },
       ]}

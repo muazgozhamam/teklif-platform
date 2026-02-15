@@ -53,6 +53,7 @@ export default function AdminHomePage() {
       nav={[
         { href: '/admin', label: 'Panel' },
         { href: '/admin/users', label: 'Kullanıcılar' },
+        { href: '/admin/audit', label: 'Denetim' },
         { href: '/admin/onboarding', label: 'Uyum Süreci' },
         { href: '/admin/commission', label: 'Komisyon' },
       ]}
@@ -96,6 +97,10 @@ export default function AdminHomePage() {
         <a href="/admin/onboarding" style={{ textDecoration: 'none', color: '#1f1b16', border: '1px solid #e2dbd1', borderRadius: 14, padding: 16, background: '#fff' }}>
           <div style={{ fontWeight: 700 }}>Uyum Süreci</div>
           <div style={{ marginTop: 6, opacity: 0.75, fontSize: 13 }}>Rol bazlı onboarding ilerlemesini görüntüle.</div>
+        </a>
+        <a href="/admin/audit" style={{ textDecoration: 'none', color: '#1f1b16', border: '1px solid #e2dbd1', borderRadius: 14, padding: 16, background: '#fff' }}>
+          <div style={{ fontWeight: 700 }}>Denetim Kayıtları</div>
+          <div style={{ marginTop: 6, opacity: 0.75, fontSize: 13 }}>Aksiyonları ham ve kanonik alanlarla incele.</div>
         </a>
         <a href="/admin/commission" style={{ textDecoration: 'none', color: '#1f1b16', border: '1px solid #e2dbd1', borderRadius: 14, padding: 16, background: '#fff' }}>
           <div style={{ fontWeight: 700 }}>Komisyon Ayarları</div>

@@ -3,6 +3,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { api } from '@/lib/api';
+import { AlertMessage, ToastView, useToast } from '@/app/_components/UiFeedback';
 
 type JsonObject = Record<string, unknown>;
 
@@ -111,6 +112,7 @@ export default function ConsultantListingEditPage() {
   const [status, setStatus] = useState('');
   const [auditRows, setAuditRows] = useState<AuditRow[]>([]);
   const [auditLoading, setAuditLoading] = useState(false);
+  const { toast, show } = useToast();
 
   const canPublish = useMemo(() => {
     const t = title.trim();
@@ -199,6 +201,7 @@ export default function ConsultantListingEditPage() {
       const l = (r?.data ?? r) as unknown as JsonObject as Listing;
       setData(l);
       setStatus(String(l?.status ?? status));
+      show('success', 'İlan kaydedildi');
     } catch (e: unknown) {
       console.error('save listing failed:', e);
       setErr(getErrorMessage(e, 'Kaydetme başarısız'));
@@ -210,7 +213,7 @@ export default function ConsultantListingEditPage() {
   async function publish() {
     if (!id) return;
     if (!canPublish) {
-      alert('Yayınlamak için en az Başlık ve Fiyat gerekli.');
+      show('error', 'Yayınlamak için en az Başlık ve Fiyat gerekli.');
       return;
     }
     setPublishing(true);
@@ -221,7 +224,8 @@ export default function ConsultantListingEditPage() {
       const l = (r?.data ?? r) as unknown as JsonObject as Listing;
       setData(l);
       setStatus(String(l?.status ?? 'PUBLISHED'));
-      alert('✅ Yayına alındı');
+      show('success', 'İlan yayına alındı');
+      await loadAudit();
     } catch (e: unknown) {
       console.error('publish listing failed:', e);
       setErr(getErrorMessage(e, 'Yayına alma başarısız'));
@@ -254,22 +258,7 @@ export default function ConsultantListingEditPage() {
         </div>
       </div>
 
-      {err && (
-        <div
-          style={{
-            marginTop: 14,
-            padding: 12,
-            borderRadius: 14,
-            border: '1px solid #FECACA',
-            background: '#FEF2F2',
-            color: '#991B1B',
-            fontSize: 13,
-            fontWeight: 700,
-          }}
-        >
-          {err}
-        </div>
-      )}
+      {err ? <AlertMessage type="error" message={err} /> : null}
 
       <div style={{ marginTop: 16, display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: 14 }}>
         <div style={{ border: '1px solid #EEF2F7', borderRadius: 18, padding: 14, background: '#fff' }}>
@@ -395,6 +384,7 @@ export default function ConsultantListingEditPage() {
           createdAt: {data.createdAt || '—'} • updatedAt: {data.updatedAt || '—'} • consultantId: {data.consultantId || '—'}
         </div>
       )}
+      <ToastView toast={toast} />
     </div>
   );
 }
