@@ -2,6 +2,9 @@
 
 import { useEffect, useState } from 'react';
 
+type JsonObject = Record<string, unknown>;
+
+
 type ErrInfo = { type: 'error' | 'rejection'; message: string; stack?: string };
 
 export default function ClientErrorOverlay() {
@@ -21,7 +24,7 @@ export default function ClientErrorOverlay() {
         typeof reason === 'string'
           ? reason
           : ((anyReason && typeof anyReason['message'] === 'string' ? (anyReason['message'] as string) : undefined) || (() => { try { return JSON.stringify(reason, null, 2); } catch { return String(reason); } })() || 'Unhandled promise rejection');
-      const stack = (anyReason && typeof anyReason['stack'] === 'string') ? String((anyReason as any)['stack']) : undefined;
+      const stack = (anyReason && typeof anyReason['stack'] === 'string') ? String((anyReason as unknown as JsonObject)['stack']) : undefined;
       setErr({ type: 'rejection', message, stack });
     };
 

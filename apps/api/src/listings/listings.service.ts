@@ -1,9 +1,11 @@
 import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { AuditEntityType, DealStatus, ListingStatus } from '@prisma/client';
+import { AuditService } from '../audit/audit.service';
 
 @Injectable()
 export class ListingsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService, private readonly audit: AuditService) {}
 
   async getById(id: string) {
     const listing = await this.prisma.listing.findUnique({ where: { id } });
@@ -36,7 +38,6 @@ export class ListingsService {
       data.title = t || 'İlan Taslağı';
     }
 
-    /* __AUTO_DEFAULT_CONSULTANT__ */
     if (!(data as any).consultant && !(data as any).consultantId) {
       const u =
         (await this.prisma.user.findFirst({ where: { role: 'CONSULTANT' as any } })) ??
@@ -46,6 +47,7 @@ export class ListingsService {
       }
       (data as any).consultant = { connect: { id: u.id } };
     }
+
     return this.prisma.listing.create({ data });
   }
 
@@ -69,7 +71,10 @@ export class ListingsService {
       if (cid) data.consultant = { connect: { id: cid } };
     }
 
-    if (dto?.title === undefined && (dto?.city !== undefined || dto?.district !== undefined || dto?.type !== undefined || dto?.rooms !== undefined)) {
+    if (
+      dto?.title === undefined &&
+      (dto?.city !== undefined || dto?.district !== undefined || dto?.type !== undefined || dto?.rooms !== undefined)
+    ) {
       const city = data.city ?? exists.city ?? null;
       const district = data.district ?? exists.district ?? null;
       const type = data.type ?? exists.type ?? null;
@@ -93,7 +98,10 @@ export class ListingsService {
     return listing;
   }
 
-  async upsertFromDealMeta(dealId: string): Promise<{ listing: any; created: boolean }> {
+  async upsertFromDealMeta(
+    dealId: string,
+    actor?: { actorUserId?: string | null; actorRole?: string | null },
+  ): Promise<{ listing: any; created: boolean }> {
     const deal = await this.prisma.deal.findUnique({ where: { id: dealId } });
     if (!deal) throw new NotFoundException('Deal not found');
 
@@ -112,6 +120,31 @@ export class ListingsService {
 
     if (listingId) {
       const updated = await this.prisma.listing.update({ where: { id: listingId }, data: updateData });
+      const beforeStatus = deal.status;
+      await this.prisma.deal.update({
+        where: { id: dealId },
+        data: { status: DealStatus.READY_FOR_LISTING },
+      });
+      if (beforeStatus !== DealStatus.READY_FOR_LISTING) {
+        await this.audit.log({
+          actorUserId: actor?.actorUserId ?? consultantId,
+          actorRole: actor?.actorRole ?? 'CONSULTANT',
+          action: 'DEAL_STATUS_CHANGED',
+          entityType: AuditEntityType.DEAL,
+          entityId: dealId,
+          beforeJson: { status: beforeStatus },
+          afterJson: { status: DealStatus.READY_FOR_LISTING },
+        });
+      }
+      await this.audit.log({
+        actorUserId: actor?.actorUserId ?? consultantId,
+        actorRole: actor?.actorRole ?? 'CONSULTANT',
+        action: 'LISTING_UPSERTED',
+        entityType: AuditEntityType.LISTING,
+        entityId: updated.id,
+        afterJson: { listingId: updated.id },
+        metaJson: { dealId, created: false },
+      });
       return { listing: updated, created: false };
     }
 
@@ -122,97 +155,192 @@ export class ListingsService {
       },
     });
 
-    await this.prisma.deal.update({ where: { id: dealId }, data: { listingId: created.id } });
+    await this.prisma.deal.update({
+      where: { id: dealId },
+      data: { listingId: created.id, status: DealStatus.READY_FOR_LISTING },
+    });
+    if (deal.status !== DealStatus.READY_FOR_LISTING) {
+      await this.audit.log({
+        actorUserId: actor?.actorUserId ?? consultantId,
+        actorRole: actor?.actorRole ?? 'CONSULTANT',
+        action: 'DEAL_STATUS_CHANGED',
+        entityType: AuditEntityType.DEAL,
+        entityId: dealId,
+        beforeJson: { status: deal.status },
+        afterJson: { status: DealStatus.READY_FOR_LISTING },
+      });
+    }
+    await this.audit.log({
+      actorUserId: actor?.actorUserId ?? consultantId,
+      actorRole: actor?.actorRole ?? 'CONSULTANT',
+      action: 'LISTING_UPSERTED',
+      entityType: AuditEntityType.LISTING,
+      entityId: created.id,
+      afterJson: { listingId: created.id },
+      metaJson: { dealId, created: true },
+    });
     return { listing: created, created: true };
   }
 
-  // Backward-compatible wrapper
-  async upsertFromDeal(dealId: string) {
-    const r = await this.upsertFromDealMeta(dealId);
+  async upsertFromDeal(dealId: string, actor?: { actorUserId?: string | null; actorRole?: string | null }) {
+    const r = await this.upsertFromDealMeta(dealId, actor);
     return r.listing;
   }
+
   /**
    * Publish listing: DRAFT -> PUBLISHED
-   * Minimal validation: title must be present, price must be set.
+   * Also CLOSES related deal(s)
    */
-  async publish(id: string) {
-    const listing = await this.prisma.listing.findUnique({ where: { id } });
-    if (!listing) throw new NotFoundException('Listing not found');
-
-    const title = (listing as any).title ?? null;
-    const price = (listing as any).price ?? null;
-
-    if (!title || String(title).trim().length === 0) {
-      throw new BadRequestException('Listing title is required before publish');
-    }
-    if (price === null || price === undefined) {
-      throw new BadRequestException('Listing price is required before publish');
-    }
-
-    const updated = await this.prisma.listing.update({
-      where: { id },
-      data: { status: 'PUBLISHED' },
+  async publish(id: string, actor?: { actorUserId?: string | null; actorRole?: string | null }) {
+    const beforeDeals = await this.prisma.deal.findMany({
+      where: { listingId: id },
+      select: { id: true, status: true },
     });
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const listing = await tx.listing.findUnique({ where: { id } });
+      if (!listing) throw new NotFoundException('Listing not found');
 
+      const title = (listing as any).title ?? null;
+      const price = (listing as any).price ?? null;
+
+      if (!title || String(title).trim().length === 0) {
+        throw new BadRequestException('Listing title is required before publish');
+      }
+      if (price === null || price === undefined) {
+        throw new BadRequestException('Listing price is required before publish');
+      }
+
+      const updated = await tx.listing.update({
+        where: { id },
+        data: { status: ListingStatus.PUBLISHED },
+      });
+
+      const r = await tx.deal.updateMany({
+        where: { listingId: id },
+        data: { status: DealStatus.WON },
+      });
+
+      console.log('[publish] listing', id, 'closed deals:', r.count);
+
+      return updated;
+    });
+    await this.audit.log({
+      actorUserId: actor?.actorUserId ?? null,
+      actorRole: actor?.actorRole ?? null,
+      action: 'LISTING_PUBLISHED',
+      entityType: AuditEntityType.LISTING,
+      entityId: id,
+      afterJson: { status: ListingStatus.PUBLISHED },
+    });
+    for (const d of beforeDeals) {
+      if (d.status !== DealStatus.WON) {
+        await this.audit.log({
+          actorUserId: actor?.actorUserId ?? null,
+          actorRole: actor?.actorRole ?? null,
+          action: 'DEAL_STATUS_CHANGED',
+          entityType: AuditEntityType.DEAL,
+          entityId: d.id,
+          beforeJson: { status: d.status },
+          afterJson: { status: DealStatus.WON },
+          metaJson: { source: 'LISTING_PUBLISH' },
+        });
+      }
+    }
     return updated;
   }
 
-                                async list(filters: any = {}) {
-                  const where: any = {};
+  async markSold(id: string, actor?: { actorUserId?: string | null; actorRole?: string | null }) {
+    const beforeDeals = await this.prisma.deal.findMany({
+      where: { listingId: id },
+      select: { id: true, status: true },
+    });
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const listing = await tx.listing.findUnique({ where: { id } });
+      if (!listing) throw new NotFoundException('Listing not found');
 
-                  
+      const updated = await tx.listing.update({
+        where: { id },
+        data: { status: ListingStatus.SOLD },
+      });
+
+      await tx.deal.updateMany({
+        where: { listingId: id },
+        data: { status: DealStatus.WON },
+      });
+
+      return updated;
+    });
+    await this.audit.log({
+      actorUserId: actor?.actorUserId ?? null,
+      actorRole: actor?.actorRole ?? null,
+      action: 'LISTING_SOLD',
+      entityType: AuditEntityType.LISTING,
+      entityId: id,
+      afterJson: { status: ListingStatus.SOLD },
+    });
+    for (const d of beforeDeals) {
+      if (d.status !== DealStatus.WON) {
+        await this.audit.log({
+          actorUserId: actor?.actorUserId ?? null,
+          actorRole: actor?.actorRole ?? null,
+          action: 'DEAL_STATUS_CHANGED',
+          entityType: AuditEntityType.DEAL,
+          entityId: d.id,
+          beforeJson: { status: d.status },
+          afterJson: { status: DealStatus.WON },
+          metaJson: { source: 'LISTING_SOLD' },
+        });
+      }
+    }
+    return updated;
+  }
+
+  async list(filters: any = {}) {
+    const where: any = {};
+
     // Default feed behavior: if caller doesn't specify status, show only PUBLISHED
     if ((filters as any)?.status) {
       where.status = (filters as any).status;
     } else {
       where.status = 'PUBLISHED';
     }
-// status-based publishing:
-                  // default: only PUBLISHED
-                  // published=false: include drafts too
-if ((filters as any)?.status) {
-                    where.status = (filters as any).status;
-                  }
-if ((filters as any)?.city) where.city = (filters as any).city;
-                  if ((filters as any)?.district) where.district = (filters as any).district;
-                  if ((filters as any)?.type) where.type = (filters as any).type;
-                  if ((filters as any)?.rooms) where.rooms = (filters as any).rooms;
-                  if ((filters as any)?.consultantId) where.consultantId = (filters as any).consultantId;
 
-                  // pagination: page/pageSize OR skip/take
-                  const pageSizeRaw = Number((filters as any)?.pageSize ?? (filters as any)?.take ?? 20);
-                  const pageRaw = Number((filters as any)?.page ?? 1);
-                  const pageSize = Number.isFinite(pageSizeRaw) && pageSizeRaw > 0 ? Math.min(pageSizeRaw, 100) : 20;
-                  const page = Number.isFinite(pageRaw) && pageRaw > 0 ? pageRaw : 1;
+    if ((filters as any)?.city) where.city = (filters as any).city;
+    if ((filters as any)?.district) where.district = (filters as any).district;
+    if ((filters as any)?.type) where.type = (filters as any).type;
+    if ((filters as any)?.rooms) where.rooms = (filters as any).rooms;
+    if ((filters as any)?.consultantId) where.consultantId = (filters as any).consultantId;
 
-                  let take = pageSize;
-                  let skip = (page - 1) * pageSize;
+    // pagination: page/pageSize OR skip/take
+    const pageSizeRaw = Number((filters as any)?.pageSize ?? (filters as any)?.take ?? 20);
+    const pageRaw = Number((filters as any)?.page ?? 1);
+    const pageSize = Number.isFinite(pageSizeRaw) && pageSizeRaw > 0 ? Math.min(pageSizeRaw, 100) : 20;
+    const page = Number.isFinite(pageRaw) && pageRaw > 0 ? pageRaw : 1;
 
-                  const takeRaw = Number((filters as any)?.take);
-                  const skipRaw = Number((filters as any)?.skip);
-                  if (Number.isFinite(takeRaw) && takeRaw > 0) take = Math.min(takeRaw, 100);
-                  if (Number.isFinite(skipRaw) && skipRaw >= 0) skip = skipRaw;
+    let take = pageSize;
+    let skip = (page - 1) * pageSize;
 
-                  // ordering
-                  const sortByRaw = String((filters as any)?.sortBy ?? (filters as any)?.orderBy ?? 'createdAt');
-                  const dirRaw = String((filters as any)?.sortDir ?? (filters as any)?.direction ?? 'desc').toLowerCase();
-                  const direction = dirRaw === 'asc' ? 'asc' : 'desc';
-                  const allowed = new Set(['createdAt', 'updatedAt', 'price', 'title']);
-                  const sortBy = allowed.has(sortByRaw) ? sortByRaw : 'createdAt';
+    const takeRaw = Number((filters as any)?.take);
+    const skipRaw = Number((filters as any)?.skip);
+    if (Number.isFinite(takeRaw) && takeRaw > 0) take = Math.min(takeRaw, 100);
+    if (Number.isFinite(skipRaw) && skipRaw >= 0) skip = skipRaw;
 
-                  const orderBy: any = {};
-                  orderBy[sortBy] = direction;
+    // ordering
+    const sortByRaw = String((filters as any)?.sortBy ?? (filters as any)?.orderBy ?? 'createdAt');
+    const dirRaw = String((filters as any)?.sortDir ?? (filters as any)?.direction ?? 'desc').toLowerCase();
+    const direction = dirRaw === 'asc' ? 'asc' : 'desc';
+    const allowed = new Set(['createdAt', 'updatedAt', 'price', 'title']);
+    const sortBy = allowed.has(sortByRaw) ? sortByRaw : 'createdAt';
 
-                  const [items, total] = await Promise.all([
-                    this.prisma.listing.findMany({ where, orderBy, skip, take }),
-                    this.prisma.listing.count({ where }),
-                  ]);
+    const orderBy: any = {};
+    orderBy[sortBy] = direction;
 
-                  return { items, total, page, pageSize };
-                }
+    const [items, total] = await Promise.all([
+      this.prisma.listing.findMany({ where, orderBy, skip, take }),
+      this.prisma.listing.count({ where }),
+    ]);
 
-
-
-
+    return { items, total, page, pageSize, take, skip };
+  }
 
 }

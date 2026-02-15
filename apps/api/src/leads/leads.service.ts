@@ -1,22 +1,29 @@
-import { DealStatus } from '@prisma/client';
+import { AuditEntityType, DealStatus, LeadStatus } from '@prisma/client';
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { DealsService } from '../deals/deals.service';
 import { LEAD_QUESTIONS } from './lead.questions';
+import { AuditService } from '../audit/audit.service';
 
 @Injectable()
 export class LeadsService {
-  constructor(private prisma: PrismaService, private dealsService: DealsService) {}
+  constructor(private prisma: PrismaService, private dealsService: DealsService, private audit: AuditService) {}
 
   async create(initialText: string) {
     const txt = (initialText ?? '').trim();
     if (!txt) throw new BadRequestException('initialText is required');
 
     const lead = await this.prisma.lead.create({
-      data: { initialText: txt, status: 'OPEN' },
+      data: { initialText: txt, status: LeadStatus.NEW },
       select: { id: true, status: true, createdAt: true },
     });
-    await this.dealsService.ensureForLead(lead.id);
+    await this.audit.log({
+      action: 'LEAD_CREATED',
+      entityType: AuditEntityType.LEAD,
+      entityId: lead.id,
+      afterJson: { status: LeadStatus.NEW },
+      metaJson: { sourceRole: 'PUBLIC' },
+    });
     return lead;
   }
 
@@ -36,8 +43,16 @@ export class LeadsService {
 
     if (!next) {
       // tamamlandı
-      if (lead.status !== 'COMPLETED') {
-        await this.prisma.lead.update({ where: { id }, data: { status: 'COMPLETED' } });
+      if (lead.status !== LeadStatus.REVIEW) {
+        await this.prisma.lead.update({ where: { id }, data: { status: LeadStatus.REVIEW } });
+        await this.audit.log({
+          action: 'LEAD_STATUS_CHANGED',
+          entityType: AuditEntityType.LEAD,
+          entityId: id,
+          beforeJson: { status: lead.status },
+          afterJson: { status: LeadStatus.REVIEW },
+          metaJson: { reason: 'QUESTIONS_COMPLETED' },
+        });
       }
       await this.ensureDealForCompletedLead(id);
       const d = await this.dealsService.ensureForLead(id);
@@ -46,8 +61,16 @@ export class LeadsService {
     }
 
     // süreç başladı
-    if (lead.status === 'OPEN') {
-      await this.prisma.lead.update({ where: { id }, data: { status: 'IN_PROGRESS' } });
+    if (lead.status === LeadStatus.NEW) {
+      await this.prisma.lead.update({ where: { id }, data: { status: LeadStatus.REVIEW } });
+      await this.audit.log({
+        action: 'LEAD_STATUS_CHANGED',
+        entityType: AuditEntityType.LEAD,
+        entityId: id,
+        beforeJson: { status: LeadStatus.NEW },
+        afterJson: { status: LeadStatus.REVIEW },
+        metaJson: { reason: 'QUESTIONS_STARTED' },
+      });
     }
 
     return { done: false, ...next };
@@ -142,12 +165,20 @@ export class LeadsService {
     // Basit başlangıç: status NEW, title initialText'ten türet
     const title = (lead.initialText ?? '').slice(0, 120) || 'Yeni Deal';
 
-    return this.prisma.deal.create({
+    const created = await this.prisma.deal.create({
       data: {
         leadId,
         status: 'OPEN',
         },
     });
+    await this.audit.log({
+      action: 'DEAL_CREATED',
+      entityType: AuditEntityType.DEAL,
+      entityId: created.id,
+      afterJson: { status: DealStatus.OPEN },
+      metaJson: { leadId, source: 'LEAD_COMPLETION' },
+    });
+    return created;
   }
 
 
@@ -193,10 +224,23 @@ export class LeadsService {
 
 
   private async markDealReadyForMatching(dealId: string) {
+    const before = await this.prisma.deal.findUnique({
+      where: { id: dealId },
+      select: { status: true },
+    });
     await this.prisma.deal.update({
       where: { id: dealId },
-      data: { status: DealStatus.READY_FOR_MATCHING },
+      data: { status: DealStatus.READY_FOR_LISTING },
     });
+    if (before && before.status !== DealStatus.READY_FOR_LISTING) {
+      await this.audit.log({
+        action: 'DEAL_STATUS_CHANGED',
+        entityType: AuditEntityType.DEAL,
+        entityId: dealId,
+        beforeJson: { status: before.status },
+        afterJson: { status: DealStatus.READY_FOR_LISTING },
+      });
+    }
   }
   private normalizeWizardValue(field: string, raw: string) {
     const v = String(raw ?? '').trim();

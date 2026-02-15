@@ -10,6 +10,8 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { AuditEntityType, LeadStatus } from '@prisma/client';
+import { AuditService } from '../audit/audit.service';
 
 type ReqWithUser = {
   user?: { id?: string; sub?: string; role?: string };
@@ -18,7 +20,7 @@ type ReqWithUser = {
 @Controller('hunter/leads')
 @UseGuards(JwtAuthGuard)
 export class HunterLeadsController {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService, private audit: AuditService) {}
 
   private assertHunter(req: ReqWithUser) {
     const role = String(req.user?.role || '').toUpperCase();
@@ -44,11 +46,21 @@ export class HunterLeadsController {
     const lead = await this.prisma.lead.create({
       data: {
         initialText,
-        status: 'OPEN',
+        status: LeadStatus.NEW,
         sourceRole: 'HUNTER',
         sourceUserId: userId,
       },
       select: { id: true, status: true, createdAt: true },
+    });
+
+    await this.audit.log({
+      actorUserId: userId,
+      actorRole: 'HUNTER',
+      action: 'LEAD_CREATED',
+      entityType: AuditEntityType.LEAD,
+      entityId: lead.id,
+      afterJson: { status: LeadStatus.NEW },
+      metaJson: { sourceRole: 'HUNTER' },
     });
 
     return lead;

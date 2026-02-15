@@ -21,6 +21,7 @@ export type ApiClient = {
   get<T = any>(path: string, init?: ApiInit): Promise<ApiResponse<T>>;
   post<T = any>(path: string, body?: any, init?: ApiInit): Promise<ApiResponse<T>>;
   patch<T = any>(path: string, body?: any, init?: ApiInit): Promise<ApiResponse<T>>;
+  put<T = any>(path: string, body?: any, init?: ApiInit): Promise<ApiResponse<T>>;
   delete<T = any>(path: string, init?: ApiInit): Promise<ApiResponse<T>>;
 };
 
@@ -76,6 +77,7 @@ function appendParamsToUrl(url: string, init?: ApiInit): { url: string; init: Ap
   }
   const qs = usp.toString();
   if (!qs) {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { params: _p, ...rest } = anyInit;
     return { url, init: rest as RequestInit };
   }
@@ -83,6 +85,7 @@ function appendParamsToUrl(url: string, init?: ApiInit): { url: string; init: Ap
   const joiner = url.includes('?') ? '&' : '?';
   const nextUrl = url + joiner + qs;
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { params: _p, ...rest } = anyInit;
   return { url: nextUrl, init: rest as RequestInit };
 }
@@ -166,6 +169,9 @@ export const api: ApiClient = Object.assign(baseCallable, {
   patch<T = any>(path: string, body?: any, init?: ApiInit) {
     return requestJson<T>('PATCH', path, body, init);
   },
+put<T = any>(path: string, body?: any, init?: ApiInit) {
+  return requestJson<T>('PUT', path, body, init);
+},
   delete<T = any>(path: string, init?: ApiInit) {
     return requestJson<T>('DELETE', path, undefined, init);
   },

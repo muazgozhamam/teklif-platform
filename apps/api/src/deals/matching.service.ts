@@ -54,14 +54,23 @@ export class MatchingService {
     const ACTIVE_STATUSES = ['OPEN', 'READY_FOR_MATCHING', 'ASSIGNED'] as const;
 
     const m = new Map<string, number>();
-    for (const cid of consultantIds) {
-      const c = await this.prisma.deal.count({
-        where: {
-          consultantId: cid,
-          status: { in: [...ACTIVE_STATUSES] as any }, // Prisma enum farklarında TS takılmasın
-        },
-      });
-      m.set(cid, c);
+    if (!consultantIds.length) {
+      return m;
+    }
+
+    const rows = await this.prisma.deal.groupBy({
+      by: ['consultantId'],
+      where: {
+        consultantId: { in: consultantIds },
+        status: { in: [...ACTIVE_STATUSES] as any }, // Prisma enum farklarında TS takılmasın
+      },
+      _count: { _all: true },
+    });
+
+    for (const cid of consultantIds) m.set(cid, 0);
+    for (const row of rows) {
+      if (!row.consultantId) continue;
+      m.set(row.consultantId, row._count?._all ?? 0);
     }
     return m;
   }

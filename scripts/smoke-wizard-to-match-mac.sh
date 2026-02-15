@@ -35,7 +35,10 @@ for i in 1 2 3 4 5 6 7 8 9 10; do
   Q="$(curl -sS -X POST "$BASE_URL/leads/$LEAD_ID/wizard/next-question")"
   echo "Q$i: $Q"
 
-  FIELD="$(echo "$Q" | node -e 'const fs=require("fs"); const j=JSON.parse(fs.readFileSync(0,"utf8")); process.stdout.write(j.field||"");')"
+  KEY="$(echo "$Q" | node -e 'const fs=require("fs"); const j=JSON.parse(fs.readFileSync(0,"utf8")); process.stdout.write((j.key||"").toString());')"
+  FIELD="$(echo "$Q" | node -e 'const fs=require("fs"); const j=JSON.parse(fs.readFileSync(0,"utf8")); process.stdout.write((j.field||"").toString());')"
+  [ -n "$KEY" ] || KEY="$FIELD"
+  [ -n "$FIELD" ] || FIELD="$KEY"
 
   if [ -z "$FIELD" ]; then
     echo "Not: field gelmedi (muhtemelen wizard done)."
@@ -51,7 +54,7 @@ for i in 1 2 3 4 5 6 7 8 9 10; do
   echo "-> answering: $FIELD = $A"
   curl -sS -i -X POST "$BASE_URL/leads/$LEAD_ID/wizard/answer" \
     -H "Content-Type: application/json" \
-    -d "{\"answer\":\"$A\"}" | sed -n '1,25p'
+    -d "{\"key\":\"$FIELD\",\"field\":\"$FIELD\",\"answer\":\"$(answer_for_field "$FIELD")\"}" | sed -n '1,25p'
   echo "deal.status => $(deal_status)"
 done
 

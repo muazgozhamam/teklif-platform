@@ -1,10 +1,16 @@
 import { BadRequestException, Body, Controller, Get, Param, Post, Put } from '@nestjs/common';
-import { LeadAnswerDto, WizardAnswerDto } from './dto/lead-answer.dto';
+import { LeadAnswerDto } from './dto/lead-answer.dto';
 import { LeadsService } from './leads.service';
+import { UseGuards, Req } from '@nestjs/common';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { RolesGuard } from '../common/roles/roles.guard';
+import { Roles } from '../common/roles/roles.decorator';
+import { AuditService } from '../audit/audit.service';
+import { AuditEntityType } from '@prisma/client';
 
 @Controller('leads')
 export class LeadsController {
-  constructor(private leads: LeadsService) {}
+  constructor(private leads: LeadsService, private audit: AuditService) {}
 
   @Post()
   create(@Body() body: { initialText: string }) {
@@ -49,6 +55,17 @@ export class LeadsController {
     return this.leads.getLead(id);
   }
 
+  @Get(':id/audit')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN', 'BROKER', 'HUNTER')
+  async auditTimeline(@Req() req: any, @Param('id') id: string) {
+    const actor = {
+      userId: String(req.user?.sub ?? req.user?.id ?? '').trim(),
+      role: String(req.user?.role ?? '').trim().toUpperCase(),
+    };
+    await this.audit.assertCanReadLead(actor, id);
+    return this.audit.listByEntity(AuditEntityType.LEAD, id, 'asc');
+  }
 
   /**
    * Sprint-1: Lead Wizard (tek tek soru)
@@ -60,10 +77,12 @@ export class LeadsController {
   }
 
   @Post(':id/wizard/answer')
-  async wizardAnswer(@Param('id') id: string, @Body() body: WizardAnswerDto) {
+  async wizardAnswer(@Param('id') id: string, @Body() body: LeadAnswerDto) {
+    body.key = body.key ?? (body as any).field;
+
+
     return this.leads.wizardAnswer(id, body?.key, body?.answer);
   }
-
 
   // Public: lead iletişim bilgisi kaydet (şimdilik LeadAnswer key=phone olarak saklıyoruz)
   @Post(':id/contact')
@@ -76,7 +95,9 @@ export class LeadsController {
 
     // LeadAnswer upsert ile sakla (DB şeması gerektirmez)
     await this.leads.upsertAnswer(id, 'phone', digits);
-    return { ok: true };
+    return {
+
+ ok: true };
   }
 
 }

@@ -1,6 +1,7 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { Role } from '@prisma/client';
+import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class DevSeedService implements OnModuleInit {
@@ -16,17 +17,19 @@ export class DevSeedService implements OnModuleInit {
     // DEV amaçlı consultant seed (idempotent)
     const id = 'consultant_seed_1';
     const email = 'consultant1@test.com';
+    const hash = await bcrypt.hash('pass123', 10);
 
     try {
       await this.prisma.user.upsert({
         where: { email },
-        update: { role: Role.CONSULTANT },
+        update: { role: Role.CONSULTANT, isActive: true, password: hash },
         create: {
           id,
           email,
-          password: 'pass123',
+          password: hash,
           name: 'Consultant 1',
           role: Role.CONSULTANT,
+          isActive: true,
         },
       });
 

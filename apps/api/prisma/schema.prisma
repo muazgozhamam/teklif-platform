@@ -20,6 +20,12 @@ model User {
   password        String
   name            String?
   role            Role     @default(USER)
+  parentId        String?
+  parent          User?    @relation("UserHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  children        User[]   @relation("UserHierarchy")
+  officeId        String?
+  office          Office?  @relation(fields: [officeId], references: [id], onDelete: SetNull)
+  officesManaged  Office[] @relation("OfficeBroker")
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
   offers          Offer[]  @relation("UserOffers")
@@ -30,11 +36,19 @@ model User {
   isActive         Boolean   @default(false)
   approvedAt       DateTime?
   approvedByUserId String?
+  auditLogsActed   AuditLog[] @relation("AuditActor")
+  commissionAllocations CommissionAllocation[] @relation("CommissionAllocationBeneficiary")
+
+  consultantCommissionProfile ConsultantCommissionProfile? @relation("UserConsultantCommissionProfile")
+
+  @@index([parentId])
+  @@index([officeId])
 }
 
 enum Role {
   USER
   ADMIN
+  BROKER
   CONSULTANT
   HUNTER
 }
@@ -48,12 +62,14 @@ model Lead {
   initialText String
 
   // Durum (sonra pipeline yapacağız)
-  status LeadStatus @default(OPEN)
+  status LeadStatus @default(NEW)
 
   // Kaynak (HUNTER vs PUBLIC vs BROKER vs ...)
   sourceRole   String?
   // Kaynağı oluşturan kullanıcı (Hunter gönderimleri için)
   sourceUserId String?
+  regionId     String?
+  region       Region? @relation(fields: [regionId], references: [id], onDelete: SetNull)
 
   // İsteğe bağlı: admin/agent ataması (sonra User ile ilişkilendiririz)
   assignedTo String?
@@ -62,6 +78,8 @@ model Lead {
   answers LeadAnswer[]
   offers  Offer[]
   deal    Deal?
+
+  @@index([regionId])
 }
 
 model LeadAnswer {
@@ -77,6 +95,11 @@ model LeadAnswer {
 }
 
 enum LeadStatus {
+  NEW
+  REVIEW
+  APPROVED
+  REJECTED
+
   OPEN
   IN_PROGRESS
   COMPLETED
@@ -92,6 +115,7 @@ enum LeadStatus {
 enum DealStatus {
   OPEN
   READY_FOR_MATCHING
+  READY_FOR_LISTING
   ASSIGNED
   WON
   LOST
@@ -143,11 +167,16 @@ model Deal {
 
   @@index([status])
   @@index([listingId])
+  @@index([consultantId, createdAt])
+  @@index([status, createdAt])
+
+  commissionSnapshot CommissionSnapshot? @relation("DealCommissionSnapshot")
 }
 
 enum ListingStatus {
   DRAFT
   PUBLISHED
+  SOLD
   ARCHIVED
 }
 
@@ -155,6 +184,136 @@ enum ApplicationStatus {
   PENDING
   APPROVED
   REJECTED
+}
+
+enum AuditEntityType {
+  LEAD
+  DEAL
+  LISTING
+  REGION
+  OFFICE
+  USER
+  COMMISSION_CONFIG
+  COMMISSION
+  AUTH
+}
+
+enum AuditAction {
+  // Legacy actions (keep for backward compatibility)
+  ADMIN_USER_PATCHED
+  ADMIN_COMMISSION_PATCHED
+
+  // Canonical actions
+  LEAD_CREATED
+  LEAD_STATUS_CHANGED
+  DEAL_CREATED
+  DEAL_ASSIGNED
+  DEAL_STATUS_CHANGED
+  LISTING_UPSERTED
+  LISTING_PUBLISHED
+  LISTING_SOLD
+  USER_CREATED
+  USER_PATCHED
+  USER_PASSWORD_SET
+  COMMISSION_SNAPSHOT_CREATED
+  COMMISSION_SNAPSHOT_NETWORK_CAPTURED
+  LOGIN_DENIED_INACTIVE
+  NETWORK_PARENT_SET
+  COMMISSION_SPLIT_CONFIG_SET
+  REGION_CREATED
+  OFFICE_CREATED
+  USER_OFFICE_ASSIGNED
+  LEAD_REGION_ASSIGNED
+  COMMISSION_ALLOCATED
+  COMMISSION_ALLOCATION_APPROVED
+  COMMISSION_ALLOCATION_VOIDED
+  COMMISSION_ALLOCATION_EXPORTED
+}
+
+enum AllocationState {
+  PENDING
+  APPROVED
+  VOID
+}
+
+enum BackgroundJobStatus {
+  PENDING
+  RUNNING
+  SUCCEEDED
+  FAILED
+}
+
+model Region {
+  id        String   @id @default(cuid())
+  city      String
+  district  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  offices Office[]
+  leads   Lead[]
+
+  @@index([city])
+  @@index([city, district])
+}
+
+model Office {
+  id              String   @id @default(cuid())
+  name            String
+  regionId        String
+  region          Region   @relation(fields: [regionId], references: [id], onDelete: Restrict)
+  brokerId        String?
+  broker          User?    @relation("OfficeBroker", fields: [brokerId], references: [id], onDelete: SetNull)
+  overridePercent Float?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  users User[]
+
+  @@index([regionId])
+  @@index([brokerId])
+}
+
+model CommissionConfig {
+  id             String   @id @default("default")
+  baseRate       Float    @default(0.03)
+  hunterSplit    Int      @default(10)
+  brokerSplit    Int      @default(10)
+  consultantSplit Int     @default(70)
+  platformSplit  Int      @default(10)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model CommissionSplitConfig {
+  id        String   @id @default(cuid())
+  role      Role     @unique
+  percent   Float
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model AuditLog {
+  id          String          @id @default(cuid())
+  createdAt   DateTime        @default(now())
+  actorUserId String?
+  actorRole   Role?
+  action      AuditAction
+  entityType AuditEntityType
+  entityId    String
+  beforeJson  Json?
+  afterJson   Json?
+  metaJson    Json?
+  prevHash    String?
+  hash        String?
+
+  actorUser   User?           @relation("AuditActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([entityType, entityId, createdAt])
+  @@index([actorUserId, createdAt])
+  @@index([action, createdAt])
+  @@index([createdAt])
+  @@index([hash])
 }
 
 model Listing {
@@ -214,4 +373,97 @@ model HunterApplication {
   @@index([email])
   @@index([brokerId])
   @@index([sponsorId])
+}
+
+/// Consultant-specific commission profile (role-based split percentages)
+/// Rates are fractions (e.g., 0.10 = 10%). Must sum to 1.00 by business rule.
+model ConsultantCommissionProfile {
+  id               String   @id @default(cuid())
+  consultantId     String   @unique
+  isActive         Boolean  @default(true)
+
+  hunterRate       Decimal  @default(0.10)
+  brokerRate       Decimal  @default(0.10)
+  consultantRate   Decimal  @default(0.70)
+  platformRate     Decimal  @default(0.10)
+
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  /// relations (assumes User model exists with id String)
+  consultant       User     @relation("UserConsultantCommissionProfile", fields: [consultantId], references: [id])
+  @@index([consultantId, isActive])
+}
+
+/// Immutable commission snapshot (generated when a deal is WON)
+model CommissionSnapshot {
+  id               String   @id @default(cuid())
+  dealId           String   @unique
+
+  closingPrice     Decimal
+  currency         String   @default("TRY")
+
+  totalCommission  Decimal
+  hunterAmount     Decimal
+  brokerAmount     Decimal
+  consultantAmount Decimal
+  platformAmount   Decimal
+
+  /// Keep the exact rate config used at the time of snapshot
+  rateUsedJson     Json
+  networkMeta      Json?
+
+  createdAt        DateTime @default(now())
+
+  /// relations
+  deal             Deal     @relation("DealCommissionSnapshot", fields: [dealId], references: [id])
+  allocations      CommissionAllocation[]
+  @@index([createdAt])
+}
+
+model CommissionAllocation {
+  id                String           @id @default(cuid())
+  snapshotId         String
+  snapshot           CommissionSnapshot @relation(fields: [snapshotId], references: [id], onDelete: Cascade)
+  beneficiaryUserId  String
+  beneficiary        User             @relation("CommissionAllocationBeneficiary", fields: [beneficiaryUserId], references: [id], onDelete: Restrict)
+
+  role              Role
+  percent           Float
+  amount            Float
+
+  state             AllocationState   @default(PENDING)
+  exportedAt        DateTime?
+  exportBatchId     String?
+
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  @@index([snapshotId])
+  @@index([beneficiaryUserId, createdAt])
+  @@index([state, createdAt])
+  @@index([exportedAt, createdAt])
+  @@index([exportBatchId])
+  @@unique([snapshotId, beneficiaryUserId, role])
+}
+
+model BackgroundJobRun {
+  id             String              @id @default(cuid())
+  jobName        String
+  idempotencyKey String
+  status         BackgroundJobStatus @default(PENDING)
+  attempts       Int                 @default(0)
+  maxAttempts    Int                 @default(3)
+  payload        Json?
+  resultJson     Json?
+  lastError      String?
+  startedAt      DateTime?
+  finishedAt     DateTime?
+  nextRetryAt    DateTime?
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+
+  @@unique([jobName, idempotencyKey])
+  @@index([jobName, status, createdAt])
+  @@index([createdAt])
 }

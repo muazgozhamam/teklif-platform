@@ -13,16 +13,31 @@ function getAdapter() {
 const prisma = new PrismaClient({ adapter: getAdapter() });
 
 async function main() {
-  const email = 'admin@local.dev';
-  const password = await bcrypt.hash('admin123', 10);
+  const adminEmail = 'admin@local.dev';
+  const adminPassword = await bcrypt.hash('admin123', 10);
+  const consultantEmail = 'consultant1@test.com';
+  const consultantPassword = await bcrypt.hash('pass123', 10);
 
   await prisma.user.upsert({
-    where: { email },
-    update: {},
-    create: { email, password, role: 'ADMIN' },
+    where: { email: adminEmail },
+    update: { isActive: true, role: 'ADMIN' },
+    create: { email: adminEmail, password: adminPassword, role: 'ADMIN', isActive: true },
   });
 
-  console.log('✅ Admin user hazır:', email, ' / admin123');
+  await prisma.user.upsert({
+    where: { email: consultantEmail },
+    update: { isActive: true, role: 'CONSULTANT', password: consultantPassword },
+    create: {
+      email: consultantEmail,
+      password: consultantPassword,
+      role: 'CONSULTANT',
+      name: 'Consultant 1',
+      isActive: true,
+    },
+  });
+
+  console.log('✅ Admin user hazır:', adminEmail, ' / admin123');
+  console.log('✅ Consultant user hazır:', consultantEmail, ' / pass123');
 }
 
 main()
