@@ -18,35 +18,33 @@ export default function BrokerRootPage() {
   const [stats, setStats] = React.useState<BrokerStats | null>(null);
   const [statsLoading, setStatsLoading] = React.useState(true);
   const [statsErr, setStatsErr] = React.useState<string | null>(null);
+  const [updatedAt, setUpdatedAt] = React.useState<string | null>(null);
+
+  const loadStats = React.useCallback(async () => {
+    if (!allowed) return;
+    setStatsLoading(true);
+    setStatsErr(null);
+    try {
+      const res = await api.get<BrokerStats | { role?: string }>('/stats/me');
+      const data = res.data;
+      if (data && (data as { role?: string }).role === 'BROKER') {
+        setStats(data as BrokerStats);
+      } else {
+        setStats(null);
+      }
+      setUpdatedAt(new Date().toLocaleTimeString('tr-TR'));
+    } catch (e: unknown) {
+      const msg = e && typeof e === 'object' && 'message' in e ? String((e as { message?: string }).message || '') : '';
+      setStatsErr(msg || 'İstatistik alınamadı');
+    } finally {
+      setStatsLoading(false);
+    }
+  }, [allowed]);
 
   React.useEffect(() => {
     if (!allowed) return;
-    let mounted = true;
-    async function loadStats() {
-      setStatsLoading(true);
-      setStatsErr(null);
-      try {
-        const res = await api.get<BrokerStats | { role?: string }>('/stats/me');
-        const data = res.data;
-        if (!mounted) return;
-        if (data && (data as { role?: string }).role === 'BROKER') {
-          setStats(data as BrokerStats);
-        } else {
-          setStats(null);
-        }
-      } catch (e: unknown) {
-        if (!mounted) return;
-        const msg = e && typeof e === 'object' && 'message' in e ? String((e as { message?: string }).message || '') : '';
-        setStatsErr(msg || 'İstatistik alınamadı');
-      } finally {
-        if (mounted) setStatsLoading(false);
-      }
-    }
-    loadStats();
-    return () => {
-      mounted = false;
-    };
-  }, [allowed]);
+    void loadStats();
+  }, [allowed, loadStats]);
 
   if (!allowed) {
     return (
@@ -68,6 +66,14 @@ export default function BrokerRootPage() {
         { href: '/broker/hunter-applications', label: 'Hunter Başvuruları' },
       ]}
     >
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10, alignItems: 'center' }}>
+        <div style={{ fontSize: 12, color: '#6b7280' }}>
+          Son güncelleme: <b>{updatedAt || '—'}</b>
+        </div>
+        <button onClick={() => void loadStats()} disabled={statsLoading} style={{ border: '1px solid #ddd', background: '#fff', borderRadius: 10, padding: '8px 12px' }}>
+          Yenile
+        </button>
+      </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(180px,1fr))', gap: 10, marginBottom: 12 }}>
         {statsLoading ? (
           <>
