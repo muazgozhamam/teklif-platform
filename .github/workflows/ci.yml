@@ -27,6 +27,11 @@ jobs:
       - name: Install deps
         run: pnpm install --frozen-lockfile
 
+      - name: Prisma generate
+        env:
+          DATABASE_URL: postgresql://teklif:teklif@localhost:5432/teklif?schema=public
+        run: pnpm -C apps/api exec prisma generate
+
       - name: API tests
         run: pnpm -C apps/api test
 
@@ -75,6 +80,9 @@ jobs:
 
       - name: Install deps
         run: pnpm install --frozen-lockfile
+
+      - name: Prisma generate
+        run: pnpm -C apps/api exec prisma generate
 
       - name: Prepare API env
         run: |
