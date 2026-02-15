@@ -63,3 +63,4 @@
 | 12.5 satdedi.com operations handover | DONE |  | `SATDEDI_OPS_HANDOVER.md` | Gunluk/haftalik runbook ve deploy/incident akisi tek referansta toplandi |
 | 12.6 satdedi.com release-day one-shot | DONE |  | `scripts/ops/satdedi-release-day.sh`, `SATDEDI_RELEASE_DAY.md` | Signoff + domain readiness + post-go-live smoke tek komutta toplandi |
 | 12.7 PR/merge hizlandirma standardi | DONE |  | `.github/pull_request_template.md`, `PR_WORKFLOW_SATDEDI.md` | PR metni ve merge akisi tek formatta standardize edildi |
+| 12.8 GitHub auto-merge setup standardi | DONE |  | `GITHUB_AUTOMERGE_SETUP.md` | Branch protection + required checks + auto-merge akisi dokumante edildi |
