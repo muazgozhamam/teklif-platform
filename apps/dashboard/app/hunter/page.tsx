@@ -26,25 +26,43 @@ export default function HunterDashboardPage() {
       subtitle="Lead oluştur, akışı takip et ve broker kuyruğunu besle."
       nav={[
         { href: '/hunter', label: 'Panel' },
+        { href: '/hunter/leads', label: 'Leadlerim' },
         { href: '/hunter/leads/new', label: 'Yeni Lead' },
       ]}
     >
       <div style={{ border: '1px solid #e2dbd1', borderRadius: 14, padding: 16, background: '#fff' }}>
         <div style={{ fontWeight: 700, marginBottom: 8 }}>Hızlı Aksiyon</div>
-        <a
-          href="/hunter/leads/new"
-          style={{
-            display: 'inline-flex',
-            textDecoration: 'none',
-            color: '#1f1b16',
-            border: '1px solid #d7cfbf',
-            borderRadius: 10,
-            padding: '10px 14px',
-            fontWeight: 700,
-          }}
-        >
-          Lead Gönder
-        </a>
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+          <a
+            href="/hunter/leads/new"
+            style={{
+              display: 'inline-flex',
+              textDecoration: 'none',
+              color: '#1f1b16',
+              border: '1px solid #d7cfbf',
+              borderRadius: 10,
+              padding: '10px 14px',
+              fontWeight: 700,
+            }}
+          >
+            Lead Gönder
+          </a>
+          <a
+            href="/hunter/leads"
+            style={{
+              display: 'inline-flex',
+              textDecoration: 'none',
+              color: '#1f1b16',
+              border: '1px solid #d7cfbf',
+              borderRadius: 10,
+              padding: '10px 14px',
+              fontWeight: 700,
+              background: '#fff',
+            }}
+          >
+            Leadlerimi Gör
+          </a>
+        </div>
       </div>
     </RoleShell>
   );

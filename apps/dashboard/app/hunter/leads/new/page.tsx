@@ -125,6 +125,7 @@ export default function HunterNewLeadPage() {
       subtitle="Satdedi ağına yeni müşteri talebini ekle."
       nav={[
         { href: '/hunter', label: 'Panel' },
+        { href: '/hunter/leads', label: 'Leadlerim' },
         { href: '/hunter/leads/new', label: 'Yeni Lead' },
       ]}
     >
