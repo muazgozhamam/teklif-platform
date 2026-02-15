@@ -86,7 +86,9 @@ export default function AdminUsersPage() {
       title="Yönetici Kullanıcıları"
       subtitle="Kullanıcıları listele ve rol güncelle."
       nav={[
+        { href: '/admin', label: 'Panel' },
         { href: '/admin/users', label: 'Kullanıcılar' },
+        { href: '/admin/audit', label: 'Denetim' },
         { href: '/admin/onboarding', label: 'Uyum Süreci' },
         { href: '/admin/commission', label: 'Komisyon' },
       ]}
