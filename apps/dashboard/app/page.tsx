@@ -439,7 +439,7 @@ export default function PublicChatPage() {
               disabled={disabled}
               placeholder={placeholder}
               onSend={onSend}
-              onInputChange={(value) => setInput(phase === "collect_phone" ? maskPhoneTR(value) : value)}
+              onInputChange={(value) => setInput(value)}
               isPhoneValid={isValidPhoneTRForApi(input)}
               inputRef={composerRef}
             />
