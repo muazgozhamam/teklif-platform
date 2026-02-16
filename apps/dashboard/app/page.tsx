@@ -9,21 +9,7 @@ import LandingHeader from "@/components/landing/LandingHeader";
 type Role = "assistant" | "user" | "system";
 type Message = { id: string; role: Role; text: string };
 
-function resolveApiBase() {
-  const fromEnv = process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
-  if (fromEnv) return fromEnv.replace(/\/+$/, "");
-
-  if (typeof window !== "undefined") {
-    const host = window.location.hostname;
-    if (host === "app.satdedi.com") return "https://api.satdedi.com";
-    if (host === "stage.satdedi.com") return "https://api-stage-44dd.up.railway.app";
-  }
-
-  return "http://localhost:3001";
-}
-
 export default function PublicChatPage() {
-  const apiBase = useMemo(() => resolveApiBase(), []);
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "welcome",
@@ -81,7 +67,7 @@ export default function PublicChatPage() {
 
     setIsStreaming(true);
     try {
-      const res = await fetch(`${apiBase}/public/chat`, {
+      const res = await fetch("/api/public/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message: text, history }),
