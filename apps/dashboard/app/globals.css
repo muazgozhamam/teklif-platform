@@ -23,17 +23,38 @@ body {
   @apply antialiased;
 }
 
+a,
+button,
+input,
+textarea,
+select {
+  -webkit-tap-highlight-color: transparent;
+}
+
+a:focus,
+button:focus,
+input:focus,
+textarea:focus,
+select:focus {
+  outline: none;
+}
+
 @media (max-width: 639px) {
-  .mobile-marquee-track {
+  .mobile-marquee-input::placeholder {
+    color: transparent;
+  }
+
+  .mobile-marquee-text {
     animation: prompt-marquee 14s linear infinite;
+    will-change: transform;
   }
 }
 
 @keyframes prompt-marquee {
   from {
-    transform: translateX(0);
+    transform: translateX(100%);
   }
   to {
-    transform: translateX(-50%);
+    transform: translateX(-100%);
   }
 }

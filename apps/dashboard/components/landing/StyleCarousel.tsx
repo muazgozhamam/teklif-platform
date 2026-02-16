@@ -32,13 +32,14 @@ export default function StyleCarousel() {
           key={item.title}
           href={item.href}
           aria-label={`${item.title} olarak devam et`}
-          className="rounded-2xl border p-2 text-left text-xs transition-transform hover:scale-[1.02]"
+          className="rounded-2xl border p-2 text-left text-xs transition-transform hover:scale-[1.02] focus:outline-none focus:ring-0 focus-visible:ring-0"
           style={{
             borderColor: "var(--color-border)",
             background: "var(--color-surface)",
             color: "var(--color-text-secondary)",
             boxShadow: "var(--shadow-sm)",
             textDecoration: "none",
+            WebkitTapHighlightColor: "transparent",
           }}
         >
           <div className="font-medium" style={{ color: "var(--color-text-primary)" }}>

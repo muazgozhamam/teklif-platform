@@ -93,12 +93,11 @@ export default function AuthModal({ open, onClose }: AuthModalProps) {
             type="email"
             placeholder="E-posta adresin"
             aria-label="E-posta adresi"
-            className="rounded-2xl border px-4 py-3 text-sm outline-none focus:ring-2"
+            className="rounded-2xl border px-4 py-3 text-sm outline-none focus:outline-none focus:ring-0 focus-visible:ring-0"
             style={{
               borderColor: "var(--color-border)",
               color: "var(--color-text-primary)",
               background: "var(--color-surface)",
-              ["--tw-ring-color" as string]: "var(--color-brand-500)",
             }}
           />
           <button
