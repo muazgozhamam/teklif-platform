@@ -20,7 +20,7 @@ import { DevSeedModule } from './dev-seed/dev-seed.module';
     }),
     JwtModule.register({
       global: true,
-      secret: 'dev-secret',
+      secret: process.env.JWT_SECRET || 'dev-secret',
       signOptions: { expiresIn: '7d' },
     }),
     PrismaModule,

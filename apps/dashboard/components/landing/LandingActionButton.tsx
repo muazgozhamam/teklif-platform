@@ -4,10 +4,11 @@ import React from "react";
 type Variant = "primary" | "outline" | "ghost";
 
 type LandingActionButtonProps = {
-  href: string;
+  href?: string;
   label: string;
   ariaLabel?: string;
   variant?: Variant;
+  onClick?: () => void;
 };
 
 export default function LandingActionButton({
@@ -15,6 +16,7 @@ export default function LandingActionButton({
   label,
   ariaLabel,
   variant = "outline",
+  onClick,
 }: LandingActionButtonProps) {
   const shared = "inline-flex items-center justify-center rounded-full px-4 py-2 text-sm font-medium transition-colors";
 
@@ -36,13 +38,22 @@ export default function LandingActionButton({
     },
   };
 
+  if (onClick && !href) {
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        aria-label={ariaLabel || label}
+        className={shared}
+        style={styleByVariant[variant]}
+      >
+        {label}
+      </button>
+    );
+  }
+
   return (
-    <Link
-      href={href}
-      aria-label={ariaLabel || label}
-      className={shared}
-      style={styleByVariant[variant]}
-    >
+    <Link href={href || "#"} aria-label={ariaLabel || label} className={shared} style={styleByVariant[variant]}>
       {label}
     </Link>
   );
