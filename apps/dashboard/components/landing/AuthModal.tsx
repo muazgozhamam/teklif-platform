@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React from "react";
+import ModalShell from "@/components/ui/ModalShell";
 
 type AuthModalProps = {
   open: boolean;
@@ -16,17 +17,6 @@ const API_BASE = (
 ).replace(/\/+$/, "");
 
 export default function AuthModal({ open, onClose }: AuthModalProps) {
-  useEffect(() => {
-    if (!open) return;
-    function onKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
-    }
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [open, onClose]);
-
-  if (!open) return null;
-
   function startGoogleAuth() {
     if (typeof window === "undefined") return;
     const redirect = `${window.location.origin}/login`;
@@ -34,33 +24,7 @@ export default function AuthModal({ open, onClose }: AuthModalProps) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <button
-        type="button"
-        aria-label="Oturum aç modalını kapat"
-        onClick={onClose}
-        className="absolute inset-0"
-        style={{ background: "rgba(15,23,42,0.46)", backdropFilter: "blur(6px)" }}
-      />
-
-      <div
-        className="relative w-full max-w-md rounded-3xl border p-6 shadow-2xl"
-        style={{ borderColor: "var(--color-border)", background: "var(--color-surface)" }}
-      >
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label="Modalı kapat"
-          className="absolute right-4 top-4 rounded-full border px-2 py-1 text-xs"
-          style={{ borderColor: "var(--color-border)", color: "var(--color-text-secondary)" }}
-        >
-          X
-        </button>
-
-        <h2 className="text-xl font-semibold tracking-tight" style={{ color: "var(--color-text-primary)" }}>
-          Oturum aç veya kaydol
-        </h2>
-
+    <ModalShell open={open} onClose={onClose} title="Oturum aç veya kaydol">
         <div className="mt-5 grid gap-2">
           <button
             type="button"
@@ -143,8 +107,7 @@ export default function AuthModal({ open, onClose }: AuthModalProps) {
             Devam
           </button>
         </div>
-      </div>
-    </div>
+    </ModalShell>
   );
 }
 

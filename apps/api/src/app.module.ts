@@ -11,6 +11,7 @@ import { HunterLeadsModule } from './hunter-leads/hunter-leads.module';
 import { DealsModule } from './deals/deals.module';
 import { ListingsModule } from './listings/listings.module';
 import { DevSeedModule } from './dev-seed/dev-seed.module';
+import { PublicModule } from './public/public.module';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { DevSeedModule } from './dev-seed/dev-seed.module';
     DealsModule,
     ListingsModule,
     DevSeedModule,
+    PublicModule,
   ],
 })
 export class AppModule {}
