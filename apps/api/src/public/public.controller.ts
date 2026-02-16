@@ -4,6 +4,7 @@ import {
   Controller,
   HttpCode,
   HttpStatus,
+  InternalServerErrorException,
   Logger,
   Post,
   Req,
@@ -100,6 +101,23 @@ export class PublicController {
       );
     } finally {
       cleanup('finally');
+    }
+  }
+
+  @Post('chat')
+  async chat(@Body() body: ChatStreamBody) {
+    const normalized = this.normalizeChatPayload(body);
+    if (!normalized.message) {
+      throw new BadRequestException(
+        'Invalid chat payload. Use either { messages: [{ role, content }] } or { message, history }.',
+      );
+    }
+
+    try {
+      const text = await this.publicChatService.completeChat(normalized);
+      return { ok: true, text };
+    } catch (err) {
+      throw new InternalServerErrorException((err as Error)?.message || 'Chat failed');
     }
   }
 

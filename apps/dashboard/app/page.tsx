@@ -71,6 +71,12 @@ export default function PublicChatPage() {
     );
   }
 
+  function setAssistantText(messageId: string, text: string) {
+    setMessages((prev) =>
+      prev.map((m) => (m.id === messageId ? { ...m, text } : m)),
+    );
+  }
+
   async function onSend() {
     const text = input.trim();
     if (!text || isStreaming) return;
@@ -187,6 +193,28 @@ export default function PublicChatPage() {
 
     setIsStreaming(false);
     streamAbortRef.current = null;
+
+    if (lastNetworkError && !receivedDelta) {
+      try {
+        const fallbackRes = await fetch(`${API_BASE}/public/chat`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message: text, history }),
+        });
+        if (fallbackRes.ok) {
+          const payload = (await fallbackRes.json()) as { text?: string };
+          const fallbackText = (payload?.text || "").trim();
+          if (fallbackText) {
+            setAssistantText(assistantId, fallbackText);
+            receivedDelta = true;
+            lastNetworkError = null;
+            setLastError(null);
+          }
+        }
+      } catch {
+        // ignore fallback error; UI error will be shown below
+      }
+    }
 
     if (lastNetworkError && !receivedDelta) {
       setLastError(lastNetworkError);

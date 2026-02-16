@@ -31,27 +31,22 @@ export class PublicChatService {
     'Kullanıcı sorusu belirsizse tek bir netleştirici soru sor.',
   ].join(' ');
 
-  async streamChat(input: ChatStreamInput, handlers: StreamHandlers): Promise<void> {
+  private getApiKey(): string {
     const apiKey = process.env.OPENAI_API_KEY;
-    if (!apiKey) {
-      handlers.onError('OPENAI_API_KEY tanımlı değil.');
-      handlers.onDone();
-      return;
-    }
+    if (!apiKey) throw new Error('OPENAI_API_KEY tanımlı değil.');
+    return apiKey;
+  }
 
+  private normalizeInput(input: ChatStreamInput): { message: string; history: ChatMessage[] } {
     const message = (input.message || '').trim();
-    if (!message) {
-      handlers.onError('Boş mesaj gönderilemez.');
-      handlers.onDone();
-      return;
-    }
-
-    const model = process.env.OPENAI_CHAT_MODEL || 'gpt-4.1-mini';
     const history = (input.history || [])
       .filter((m) => m && typeof m.content === 'string' && m.content.trim().length > 0)
       .slice(-12);
+    return { message, history };
+  }
 
-    const openAiInput = [
+  private buildOpenAiInput(message: string, history: ChatMessage[]) {
+    return [
       {
         role: 'system',
         content: [{ type: 'input_text', text: this.systemPrompt }],
@@ -65,6 +60,74 @@ export class PublicChatService {
         content: [{ type: 'input_text', text: message }],
       },
     ];
+  }
+
+  async completeChat(input: ChatStreamInput): Promise<string> {
+    const apiKey = this.getApiKey();
+    const { message, history } = this.normalizeInput(input);
+    if (!message) throw new Error('Boş mesaj gönderilemez.');
+
+    const model = process.env.OPENAI_CHAT_MODEL || 'gpt-4.1-mini';
+    const response = await fetch('https://api.openai.com/v1/responses', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model,
+        stream: false,
+        input: this.buildOpenAiInput(message, history),
+      }),
+    });
+
+    const json = await response.json().catch(() => ({} as Record<string, unknown>));
+    if (!response.ok) {
+      this.logger.error(`OpenAI sync failed status=${response.status} body=${JSON.stringify(json)}`);
+      throw new Error('Yanıt alınamadı. Lütfen tekrar dene.');
+    }
+
+    const direct = typeof (json as { output_text?: unknown }).output_text === 'string'
+      ? ((json as { output_text: string }).output_text || '').trim()
+      : '';
+    if (direct) return direct;
+
+    const output = Array.isArray((json as { output?: unknown }).output) ? (json as { output: unknown[] }).output : [];
+    const textParts: string[] = [];
+
+    for (const item of output) {
+      if (!item || typeof item !== 'object') continue;
+      const content = Array.isArray((item as { content?: unknown }).content) ? (item as { content: unknown[] }).content : [];
+      for (const c of content) {
+        if (!c || typeof c !== 'object') continue;
+        if ((c as { type?: unknown }).type === 'output_text' && typeof (c as { text?: unknown }).text === 'string') {
+          textParts.push((c as { text: string }).text);
+        }
+      }
+    }
+
+    return textParts.join('').trim();
+  }
+
+  async streamChat(input: ChatStreamInput, handlers: StreamHandlers): Promise<void> {
+    let apiKey = '';
+    try {
+      apiKey = this.getApiKey();
+    } catch (err) {
+      handlers.onError('OPENAI_API_KEY tanımlı değil.');
+      handlers.onDone();
+      return;
+    }
+
+    const { message, history } = this.normalizeInput(input);
+    if (!message) {
+      handlers.onError('Boş mesaj gönderilemez.');
+      handlers.onDone();
+      return;
+    }
+
+    const model = process.env.OPENAI_CHAT_MODEL || 'gpt-4.1-mini';
+    const openAiInput = this.buildOpenAiInput(message, history);
 
     const response = await fetch('https://api.openai.com/v1/responses', {
       method: 'POST',
@@ -140,4 +203,3 @@ export class PublicChatService {
     }
   }
 }
-
