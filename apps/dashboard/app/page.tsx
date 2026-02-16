@@ -24,20 +24,6 @@ const API_BASE = resolveApiBase();
 type Role = "assistant" | "user" | "system";
 type Message = { id: string; role: Role; text: string };
 
-function parseSseBlock(block: string): { event: string; data: string } | null {
-  const lines = block.split("\n");
-  let event = "message";
-  let data = "";
-
-  for (const line of lines) {
-    if (line.startsWith("event:")) event = line.slice(6).trim();
-    if (line.startsWith("data:")) data += line.slice(5).trim();
-  }
-
-  if (!data) return null;
-  return { event, data };
-}
-
 export default function PublicChatPage() {
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -53,7 +39,6 @@ export default function PublicChatPage() {
 
   const listRef = useRef<HTMLDivElement | null>(null);
   const composerRef = useRef<HTMLTextAreaElement | HTMLInputElement | null>(null);
-  const streamAbortRef = useRef<AbortController | null>(null);
 
   const placeholder = useMemo(
     () => "Lütfen bize ne istediğini söyle. Örn: 3+1 dairemin fiyatını öğrenmek istiyorum.",
@@ -68,20 +53,10 @@ export default function PublicChatPage() {
     el.scrollTop = el.scrollHeight;
   }, [messages, isStreaming]);
 
-  useEffect(() => {
-    return () => streamAbortRef.current?.abort();
-  }, []);
-
   function addMessage(role: Role, text: string) {
     const id = `m_${Date.now()}_${Math.random().toString(16).slice(2)}`;
     setMessages((prev) => [...prev, { id, role, text }]);
     return id;
-  }
-
-  function appendAssistantDelta(messageId: string, delta: string) {
-    setMessages((prev) =>
-      prev.map((m) => (m.id === messageId ? { ...m, text: `${m.text}${delta}` } : m)),
-    );
   }
 
   function setAssistantText(messageId: string, text: string) {
@@ -106,143 +81,34 @@ export default function PublicChatPage() {
     const assistantId = addMessage("assistant", "");
 
     setIsStreaming(true);
-    let receivedDelta = false;
-    let streamFailed = false;
-    let lastNetworkError: string | null = null;
-    const maxAttempts = 2;
+    try {
+      const res = await fetch(`${API_BASE}/public/chat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: text, history }),
+      });
 
-    for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
-      const controller = new AbortController();
-      streamAbortRef.current = controller;
-
-      try {
-        const res = await fetch(`${API_BASE}/public/chat/stream`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ message: text, history }),
-          signal: controller.signal,
-        });
-
-        if (!res.ok || !res.body) {
-          const bodyText = await res.text().catch(() => "");
-          throw new Error(`Chat stream failed: ${res.status} ${bodyText}`);
-        }
-
-        const reader = res.body.getReader();
-        const decoder = new TextDecoder();
-        let buffer = "";
-
-        while (true) {
-          const { value, done } = await reader.read();
-          if (done) break;
-
-          buffer += decoder.decode(value, { stream: true }).replace(/\r\n/g, "\n");
-          let boundary = buffer.indexOf("\n\n");
-
-          while (boundary !== -1) {
-            const block = buffer.slice(0, boundary).trim();
-            buffer = buffer.slice(boundary + 2);
-            const parsed = parseSseBlock(block);
-
-            if (parsed) {
-              if (parsed.event === "delta") {
-                try {
-                  const payload = JSON.parse(parsed.data) as { text?: string };
-                  if (payload.text) {
-                    receivedDelta = true;
-                    appendAssistantDelta(assistantId, payload.text);
-                  }
-                } catch {
-                  // ignore parse noise
-                }
-              }
-
-              if (parsed.event === "error") {
-                streamFailed = true;
-                try {
-                  const payload = JSON.parse(parsed.data) as { message?: string };
-                  setLastError(payload.message || "Yanıt üretilemedi.");
-                } catch {
-                  setLastError("Yanıt üretilemedi.");
-                }
-              }
-            }
-
-            boundary = buffer.indexOf("\n\n");
-          }
-        }
-
-        const tail = buffer.trim();
-        if (tail) {
-          const parsed = parseSseBlock(tail);
-          if (parsed?.event === "delta") {
-            try {
-              const payload = JSON.parse(parsed.data) as { text?: string };
-              if (payload.text) {
-                receivedDelta = true;
-                appendAssistantDelta(assistantId, payload.text);
-              }
-            } catch {
-              // ignore tail parse noise
-            }
-          }
-        }
-
-        lastNetworkError = null;
-        break;
-      } catch (err) {
-        if ((err as Error)?.name === "AbortError") {
-          break;
-        }
-
-        lastNetworkError = "Bağlantı koptu. Lütfen tekrar dene.";
-        const canRetry = attempt < maxAttempts && !receivedDelta;
-        if (canRetry) {
-          await new Promise((resolve) => setTimeout(resolve, 700));
-          continue;
-        }
+      if (!res.ok) {
+        const bodyText = await res.text().catch(() => "");
+        throw new Error(`Chat failed: ${res.status} ${bodyText}`);
       }
-    }
 
-    setIsStreaming(false);
-    streamAbortRef.current = null;
+      const payload = (await res.json()) as { text?: string };
+      const reply = (payload?.text || "").trim();
 
-    if (lastNetworkError && !receivedDelta) {
-      try {
-        const fallbackRes = await fetch(`${API_BASE}/public/chat`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ message: text, history }),
-        });
-        if (fallbackRes.ok) {
-          const payload = (await fallbackRes.json()) as { text?: string };
-          const fallbackText = (payload?.text || "").trim();
-          if (fallbackText) {
-            setAssistantText(assistantId, fallbackText);
-            receivedDelta = true;
-            lastNetworkError = null;
-            setLastError(null);
-          }
-        }
-      } catch {
-        // ignore fallback error; UI error will be shown below
+      if (!reply) {
+        setAssistantText(assistantId, "Şu an yanıt üretemedim. Lütfen tekrar sorar mısın?");
+        setLastError("Yanıt üretilemedi.");
+        return;
       }
-    }
 
-    if (lastNetworkError && !receivedDelta) {
-      setLastError(lastNetworkError);
-    }
-
-    setMessages((prev) =>
-      prev.map((m) =>
-        m.id === assistantId && m.text.trim().length === 0 && !receivedDelta
-          ? { ...m, text: "Şu an yanıt üretemedim. Lütfen tekrar sorar mısın?" }
-          : m,
-      ),
-    );
-
-    if (!streamFailed && receivedDelta) {
+      setAssistantText(assistantId, reply);
       setLastError(null);
+    } catch {
+      setAssistantText(assistantId, "Şu an yanıt üretemedim. Lütfen tekrar sorar mısın?");
+      setLastError("Bağlantı koptu. Lütfen tekrar dene.");
+    } finally {
+      setIsStreaming(false);
     }
   }
 
