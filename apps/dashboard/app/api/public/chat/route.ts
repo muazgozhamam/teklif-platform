@@ -14,14 +14,24 @@ export async function POST(req: NextRequest) {
   const apiBase = resolveApiBase();
   const upstreamUrl = `${apiBase}/public/chat`;
 
-  const bodyText = await req.text();
-  const contentType = req.headers.get("content-type") || "application/json";
+  let payload: unknown;
+  try {
+    payload = await req.json();
+  } catch {
+    return new Response(
+      JSON.stringify({ message: "Invalid JSON payload" }),
+      { status: 400, headers: { "content-type": "application/json; charset=utf-8" } },
+    );
+  }
 
   try {
     const upstream = await fetch(upstreamUrl, {
       method: "POST",
-      headers: { "content-type": contentType },
-      body: bodyText,
+      headers: {
+        "content-type": "application/json",
+        "accept": "application/json",
+      },
+      body: JSON.stringify(payload),
       cache: "no-store",
     });
 
