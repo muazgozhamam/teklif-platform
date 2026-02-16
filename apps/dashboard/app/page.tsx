@@ -81,36 +81,18 @@ export default function PublicChatPage() {
 
     setIsStreaming(true);
     try {
-      const body = JSON.stringify({ message: text, history });
-      const endpoints = [`${apiBase}/public/chat`, "/api/public/chat"];
-      let payload: { text?: string } | null = null;
-      let lastErr = "";
+      const res = await fetch(`${apiBase}/public/chat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: text, history }),
+      });
 
-      for (const endpoint of endpoints) {
-        try {
-          const res = await fetch(endpoint, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body,
-          });
-
-          const raw = await res.text();
-          if (!res.ok) {
-            lastErr = `Chat failed (${endpoint}): ${res.status} ${raw.slice(0, 200)}`;
-            continue;
-          }
-
-          payload = (JSON.parse(raw) as { text?: string }) ?? null;
-          break;
-        } catch (err) {
-          lastErr = `Chat failed (${endpoint}): ${err instanceof Error ? err.message : String(err)}`;
-        }
+      if (!res.ok) {
+        const bodyText = await res.text().catch(() => "");
+        throw new Error(`Chat failed: ${res.status} ${bodyText}`);
       }
 
-      if (!payload) {
-        throw new Error(lastErr || "Chat failed on all endpoints");
-      }
-
+      const payload = (await res.json()) as { text?: string };
       const reply = (payload?.text || "").trim();
 
       if (!reply) {
@@ -121,9 +103,9 @@ export default function PublicChatPage() {
 
       setAssistantText(assistantId, reply);
       setLastError(null);
-    } catch (err) {
+    } catch {
       setAssistantText(assistantId, "Şu an yanıt üretemedim. Lütfen tekrar sorar mısın?");
-      setLastError(err instanceof Error ? err.message : "Bağlantı koptu. Lütfen tekrar dene.");
+      setLastError("Bağlantı koptu. Lütfen tekrar dene.");
     } finally {
       setIsStreaming(false);
     }
