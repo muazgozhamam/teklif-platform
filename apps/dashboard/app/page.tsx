@@ -86,102 +86,122 @@ export default function PublicChatPage() {
     addMessage("user", text);
     const assistantId = addMessage("assistant", "");
 
-    const controller = new AbortController();
-    streamAbortRef.current = controller;
     setIsStreaming(true);
     let receivedDelta = false;
     let streamFailed = false;
+    let lastNetworkError: string | null = null;
+    const maxAttempts = 2;
 
-    try {
-      const res = await fetch(`${API_BASE}/public/chat/stream`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: text, history }),
-        signal: controller.signal,
-      });
+    for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+      const controller = new AbortController();
+      streamAbortRef.current = controller;
 
-      if (!res.ok || !res.body) {
-        const bodyText = await res.text().catch(() => "");
-        throw new Error(`Chat stream failed: ${res.status} ${bodyText}`);
-      }
+      try {
+        const res = await fetch(`${API_BASE}/public/chat/stream`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message: text, history }),
+          signal: controller.signal,
+        });
 
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = "";
+        if (!res.ok || !res.body) {
+          const bodyText = await res.text().catch(() => "");
+          throw new Error(`Chat stream failed: ${res.status} ${bodyText}`);
+        }
 
-      while (true) {
-        const { value, done } = await reader.read();
-        if (done) break;
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
 
-        buffer += decoder.decode(value, { stream: true }).replace(/\r\n/g, "\n");
-        let boundary = buffer.indexOf("\n\n");
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
 
-        while (boundary !== -1) {
-          const block = buffer.slice(0, boundary).trim();
-          buffer = buffer.slice(boundary + 2);
-          const parsed = parseSseBlock(block);
+          buffer += decoder.decode(value, { stream: true }).replace(/\r\n/g, "\n");
+          let boundary = buffer.indexOf("\n\n");
 
-          if (parsed) {
-            if (parsed.event === "delta") {
-              try {
-                const payload = JSON.parse(parsed.data) as { text?: string };
-                if (payload.text) {
-                  receivedDelta = true;
-                  appendAssistantDelta(assistantId, payload.text);
+          while (boundary !== -1) {
+            const block = buffer.slice(0, boundary).trim();
+            buffer = buffer.slice(boundary + 2);
+            const parsed = parseSseBlock(block);
+
+            if (parsed) {
+              if (parsed.event === "delta") {
+                try {
+                  const payload = JSON.parse(parsed.data) as { text?: string };
+                  if (payload.text) {
+                    receivedDelta = true;
+                    appendAssistantDelta(assistantId, payload.text);
+                  }
+                } catch {
+                  // ignore parse noise
                 }
-              } catch {
-                // ignore parse noise
+              }
+
+              if (parsed.event === "error") {
+                streamFailed = true;
+                try {
+                  const payload = JSON.parse(parsed.data) as { message?: string };
+                  setLastError(payload.message || "Yanıt üretilemedi.");
+                } catch {
+                  setLastError("Yanıt üretilemedi.");
+                }
               }
             }
 
-            if (parsed.event === "error") {
-              streamFailed = true;
-              try {
-                const payload = JSON.parse(parsed.data) as { message?: string };
-                setLastError(payload.message || "Yanıt üretilemedi.");
-              } catch {
-                setLastError("Yanıt üretilemedi.");
+            boundary = buffer.indexOf("\n\n");
+          }
+        }
+
+        const tail = buffer.trim();
+        if (tail) {
+          const parsed = parseSseBlock(tail);
+          if (parsed?.event === "delta") {
+            try {
+              const payload = JSON.parse(parsed.data) as { text?: string };
+              if (payload.text) {
+                receivedDelta = true;
+                appendAssistantDelta(assistantId, payload.text);
               }
+            } catch {
+              // ignore tail parse noise
             }
           }
+        }
 
-          boundary = buffer.indexOf("\n\n");
+        lastNetworkError = null;
+        break;
+      } catch (err) {
+        if ((err as Error)?.name === "AbortError") {
+          break;
+        }
+
+        lastNetworkError = "Bağlantı koptu. Lütfen tekrar dene.";
+        const canRetry = attempt < maxAttempts && !receivedDelta;
+        if (canRetry) {
+          await new Promise((resolve) => setTimeout(resolve, 700));
+          continue;
         }
       }
+    }
 
-      const tail = buffer.trim();
-      if (tail) {
-        const parsed = parseSseBlock(tail);
-        if (parsed?.event === "delta") {
-          try {
-            const payload = JSON.parse(parsed.data) as { text?: string };
-            if (payload.text) {
-              receivedDelta = true;
-              appendAssistantDelta(assistantId, payload.text);
-            }
-          } catch {
-            // ignore tail parse noise
-          }
-        }
-      }
-    } catch (err) {
-      if ((err as Error)?.name !== "AbortError") {
-        streamFailed = true;
-        setLastError("Bağlantı koptu. Lütfen tekrar dene.");
-      }
-    } finally {
-      setIsStreaming(false);
-      streamAbortRef.current = null;
-      setMessages((prev) =>
-        prev.map((m) =>
-          m.id === assistantId && m.text.trim().length === 0 && !receivedDelta
-            ? { ...m, text: "Şu an yanıt üretemedim. Lütfen tekrar sorar mısın?" }
-            : m,
-        ),
-      );
-      if (!streamFailed && receivedDelta) {
-        setLastError(null);
-      }
+    setIsStreaming(false);
+    streamAbortRef.current = null;
+
+    if (lastNetworkError && !receivedDelta) {
+      setLastError(lastNetworkError);
+    }
+
+    setMessages((prev) =>
+      prev.map((m) =>
+        m.id === assistantId && m.text.trim().length === 0 && !receivedDelta
+          ? { ...m, text: "Şu an yanıt üretemedim. Lütfen tekrar sorar mısın?" }
+          : m,
+      ),
+    );
+
+    if (!streamFailed && receivedDelta) {
+      setLastError(null);
     }
   }
 
