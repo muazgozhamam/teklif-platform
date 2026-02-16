@@ -6,6 +6,7 @@ import { api, setToken } from '@/lib/api';
 import { roleHomePath } from '@/lib/roles';
 import { decodeJwtPayload } from '@/lib/session';
 import { useSearchParams } from 'next/navigation';
+import Logo from '@/components/brand/Logo';
 
 const API_BASE = (
   process.env.NEXT_PUBLIC_API_BASE_URL?.trim() ||
@@ -74,7 +75,10 @@ export default function LoginPage() {
 
   return (
     <div style={{ maxWidth: 420, margin: '40px auto', fontFamily: 'system-ui' }}>
-      <h1>SatDedi.com Panel Girişi</h1>
+      <h1 style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <Logo size="md" />
+        <span>Panel Girişi</span>
+      </h1>
       <p style={{ color: '#666' }}>API: {process.env.NEXT_PUBLIC_API_BASE_URL}</p>
 
       <form onSubmit={onSubmit} style={{ display: 'grid', gap: 12 }}>

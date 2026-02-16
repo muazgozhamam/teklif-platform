@@ -6,6 +6,7 @@ import LandingActionButton from "./LandingActionButton";
 import AuthModal from "./AuthModal";
 import ConsultantApplyModal from "@/components/auth/ConsultantApplyModal";
 import PartnerApplyModal from "@/components/auth/PartnerApplyModal";
+import Logo from "@/components/brand/Logo";
 
 export default function LandingHeader() {
   const [authOpen, setAuthOpen] = useState(false);
@@ -20,15 +21,8 @@ export default function LandingHeader() {
             href="/"
             aria-label="SatDedi ana sayfa"
             className="shrink-0"
-            style={{
-              color: "var(--color-text-primary)",
-              fontSize: "20px",
-              fontWeight: 700,
-              letterSpacing: "-0.2px",
-              lineHeight: 1.2,
-            }}
           >
-            SatDedi
+            <Logo size="md" />
           </Link>
 
           <nav className="hidden items-center gap-2 md:flex" aria-label="Landing üst aksiyonlar">

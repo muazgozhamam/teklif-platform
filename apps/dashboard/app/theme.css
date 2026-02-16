@@ -6,12 +6,14 @@
   --color-warning-600: #d97706;
   --color-danger-600: #dc2626;
 
-  --color-bg: #f7f8fa;
+  --color-bg: #ffffff;
   --color-surface: #ffffff;
   --color-border: #e5e7eb;
   --color-text-primary: #111827;
   --color-text-secondary: #4b5563;
   --color-text-muted: #6b7280;
+  --color-composer: #ffffff;
+  --color-logo: #000000;
 
   /* Typography scale */
   --font-display-size: 40px;
@@ -49,6 +51,23 @@
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.08);
   --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.1);
   --shadow-lg: 0 10px 24px rgba(0, 0, 0, 0.14);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-bg: #0b0f19;
+    --color-surface: #111827;
+    --color-border: #1f2937;
+    --color-text-primary: #f3f4f6;
+    --color-text-secondary: #cbd5e1;
+    --color-text-muted: #94a3b8;
+    --color-composer: #111827;
+    --color-logo: #ffffff;
+
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.25);
+    --shadow-md: 0 8px 20px rgba(0, 0, 0, 0.3);
+    --shadow-lg: 0 14px 30px rgba(0, 0, 0, 0.35);
+  }
 }
 
 /* Shared interactive defaults */

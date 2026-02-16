@@ -7,6 +7,10 @@
   color-scheme: light;
 }
 
+.font-montserrat {
+  font-family: var(--font-montserrat), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
 html, body {
   height: 100%;
 }
@@ -17,4 +21,19 @@ body {
   font-size: var(--font-body-size);
   line-height: var(--font-body-line);
   @apply antialiased;
+}
+
+@media (max-width: 639px) {
+  .mobile-marquee-track {
+    animation: prompt-marquee 14s linear infinite;
+  }
+}
+
+@keyframes prompt-marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
 }

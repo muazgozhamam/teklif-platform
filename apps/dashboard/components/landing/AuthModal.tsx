@@ -2,6 +2,7 @@
 
 import React from "react";
 import ModalShell from "@/components/ui/ModalShell";
+import Logo from "@/components/brand/Logo";
 
 type AuthModalProps = {
   open: boolean;
@@ -25,6 +26,9 @@ export default function AuthModal({ open, onClose }: AuthModalProps) {
 
   return (
     <ModalShell open={open} onClose={onClose} title="Oturum aç veya kaydol">
+        <div className="mb-1">
+          <Logo size="md" />
+        </div>
         <div className="mt-5 grid gap-2">
           <button
             type="button"
