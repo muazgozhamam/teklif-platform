@@ -89,6 +89,8 @@ export default function PublicChatPage() {
     const controller = new AbortController();
     streamAbortRef.current = controller;
     setIsStreaming(true);
+    let receivedDelta = false;
+    let streamFailed = false;
 
     try {
       const res = await fetch(`${API_BASE}/public/chat/stream`, {
@@ -111,7 +113,7 @@ export default function PublicChatPage() {
         const { value, done } = await reader.read();
         if (done) break;
 
-        buffer += decoder.decode(value, { stream: true });
+        buffer += decoder.decode(value, { stream: true }).replace(/\r\n/g, "\n");
         let boundary = buffer.indexOf("\n\n");
 
         while (boundary !== -1) {
@@ -123,13 +125,17 @@ export default function PublicChatPage() {
             if (parsed.event === "delta") {
               try {
                 const payload = JSON.parse(parsed.data) as { text?: string };
-                if (payload.text) appendAssistantDelta(assistantId, payload.text);
+                if (payload.text) {
+                  receivedDelta = true;
+                  appendAssistantDelta(assistantId, payload.text);
+                }
               } catch {
                 // ignore parse noise
               }
             }
 
             if (parsed.event === "error") {
+              streamFailed = true;
               try {
                 const payload = JSON.parse(parsed.data) as { message?: string };
                 setLastError(payload.message || "Yanıt üretilemedi.");
@@ -142,8 +148,25 @@ export default function PublicChatPage() {
           boundary = buffer.indexOf("\n\n");
         }
       }
+
+      const tail = buffer.trim();
+      if (tail) {
+        const parsed = parseSseBlock(tail);
+        if (parsed?.event === "delta") {
+          try {
+            const payload = JSON.parse(parsed.data) as { text?: string };
+            if (payload.text) {
+              receivedDelta = true;
+              appendAssistantDelta(assistantId, payload.text);
+            }
+          } catch {
+            // ignore tail parse noise
+          }
+        }
+      }
     } catch (err) {
       if ((err as Error)?.name !== "AbortError") {
+        streamFailed = true;
         setLastError("Bağlantı koptu. Lütfen tekrar dene.");
       }
     } finally {
@@ -151,11 +174,14 @@ export default function PublicChatPage() {
       streamAbortRef.current = null;
       setMessages((prev) =>
         prev.map((m) =>
-          m.id === assistantId && m.text.trim().length === 0
+          m.id === assistantId && m.text.trim().length === 0 && !receivedDelta
             ? { ...m, text: "Şu an yanıt üretemedim. Lütfen tekrar sorar mısın?" }
             : m,
         ),
       );
+      if (!streamFailed && receivedDelta) {
+        setLastError(null);
+      }
     }
   }
 
@@ -260,4 +286,3 @@ export default function PublicChatPage() {
     </LandingShell>
   );
 }
-
