@@ -36,6 +36,13 @@ export default function PromptBar({
   const [isDeleting, setIsDeleting] = useState(false);
   const showTypingOverlay = !isPhone && input.trim().length === 0;
   const canSend = !disabled && (isPhone ? isPhoneValid : !!input.trim());
+  const handleEnterToSend = (e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    if (e.key !== "Enter") return;
+    if (e.shiftKey) return;
+    if (!canSend) return;
+    e.preventDefault();
+    onSend();
+  };
 
   useEffect(() => {
     if (!showTypingOverlay) {
@@ -93,6 +100,7 @@ export default function PromptBar({
             autoComplete="tel"
             value={input}
             onChange={(e) => onInputChange(e.target.value)}
+            onKeyDown={handleEnterToSend}
             placeholder="05xx xxx xx xx"
             className="h-12 w-0 min-w-0 flex-1 rounded-full bg-transparent px-4 text-sm outline-none focus:outline-none focus:ring-0 focus-visible:ring-0"
             aria-label="Telefon numarası"
@@ -104,6 +112,7 @@ export default function PromptBar({
               ref={inputRef as React.RefObject<HTMLTextAreaElement>}
               value={input}
               onChange={(e) => onInputChange(e.target.value)}
+              onKeyDown={handleEnterToSend}
               placeholder=""
               disabled={disabled}
               rows={1}
