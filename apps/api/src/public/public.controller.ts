@@ -69,12 +69,19 @@ export class PublicController {
       res.write(': heartbeat\n\n');
     }, 15_000);
 
-    req.on('close', () => {
+    const cleanup = (reason: 'req-close' | 'res-close' | 'res-finish' | 'finally') => {
+      if (disconnected) return;
       disconnected = true;
       clearInterval(heartbeat);
-      this.logger.log('SSE client disconnected: /public/chat/stream');
+      if (reason === 'req-close' || reason === 'res-close') {
+        this.logger.log('SSE client disconnected: /public/chat/stream');
+      }
       if (!res.writableEnded) res.end();
-    });
+    };
+
+    req.on('close', () => cleanup('req-close'));
+    res.on('close', () => cleanup('res-close'));
+    res.on('finish', () => cleanup('res-finish'));
 
     const writeSse = (event: string, data: Record<string, unknown>) => {
       if (disconnected || res.writableEnded) return;
@@ -92,10 +99,7 @@ export class PublicController {
         },
       );
     } finally {
-      clearInterval(heartbeat);
-      if (!disconnected && !res.writableEnded) {
-        res.end();
-      }
+      cleanup('finally');
     }
   }
 
