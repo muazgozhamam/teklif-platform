@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   HttpCode,
@@ -20,6 +21,12 @@ type ApplicationBody = {
   data?: Record<string, unknown>;
 };
 
+type ChatRole = 'user' | 'assistant' | 'system';
+type ChatMessage = { role: ChatRole; content: string };
+type ChatStreamBody =
+  | { messages?: ChatMessage[] }
+  | { message?: string; history?: ChatMessage[] };
+
 @Controller('public')
 export class PublicController {
   private readonly logger = new Logger(PublicController.name);
@@ -36,9 +43,17 @@ export class PublicController {
 
   @Post('chat/stream')
   async streamChat(
-    @Body() body: { message?: string; history?: Array<{ role: 'user' | 'assistant' | 'system'; content: string }> },
+    @Body() body: ChatStreamBody,
     @Res() res: Response,
   ) {
+    const normalized = this.normalizeChatPayload(body);
+
+    if (!normalized.message) {
+      throw new BadRequestException(
+        'Invalid chat payload. Use either { messages: [{ role, content }] } or { message, history }.',
+      );
+    }
+
     res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
     res.setHeader('Cache-Control', 'no-cache, no-transform');
     res.setHeader('Connection', 'keep-alive');
@@ -51,10 +66,7 @@ export class PublicController {
     };
 
     await this.publicChatService.streamChat(
-      {
-        message: body?.message || '',
-        history: body?.history || [],
-      },
+      normalized,
       {
         onDelta: (text) => writeSse('delta', { text }),
         onError: (message) => writeSse('error', { message }),
@@ -63,5 +75,40 @@ export class PublicController {
     );
 
     res.end();
+  }
+
+  private normalizeChatPayload(body: ChatStreamBody | null | undefined): { message: string; history: ChatMessage[] } {
+    if (!body || typeof body !== 'object') return { message: '', history: [] };
+
+    const isValidRole = (role: unknown): role is ChatRole =>
+      role === 'user' || role === 'assistant' || role === 'system';
+
+    const normalizeMessages = (items: unknown): ChatMessage[] => {
+      if (!Array.isArray(items)) return [];
+      return items
+        .filter((m) => !!m && typeof m === 'object')
+        .map((m) => m as Partial<ChatMessage>)
+        .filter((m): m is ChatMessage => isValidRole(m.role) && typeof m.content === 'string')
+        .map((m) => ({ role: m.role, content: m.content.trim() }))
+        .filter((m) => m.content.length > 0);
+    };
+
+    // Preferred format: { messages: [{ role, content }, ...] }
+    if ('messages' in body && Array.isArray(body.messages)) {
+      const messages = normalizeMessages(body.messages);
+      if (!messages.length) return { message: '', history: [] };
+
+      const lastUserIndex = messages.map((m) => m.role).lastIndexOf('user');
+      if (lastUserIndex === -1) return { message: '', history: [] };
+
+      const target = messages[lastUserIndex];
+      const history = messages.slice(0, lastUserIndex);
+      return { message: target.content, history };
+    }
+
+    // Legacy format: { message, history }
+    const message = 'message' in body && typeof body.message === 'string' ? body.message.trim() : '';
+    const history = 'history' in body ? normalizeMessages(body.history) : [];
+    return { message, history };
   }
 }
