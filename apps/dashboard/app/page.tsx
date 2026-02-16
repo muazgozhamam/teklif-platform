@@ -2,6 +2,10 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import LandingShell from "@/components/landing/LandingShell";
+import PromptBar from "@/components/landing/PromptBar";
+import SuggestionCard from "@/components/landing/SuggestionCard";
+import LandingHeader from "@/components/landing/LandingHeader";
 
 const API_BASE =
   process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3001";
@@ -194,8 +198,10 @@ export default function PublicChatPage() {
 
   const [pendingQuestion, setPendingQuestion] = useState<{ leadId: string; key: string; question: string } | null>(null);
   const [lastError, setLastError] = useState<string | null>(null);
+  const [showSuggestionCard, setShowSuggestionCard] = useState(true);
 
   const listRef = useRef<HTMLDivElement | null>(null);
+  const composerRef = useRef<HTMLTextAreaElement | HTMLInputElement | null>(null);
 
   const placeholder = useMemo(() => {
     if (phase === "collect_phone") return "05xx xxx xx xx";
@@ -416,133 +422,105 @@ export default function PublicChatPage() {
 
   const disabled = typing || phase === "submitting" || phase === "done";
   const isCenteredComposer = messages.length <= 1 && phase === "collect_intent";
+  const canSend = phase === "collect_phone" ? isValidPhoneTRForApi(input) : !!input.trim();
 
   return (
-    <main className="min-h-screen" style={{ background: "var(--color-bg)" }}>
-      <div className="mx-auto flex min-h-screen w-full max-w-5xl flex-col px-4 md:px-6">
-        <header className="sticky top-0 z-10 py-4">
-          <div className="mx-auto flex w-full max-w-3xl items-center justify-between rounded-full border bg-white/90 px-4 py-2 backdrop-blur">
-            <div className="text-sm font-semibold" style={{ color: "var(--color-text-primary)" }}>
-              Satdedi GPT
-            </div>
-            <div className="text-xs" style={{ color: "var(--color-text-muted)" }}>
-              Girişsiz Teklif
-            </div>
+    <LandingShell footer="SatDedi Asistanı size destek olur; önemli kararlar öncesinde teyit etmenizi öneririz.">
+      <LandingHeader />
+
+      {isCenteredComposer ? (
+        <section className="flex flex-1 flex-col items-center justify-center">
+          <h1 className="mb-6 text-center text-3xl font-semibold tracking-tight md:text-5xl">Nasıl yardımcı olabilirim?</h1>
+
+          <div className="w-full">
+            <PromptBar
+              phase={phase}
+              input={input}
+              disabled={disabled}
+              placeholder={placeholder}
+              onSend={onSend}
+              onInputChange={(value) => setInput(phase === "collect_phone" ? maskPhoneTR(value) : value)}
+              isPhoneValid={isValidPhoneTRForApi(input)}
+              inputRef={composerRef}
+            />
+
+            {showSuggestionCard ? (
+              <SuggestionCard
+                onTryNow={() => composerRef.current?.focus()}
+                onClose={() => setShowSuggestionCard(false)}
+              />
+            ) : null}
           </div>
-        </header>
-
-        <div
-          ref={listRef}
-          className={[
-            "mx-auto flex w-full max-w-3xl flex-1 flex-col gap-6 overflow-y-auto pt-4",
-            isCenteredComposer ? "pb-6" : "pb-40",
-          ].join(" ")}
-        >
-          {messages.length <= 1 && (
-            <div className="mb-2 mt-8 text-center">
-              <h1 className="text-3xl font-semibold tracking-tight" style={{ color: "var(--color-text-primary)" }}>
-                Bugün nasıl yardımcı olabilirim?
-              </h1>
-            </div>
-          )}
-
-          {messages.map((m) => (
-            <div key={m.id} className={`flex w-full ${m.role === "user" ? "justify-end" : "justify-start"}`}>
-              <div
-                className={[
-                  "max-w-[88%] whitespace-pre-wrap rounded-3xl px-4 py-3 text-[15px] leading-7",
-                  m.role === "user" ? "text-white" : "",
-                ].join(" ")}
-                style={
-                  m.role === "user"
-                    ? { background: "#2f2f2f" }
-                    : m.role === "system"
-                    ? {
-                        background: "rgba(220,38,38,0.08)",
-                        border: "1px solid rgba(220,38,38,0.25)",
-                        color: "var(--color-danger-600)",
-                      }
-                    : {
-                        background: "transparent",
-                        color: "var(--color-text-primary)",
-                      }
-                }
-              >
-                {m.text}
-              </div>
-            </div>
-          ))}
-
-          {typing && (
-            <div className="flex w-full justify-start">
-              <div className="max-w-[88%] rounded-3xl px-4 py-3 text-[15px]" style={{ color: "var(--color-text-muted)" }}>
-                Yazıyor...
-              </div>
-            </div>
-          )}
-
-          {phase === "collect_phone" && (
-            <div
-              className="mx-auto w-full max-w-2xl rounded-2xl border px-4 py-3 text-xs"
-              style={{ borderColor: "var(--color-border)", background: "var(--color-surface)", color: "var(--color-text-secondary)" }}
-            >
-              Numaranız yalnızca bu talep için danışmanın sizinle iletişim kurması amacıyla kullanılır.
-            </div>
-          )}
-
-          {lastError && (
-            <div
-              className="mx-auto w-full max-w-2xl rounded-2xl border px-4 py-3 text-xs"
-              style={{ borderColor: "rgba(220,38,38,0.3)", background: "rgba(220,38,38,0.08)", color: "var(--color-danger-600)" }}
-            >
-              {lastError}
-            </div>
-          )}
-        </div>
-
-        <div
-          className={[
-            "left-0 right-0 z-20 px-3 md:px-6",
-            isCenteredComposer
-              ? "mx-auto flex w-full max-w-3xl flex-1 items-center justify-center pb-10"
-              : "fixed bottom-0 pb-4 pt-2",
-          ].join(" ")}
-        >
-          <div className="mx-auto w-full max-w-3xl">
-            <div className="rounded-[28px] border bg-white p-3 shadow-lg" style={{ borderColor: "var(--color-border)" }}>
-              <div className="flex items-end gap-2">
-                {phase === "collect_phone" ? (
-                  <input
-                    type="tel"
-                    inputMode="numeric"
-                    autoComplete="tel"
-                    value={input}
-                    onChange={(e) => setInput(maskPhoneTR(e.target.value))}
-                    placeholder="05xx xxx xx xx"
-                    className="min-h-[44px] flex-1 rounded-2xl bg-transparent px-3 py-2 text-sm outline-none"
-                  />
-                ) : (
-                  <textarea
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    placeholder={placeholder}
-                    disabled={disabled}
-                    rows={1}
-                    className="max-h-36 min-h-[44px] flex-1 resize-none rounded-2xl bg-transparent px-3 py-2 text-sm outline-none disabled:bg-gray-100"
-                  />
-                )}
-                <button
-                  onClick={onSend}
-                  disabled={disabled || (phase === "collect_phone" ? !isValidPhoneTRForApi(input) : !input.trim())}
-                  className="h-11 rounded-xl px-4 text-sm font-medium text-white disabled:opacity-50"
-                  style={{ background: "#2f2f2f" }}
+        </section>
+      ) : (
+        <>
+          <section ref={listRef} className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-6 overflow-y-auto pb-40 pt-6">
+            {messages.map((m) => (
+              <div key={m.id} className={`flex w-full ${m.role === "user" ? "justify-end" : "justify-start"}`}>
+                <div
+                  className={[
+                    "max-w-[88%] whitespace-pre-wrap rounded-3xl px-4 py-3 text-[15px] leading-7",
+                    m.role === "user" ? "text-white" : "",
+                  ].join(" ")}
+                  style={
+                    m.role === "user"
+                      ? { background: "#2f2f2f" }
+                      : m.role === "system"
+                      ? {
+                          background: "rgba(220,38,38,0.08)",
+                          border: "1px solid rgba(220,38,38,0.25)",
+                          color: "var(--color-danger-600)",
+                        }
+                      : { color: "var(--color-text-primary)" }
+                  }
                 >
-                  {phase === "collect_phone" ? "Gönder" : "Yolla"}
-                </button>
+                  {m.text}
+                </div>
               </div>
+            ))}
 
-              {phase === "done" && (
-                <div className="mt-2">
+            {typing ? (
+              <div className="flex w-full justify-start">
+                <div className="max-w-[88%] rounded-3xl px-4 py-3 text-[15px]" style={{ color: "var(--color-text-muted)" }}>
+                  Yazıyor...
+                </div>
+              </div>
+            ) : null}
+
+            {phase === "collect_phone" ? (
+              <div
+                className="mx-auto w-full max-w-2xl rounded-2xl border px-4 py-3 text-xs"
+                style={{ borderColor: "var(--color-border)", background: "var(--color-surface)", color: "var(--color-text-secondary)" }}
+              >
+                Numaranız yalnızca bu talep için danışmanın sizinle iletişim kurması amacıyla kullanılır.
+              </div>
+            ) : null}
+
+            {lastError ? (
+              <div
+                className="mx-auto w-full max-w-2xl rounded-2xl border px-4 py-3 text-xs"
+                style={{ borderColor: "rgba(220,38,38,0.3)", background: "rgba(220,38,38,0.08)", color: "var(--color-danger-600)" }}
+              >
+                {lastError}
+              </div>
+            ) : null}
+          </section>
+
+          <div className="fixed bottom-0 left-0 right-0 z-20 px-3 pb-4 pt-2 md:px-6">
+            <div className="mx-auto w-full max-w-3xl">
+              <PromptBar
+                phase={phase}
+                input={input}
+                disabled={disabled}
+                placeholder={placeholder}
+                onSend={onSend}
+                onInputChange={(value) => setInput(phase === "collect_phone" ? maskPhoneTR(value) : value)}
+                isPhoneValid={canSend}
+                inputRef={composerRef}
+              />
+
+              {phase === "done" ? (
+                <div className="mt-3 text-center">
                   <button
                     onClick={() => window.location.reload()}
                     className="rounded-full border px-3 py-1.5 text-xs"
@@ -551,30 +529,11 @@ export default function PublicChatPage() {
                     Yeni talep oluştur
                   </button>
                 </div>
-              )}
+              ) : null}
             </div>
-
-            {phase === "collect_intent" && (
-              <div className="mt-3 flex items-center justify-center gap-2">
-                <a
-                  href="/danisman-ol"
-                  className="inline-flex items-center justify-center rounded-full border bg-white px-3 py-1.5 text-xs shadow-sm"
-                  style={{ borderColor: "var(--color-border)", color: "var(--color-text-secondary)" }}
-                >
-                  Danışman ol
-                </a>
-                <a
-                  href="/is-ortagi-ol"
-                  className="inline-flex items-center justify-center rounded-full border bg-white px-3 py-1.5 text-xs shadow-sm"
-                  style={{ borderColor: "var(--color-border)", color: "var(--color-text-secondary)" }}
-                >
-                  İş ortağı ol
-                </a>
-              </div>
-            )}
           </div>
-        </div>
-      </div>
-    </main>
+        </>
+      )}
+    </LandingShell>
   );
 }
