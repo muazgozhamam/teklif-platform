@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 
 type PromptBarProps = {
   phase: "collect_intent" | "wizard" | "collect_phone" | "submitting" | "done" | "error";
@@ -22,9 +22,58 @@ export default function PromptBar({
   inputRef,
 }: PromptBarProps) {
   const isPhone = phase === "collect_phone";
-  const [isPromptFocused, setIsPromptFocused] = useState(false);
-  const showPromptMarquee = !isPhone && !isPromptFocused && input.trim().length === 0;
+  const typingSamples = useMemo(
+    () => [
+      "3+1 dairemin fiyatını öğrenmek istiyorum.",
+      "Meram'da evimi kiraya vermek istiyorum.",
+      "Danışman olmak istiyorum.",
+      "Ticari mülkümü değerlendirmek istiyorum.",
+    ],
+    [],
+  );
+  const [typedText, setTypedText] = useState("");
+  const [sampleIndex, setSampleIndex] = useState(0);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const showTypingOverlay = !isPhone && input.trim().length === 0;
   const canSend = !disabled && (isPhone ? isPhoneValid : !!input.trim());
+
+  useEffect(() => {
+    if (!showTypingOverlay) {
+      if (typedText) setTypedText("");
+      if (isDeleting) setIsDeleting(false);
+      return;
+    }
+
+    const currentSample = typingSamples[sampleIndex];
+    let delay = 55;
+
+    if (!isDeleting && typedText.length < currentSample.length) delay = 45;
+    else if (!isDeleting && typedText.length === currentSample.length) delay = 1500;
+    else if (isDeleting && typedText.length > 0) delay = 28;
+    else delay = 260;
+
+    const timer = window.setTimeout(() => {
+      if (!isDeleting && typedText.length < currentSample.length) {
+        setTypedText(currentSample.slice(0, typedText.length + 1));
+        return;
+      }
+
+      if (!isDeleting && typedText.length === currentSample.length) {
+        setIsDeleting(true);
+        return;
+      }
+
+      if (isDeleting && typedText.length > 0) {
+        setTypedText(currentSample.slice(0, typedText.length - 1));
+        return;
+      }
+
+      setIsDeleting(false);
+      setSampleIndex((prev) => (prev + 1) % typingSamples.length);
+    }, delay);
+
+    return () => window.clearTimeout(timer);
+  }, [isDeleting, sampleIndex, showTypingOverlay, typedText, typingSamples]);
 
   return (
     <div
@@ -55,21 +104,20 @@ export default function PromptBar({
               ref={inputRef as React.RefObject<HTMLTextAreaElement>}
               value={input}
               onChange={(e) => onInputChange(e.target.value)}
-              onFocus={() => setIsPromptFocused(true)}
-              onBlur={() => setIsPromptFocused(false)}
-              placeholder={placeholder}
+              placeholder=""
               disabled={disabled}
               rows={1}
-              className="mobile-marquee-input max-h-40 min-h-[48px] w-full min-w-0 resize-none rounded-full bg-transparent px-4 py-3 text-sm outline-none focus:outline-none focus:ring-0 focus-visible:ring-0 disabled:opacity-70"
+              className="max-h-40 min-h-[48px] w-full min-w-0 resize-none rounded-full bg-transparent px-4 py-3 text-sm outline-none focus:outline-none focus:ring-0 focus-visible:ring-0 disabled:opacity-70"
               aria-label="Mesajını yaz"
             />
-            {showPromptMarquee ? (
+            {showTypingOverlay ? (
               <div
                 aria-hidden="true"
-                className="mobile-marquee pointer-events-none absolute inset-y-0 left-4 right-4 flex max-w-full items-center overflow-hidden whitespace-nowrap text-sm sm:hidden"
+                className="pointer-events-none absolute inset-y-0 left-4 right-4 flex max-w-full items-center overflow-hidden whitespace-nowrap text-sm"
                 style={{ color: "var(--color-text-muted)" }}
               >
-                <span className="mobile-marquee-text inline-block whitespace-nowrap">{placeholder}</span>
+                <span className="inline-block max-w-full truncate align-middle">{typedText}</span>
+                <span className="typing-caret ml-0.5 inline-block align-middle" />
               </div>
             ) : null}
           </div>

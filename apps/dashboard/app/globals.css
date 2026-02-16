@@ -39,22 +39,20 @@ select:focus {
   outline: none;
 }
 
-@media (max-width: 639px) {
-  .mobile-marquee-input::placeholder {
-    color: transparent;
-  }
-
-  .mobile-marquee-text {
-    animation: prompt-marquee 14s linear infinite;
-    will-change: transform;
-  }
+.typing-caret {
+  width: 1px;
+  height: 1.05em;
+  background: var(--color-text-muted);
+  animation: typing-caret-blink 1s steps(1, end) infinite;
 }
 
-@keyframes prompt-marquee {
-  from {
-    transform: translateX(100%);
+@keyframes typing-caret-blink {
+  0%,
+  50% {
+    opacity: 1;
   }
-  to {
-    transform: translateX(-100%);
+  50.01%,
+  100% {
+    opacity: 0;
   }
 }
