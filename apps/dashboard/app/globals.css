@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @reference "tailwindcss";
+@import "./theme.css";
 
 /* Small, neutral defaults */
 :root {
@@ -11,5 +12,9 @@ html, body {
 }
 
 body {
-  @apply bg-slate-50 text-slate-900 antialiased;
+  background: var(--color-bg);
+  color: var(--color-text-primary);
+  font-size: var(--font-body-size);
+  line-height: var(--font-body-line);
+  @apply antialiased;
 }
