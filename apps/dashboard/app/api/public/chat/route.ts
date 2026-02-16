@@ -24,15 +24,26 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 20_000);
   try {
+    const accept = req.headers.get("accept") || "application/json";
+    const userAgent = req.headers.get("user-agent") || "";
+    const forwardedFor = req.headers.get("x-forwarded-for") || "";
+    const host = req.headers.get("host") || "";
+
     const upstream = await fetch(upstreamUrl, {
       method: "POST",
       headers: {
         "content-type": "application/json",
-        "accept": "application/json",
+        "accept": accept,
+        ...(userAgent ? { "user-agent": userAgent } : {}),
+        ...(forwardedFor ? { "x-forwarded-for": forwardedFor } : {}),
+        ...(host ? { "x-forwarded-host": host } : {}),
       },
       body: JSON.stringify(payload),
       cache: "no-store",
+      signal: controller.signal,
     });
 
     const responseText = await upstream.text();
@@ -53,9 +64,25 @@ export async function POST(req: NextRequest) {
     console.error(
       `[api/public/chat] upstream fetch failed: ${err instanceof Error ? err.message : String(err)}`,
     );
+    const isProd = process.env.NODE_ENV === "production";
+    const details = err && typeof err === "object"
+      ? {
+          name: (err as { name?: unknown }).name ?? null,
+          message: (err as { message?: unknown }).message ?? null,
+          cause: (err as { cause?: unknown }).cause ?? null,
+          upstreamUrl,
+          apiBase,
+        }
+      : { name: null, message: String(err), cause: null, upstreamUrl, apiBase };
     return new Response(
-      JSON.stringify({ message: "Upstream API request failed" }),
+      JSON.stringify(
+        isProd
+          ? { message: "Upstream API request failed" }
+          : { message: "Upstream API request failed", details },
+      ),
       { status: 502, headers: { "content-type": "application/json; charset=utf-8" } },
     );
+  } finally {
+    clearTimeout(timeout);
   }
 }
