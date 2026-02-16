@@ -1,18 +1,19 @@
 import "./globals.css";
 import type { Metadata } from 'next';
+import { montserrat } from "./fonts";
 
 export const metadata: Metadata = {
   title: {
-    default: 'Satdedi | Dashboard',
-    template: 'Satdedi | %s',
+    default: 'SatDedi | Dashboard',
+    template: 'SatDedi | %s',
   },
-  description: 'Satdedi role-based emlak operasyon paneli',
+  description: 'SatDedi role-based emlak operasyon paneli',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="tr">
-      <body>{children}</body>
+      <body className={montserrat.variable}>{children}</body>
     </html>
   );
 }

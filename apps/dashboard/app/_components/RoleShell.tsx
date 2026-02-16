@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { roleLabelTr } from '@/lib/roles';
+import Logo from '@/components/brand/Logo';
 
 type NavItem = {
   href: string;
@@ -27,7 +28,7 @@ export default function RoleShell({ role, title, subtitle, nav, children }: Role
       <header style={{ borderBottom: '1px solid #ece7df', background: '#fffdf9' }}>
         <div style={{ maxWidth: 1140, margin: '0 auto', padding: '14px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ fontWeight: 800, letterSpacing: -0.2, color: '#2f2a24' }}>satdedi.com</div>
+            <div><Logo size="md" /></div>
             <span style={{ fontSize: 12, border: '1px solid #d8d1c7', color: '#6c6358', borderRadius: 999, padding: '3px 8px', background: '#f7f2ea' }}>
               {roleLabel}
             </span>

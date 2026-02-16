@@ -1,10 +1,12 @@
 'use client';
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { api, setToken } from '@/lib/api';
 import { roleHomePath } from '@/lib/roles';
 import { decodeJwtPayload } from '@/lib/session';
+import { useSearchParams } from 'next/navigation';
+import Logo from '@/components/brand/Logo';
 
 const API_BASE = (
   process.env.NEXT_PUBLIC_API_BASE_URL?.trim() ||
@@ -24,10 +26,25 @@ async function fetchMe(apiBase: string, token: string): Promise<{ sub?: string; 
 }
 
 export default function LoginPage() {
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState('admin@local.dev');
   const [password, setPassword] = useState('admin123');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const token = searchParams.get('access_token');
+    if (!token) return;
+
+    setToken(token);
+    const jwt = decodeJwtPayload(token);
+    const resolvedSub = String(jwt?.sub || '').trim();
+    const resolvedRole = String(jwt?.role || '').trim();
+    if (typeof window !== 'undefined') {
+      if (resolvedSub) window.localStorage.setItem('x-user-id', resolvedSub);
+      window.location.replace(roleHomePath(resolvedRole || ''));
+    }
+  }, [searchParams]);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -58,7 +75,10 @@ export default function LoginPage() {
 
   return (
     <div style={{ maxWidth: 420, margin: '40px auto', fontFamily: 'system-ui' }}>
-      <h1>satdedi.com Panel Girişi</h1>
+      <h1 style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <Logo size="md" />
+        <span>Panel Girişi</span>
+      </h1>
       <p style={{ color: '#666' }}>API: {process.env.NEXT_PUBLIC_API_BASE_URL}</p>
 
       <form onSubmit={onSubmit} style={{ display: 'grid', gap: 12 }}>

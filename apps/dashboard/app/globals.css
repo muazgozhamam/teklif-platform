@@ -7,6 +7,10 @@
   color-scheme: light;
 }
 
+.font-montserrat {
+  font-family: var(--font-montserrat), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
 html, body {
   height: 100%;
 }
@@ -17,4 +21,38 @@ body {
   font-size: var(--font-body-size);
   line-height: var(--font-body-line);
   @apply antialiased;
+}
+
+a,
+button,
+input,
+textarea,
+select {
+  -webkit-tap-highlight-color: transparent;
+}
+
+a:focus,
+button:focus,
+input:focus,
+textarea:focus,
+select:focus {
+  outline: none;
+}
+
+.typing-caret {
+  width: 1px;
+  height: 1.05em;
+  background: var(--color-text-muted);
+  animation: typing-caret-blink 1s steps(1, end) infinite;
+}
+
+@keyframes typing-caret-blink {
+  0%,
+  50% {
+    opacity: 1;
+  }
+  50.01%,
+  100% {
+    opacity: 0;
+  }
 }
