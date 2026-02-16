@@ -6,9 +6,10 @@ import {
   HttpStatus,
   Logger,
   Post,
+  Req,
   Res,
 } from '@nestjs/common';
-import type { Response } from 'express';
+import type { Request, Response } from 'express';
 import { PublicChatService } from './public-chat.service';
 
 type ApplicationBody = {
@@ -44,6 +45,7 @@ export class PublicController {
   @Post('chat/stream')
   async streamChat(
     @Body() body: ChatStreamBody,
+    @Req() req: Request,
     @Res() res: Response,
   ) {
     const normalized = this.normalizeChatPayload(body);
@@ -55,26 +57,46 @@ export class PublicController {
     }
 
     res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
-    res.setHeader('Cache-Control', 'no-cache, no-transform');
+    res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');
     res.setHeader('X-Accel-Buffering', 'no');
     res.flushHeaders();
+    res.write('retry: 15000\n\n');
+
+    let disconnected = false;
+    const heartbeat = setInterval(() => {
+      if (disconnected || res.writableEnded) return;
+      res.write(': heartbeat\n\n');
+    }, 15_000);
+
+    req.on('close', () => {
+      disconnected = true;
+      clearInterval(heartbeat);
+      this.logger.log('SSE client disconnected: /public/chat/stream');
+      if (!res.writableEnded) res.end();
+    });
 
     const writeSse = (event: string, data: Record<string, unknown>) => {
+      if (disconnected || res.writableEnded) return;
       res.write(`event: ${event}\n`);
       res.write(`data: ${JSON.stringify(data)}\n\n`);
     };
 
-    await this.publicChatService.streamChat(
-      normalized,
-      {
-        onDelta: (text) => writeSse('delta', { text }),
-        onError: (message) => writeSse('error', { message }),
-        onDone: () => writeSse('done', { ok: true }),
-      },
-    );
-
-    res.end();
+    try {
+      await this.publicChatService.streamChat(
+        normalized,
+        {
+          onDelta: (text) => writeSse('delta', { text }),
+          onError: (message) => writeSse('error', { message }),
+          onDone: () => writeSse('done', { ok: true }),
+        },
+      );
+    } finally {
+      clearInterval(heartbeat);
+      if (!disconnected && !res.writableEnded) {
+        res.end();
+      }
+    }
   }
 
   private normalizeChatPayload(body: ChatStreamBody | null | undefined): { message: string; history: ChatMessage[] } {
