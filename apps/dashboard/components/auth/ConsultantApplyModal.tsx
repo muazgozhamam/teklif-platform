@@ -153,7 +153,7 @@ export default function ConsultantApplyModal({ open, onClose }: ConsultantApplyM
             <input type="email" value={form.email} onChange={(e) => setField("email", e.target.value)} className={inputCls} />
           </Field>
 
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Field label="İl" error={errors.city}>
               <input value={form.city} onChange={(e) => setField("city", e.target.value)} className={inputCls} />
             </Field>
@@ -253,4 +253,4 @@ function Field({
   );
 }
 
-const inputCls = "rounded-2xl border px-3 py-2 text-sm outline-none focus:ring-2";
+const inputCls = "w-full min-w-0 rounded-2xl border px-3 py-2 text-sm outline-none focus:ring-2";

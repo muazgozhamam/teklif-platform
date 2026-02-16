@@ -22,6 +22,7 @@ export default function PromptBar({
   inputRef,
 }: PromptBarProps) {
   const isPhone = phase === "collect_phone";
+  const showPromptMarquee = !isPhone && input.trim().length === 0;
   const canSend = !disabled && (isPhone ? isPhoneValid : !!input.trim());
 
   return (
@@ -47,16 +48,31 @@ export default function PromptBar({
             aria-label="Telefon numarası"
           />
         ) : (
-          <textarea
-            ref={inputRef as React.RefObject<HTMLTextAreaElement>}
-            value={input}
-            onChange={(e) => onInputChange(e.target.value)}
-            placeholder={placeholder}
-            disabled={disabled}
-            rows={1}
-            className="max-h-40 min-h-[48px] flex-1 resize-none rounded-full bg-transparent px-4 py-3 text-sm outline-none disabled:opacity-70"
-            aria-label="Mesajını yaz"
-          />
+          <div className="relative flex-1">
+            <textarea
+              id="landing-prompt-input"
+              ref={inputRef as React.RefObject<HTMLTextAreaElement>}
+              value={input}
+              onChange={(e) => onInputChange(e.target.value)}
+              placeholder={placeholder}
+              disabled={disabled}
+              rows={1}
+              className="max-h-40 min-h-[48px] w-full resize-none rounded-full bg-transparent px-4 py-3 text-sm outline-none disabled:opacity-70"
+              aria-label="Mesajını yaz"
+            />
+            {showPromptMarquee ? (
+              <div
+                aria-hidden="true"
+                className="mobile-marquee pointer-events-none absolute inset-y-0 left-4 right-4 flex items-center overflow-hidden text-sm sm:hidden"
+                style={{ color: "var(--color-text-muted)" }}
+              >
+                <div className="mobile-marquee-track inline-flex min-w-max items-center">
+                  <span className="pr-8">{placeholder}</span>
+                  <span className="pr-8">{placeholder}</span>
+                </div>
+              </div>
+            ) : null}
+          </div>
         )}
 
         <button
