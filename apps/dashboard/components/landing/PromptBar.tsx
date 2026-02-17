@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React from "react";
 
 type PromptBarProps = {
   phase: "collect_intent" | "wizard" | "collect_phone" | "submitting" | "done" | "error";
@@ -9,6 +9,7 @@ type PromptBarProps = {
   onInputChange: (value: string) => void;
   isPhoneValid: boolean;
   inputRef: React.RefObject<HTMLTextAreaElement | HTMLInputElement | null>;
+  onInteract?: () => void;
 };
 
 export default function PromptBar({
@@ -20,21 +21,9 @@ export default function PromptBar({
   onInputChange,
   isPhoneValid,
   inputRef,
+  onInteract,
 }: PromptBarProps) {
   const isPhone = phase === "collect_phone";
-  const typingSamples = useMemo(
-    () => [
-      "3+1 dairemin fiyatını öğrenmek istiyorum.",
-      "Meram'da evimi kiraya vermek istiyorum.",
-      "Danışman olmak istiyorum.",
-      "Ticari mülkümü değerlendirmek istiyorum.",
-    ],
-    [],
-  );
-  const [typedText, setTypedText] = useState("");
-  const [sampleIndex, setSampleIndex] = useState(0);
-  const [isDeleting, setIsDeleting] = useState(false);
-  const showTypingOverlay = !isPhone && input.trim().length === 0;
   const canSend = !disabled && (isPhone ? isPhoneValid : !!input.trim());
   const handleEnterToSend = (e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     if (e.key !== "Enter") return;
@@ -43,44 +32,6 @@ export default function PromptBar({
     e.preventDefault();
     onSend();
   };
-
-  useEffect(() => {
-    if (!showTypingOverlay) {
-      if (typedText) setTypedText("");
-      if (isDeleting) setIsDeleting(false);
-      return;
-    }
-
-    const currentSample = typingSamples[sampleIndex];
-    let delay = 55;
-
-    if (!isDeleting && typedText.length < currentSample.length) delay = 45;
-    else if (!isDeleting && typedText.length === currentSample.length) delay = 1500;
-    else if (isDeleting && typedText.length > 0) delay = 28;
-    else delay = 260;
-
-    const timer = window.setTimeout(() => {
-      if (!isDeleting && typedText.length < currentSample.length) {
-        setTypedText(currentSample.slice(0, typedText.length + 1));
-        return;
-      }
-
-      if (!isDeleting && typedText.length === currentSample.length) {
-        setIsDeleting(true);
-        return;
-      }
-
-      if (isDeleting && typedText.length > 0) {
-        setTypedText(currentSample.slice(0, typedText.length - 1));
-        return;
-      }
-
-      setIsDeleting(false);
-      setSampleIndex((prev) => (prev + 1) % typingSamples.length);
-    }, delay);
-
-    return () => window.clearTimeout(timer);
-  }, [isDeleting, sampleIndex, showTypingOverlay, typedText, typingSamples]);
 
   return (
     <div
@@ -101,6 +52,8 @@ export default function PromptBar({
             value={input}
             onChange={(e) => onInputChange(e.target.value)}
             onKeyDown={handleEnterToSend}
+            onFocus={onInteract}
+            onClick={onInteract}
             placeholder="05xx xxx xx xx"
             className="h-12 w-0 min-w-0 flex-1 rounded-full bg-transparent px-4 text-sm outline-none focus:outline-none focus:ring-0 focus-visible:ring-0"
             aria-label="Telefon numarası"
@@ -113,22 +66,14 @@ export default function PromptBar({
               value={input}
               onChange={(e) => onInputChange(e.target.value)}
               onKeyDown={handleEnterToSend}
-              placeholder=""
+              onFocus={onInteract}
+              onClick={onInteract}
+              placeholder={placeholder}
               disabled={disabled}
               rows={1}
               className="max-h-40 min-h-[48px] w-full min-w-0 resize-none rounded-full bg-transparent px-4 py-3 text-sm outline-none focus:outline-none focus:ring-0 focus-visible:ring-0 disabled:opacity-70"
               aria-label="Mesajını yaz"
             />
-            {showTypingOverlay ? (
-              <div
-                aria-hidden="true"
-                className="pointer-events-none absolute inset-y-0 left-4 right-4 flex max-w-full items-center overflow-hidden whitespace-nowrap text-sm"
-                style={{ color: "var(--color-text-muted)" }}
-              >
-                <span className="inline-block max-w-full truncate align-middle">{typedText}</span>
-                <span className="typing-caret ml-0.5 inline-block align-middle" />
-              </div>
-            ) : null}
           </div>
         )}
 

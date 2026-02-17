@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import LandingShell from "@/components/landing/LandingShell";
 import PromptBar from "@/components/landing/PromptBar";
 import SuggestionCard from "@/components/landing/SuggestionCard";
@@ -8,6 +8,17 @@ import LandingHeader from "@/components/landing/LandingHeader";
 
 type Role = "assistant" | "user" | "system";
 type Message = { id: string; role: Role; text: string };
+
+function resolvePublicApiBase() {
+  const envBase = process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
+  if (envBase) return envBase.replace(/\/+$/, "");
+
+  if (typeof window === "undefined") return "";
+  const host = window.location.hostname;
+  if (host === "stage.satdedi.com") return "https://api-stage-44dd.up.railway.app";
+  if (host === "app.satdedi.com") return "https://api.satdedi.com";
+  return "";
+}
 
 export default function PublicChatPage() {
   const [messages, setMessages] = useState<Message[]>([
@@ -21,22 +32,15 @@ export default function PublicChatPage() {
   const [isStreaming, setIsStreaming] = useState(false);
   const [lastError, setLastError] = useState<string | null>(null);
   const [showSuggestionCard, setShowSuggestionCard] = useState(true);
+  const [hasInteracted, setHasInteracted] = useState(false);
+  const [hasStartedChat, setHasStartedChat] = useState(false);
 
   const listRef = useRef<HTMLDivElement | null>(null);
   const composerRef = useRef<HTMLTextAreaElement | HTMLInputElement | null>(null);
+  const shouldStickToBottomRef = useRef(true);
 
-  const placeholder = useMemo(
-    () => "Lütfen bize ne istediğini söyle. Örn: 3+1 dairemin fiyatını öğrenmek istiyorum.",
-    [],
-  );
-
-  const isCenteredComposer = messages.length <= 1;
-
-  useEffect(() => {
-    const el = listRef.current;
-    if (!el) return;
-    el.scrollTop = el.scrollHeight;
-  }, [messages, isStreaming]);
+  const placeholder = useMemo(() => "", []);
+  const isCenteredComposer = !hasInteracted && !hasStartedChat && messages.length <= 1;
 
   function addMessage(role: Role, text: string) {
     const id = `m_${Date.now()}_${Math.random().toString(16).slice(2)}`;
@@ -50,6 +54,34 @@ export default function PublicChatPage() {
     );
   }
 
+  function appendAssistantText(messageId: string, deltaText: string) {
+    setMessages((prev) =>
+      prev.map((m) => (m.id === messageId ? { ...m, text: `${m.text}${deltaText}` } : m)),
+    );
+  }
+
+  function handleComposerInteract() {
+    setHasInteracted(true);
+    setShowSuggestionCard(false);
+  }
+
+  function updateScrollStickiness() {
+    const el = listRef.current;
+    if (!el) return;
+    const threshold = 80;
+    const distanceToBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+    shouldStickToBottomRef.current = distanceToBottom <= threshold;
+  }
+
+  function scrollToBottomIfNeeded() {
+    if (!shouldStickToBottomRef.current) return;
+    const el = listRef.current;
+    if (!el) return;
+    requestAnimationFrame(() => {
+      el.scrollTop = el.scrollHeight;
+    });
+  }
+
   async function onSend() {
     const text = input.trim();
     if (!text || isStreaming) return;
@@ -61,15 +93,26 @@ export default function PublicChatPage() {
 
     setInput("");
     setLastError(null);
+    setHasInteracted(true);
+    setHasStartedChat(true);
     setShowSuggestionCard(false);
+    shouldStickToBottomRef.current = true;
+
     addMessage("user", text);
     const assistantId = addMessage("assistant", "");
-
     setIsStreaming(true);
+    scrollToBottomIfNeeded();
+
     try {
-      const res = await fetch("/api/public/chat", {
+      const apiBase = resolvePublicApiBase();
+      const endpoint = apiBase ? `${apiBase}/public/chat/stream` : "/api/public/chat";
+
+      const res = await fetch(endpoint, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          Accept: "text/event-stream, application/json",
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({ message: text, history }),
       });
 
@@ -78,22 +121,93 @@ export default function PublicChatPage() {
         throw new Error(`Chat failed: ${res.status} ${bodyText}`);
       }
 
-      const payload = (await res.json()) as { text?: string };
-      const reply = (payload?.text || "").trim();
+      const contentType = (res.headers.get("content-type") || "").toLowerCase();
 
-      if (!reply) {
-        setAssistantText(assistantId, "Şu an yanıt üretemedim. Lütfen tekrar sorar mısın?");
-        setLastError("Yanıt üretilemedi.");
+      if (!contentType.includes("text/event-stream")) {
+        const payload = (await res.json()) as { text?: string };
+        const reply = (payload?.text || "").trim();
+        if (!reply) {
+          setAssistantText(assistantId, "Şu an yanıt üretemedim. Lütfen tekrar sorar mısın?");
+          setLastError("Yanıt üretilemedi.");
+          return;
+        }
+        setAssistantText(assistantId, reply);
+        setLastError(null);
         return;
       }
 
-      setAssistantText(assistantId, reply);
-      setLastError(null);
-    } catch {
+      const reader = res.body?.getReader();
+      if (!reader) {
+        throw new Error("No response stream");
+      }
+
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let sawDelta = false;
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const blocks = buffer.split("\n\n");
+        buffer = blocks.pop() ?? "";
+
+        for (const rawBlock of blocks) {
+          const block = rawBlock.trim();
+          if (!block) continue;
+
+          const lines = block.split("\n");
+          let eventName = "message";
+          const dataLines: string[] = [];
+
+          for (const line of lines) {
+            if (line.startsWith(":")) continue;
+            if (line.startsWith("event:")) {
+              eventName = line.slice(6).trim();
+              continue;
+            }
+            if (line.startsWith("data:")) {
+              dataLines.push(line.slice(5).trim());
+            }
+          }
+
+          if (!dataLines.length) continue;
+          const dataText = dataLines.join("\n");
+
+          let payload: { text?: string; message?: string; ok?: boolean } | null = null;
+          try {
+            payload = JSON.parse(dataText);
+          } catch {
+            payload = null;
+          }
+
+          if (eventName === "delta" && payload?.text) {
+            sawDelta = true;
+            appendAssistantText(assistantId, payload.text);
+            scrollToBottomIfNeeded();
+            continue;
+          }
+
+          if (eventName === "error") {
+            setLastError(payload?.message || "Bağlantı koptu. Lütfen tekrar dene.");
+          }
+        }
+      }
+
+      if (!sawDelta) {
+        setAssistantText(assistantId, "Şu an yanıt üretemedim. Lütfen tekrar sorar mısın?");
+        setLastError("Yanıt üretilemedi.");
+      } else {
+        setLastError(null);
+      }
+    } catch (err) {
+      console.error("[chat-ui] stream failed", err);
       setAssistantText(assistantId, "Şu an yanıt üretemedim. Lütfen tekrar sorar mısın?");
       setLastError("Bağlantı koptu. Lütfen tekrar dene.");
     } finally {
       setIsStreaming(false);
+      scrollToBottomIfNeeded();
     }
   }
 
@@ -117,6 +231,7 @@ export default function PublicChatPage() {
               onInputChange={(value) => setInput(value)}
               isPhoneValid
               inputRef={composerRef}
+              onInteract={handleComposerInteract}
             />
 
             {showSuggestionCard ? (
@@ -128,6 +243,7 @@ export default function PublicChatPage() {
         <>
           <section
             ref={listRef}
+            onScroll={updateScrollStickiness}
             className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-6 overflow-y-auto pb-40 pt-6"
           >
             {messages.map((m) => (
@@ -160,7 +276,14 @@ export default function PublicChatPage() {
                   className="max-w-[88%] rounded-3xl px-4 py-3 text-[15px]"
                   style={{ color: "var(--color-text-muted)" }}
                 >
-                  Yazıyor...
+                  <div className="flex items-center gap-2">
+                    <span className="typing-dots" aria-hidden="true">
+                      <span className="typing-dot" />
+                      <span className="typing-dot" />
+                      <span className="typing-dot" />
+                    </span>
+                    <span className="text-sm">Yanıt yazıyor...</span>
+                  </div>
                 </div>
               </div>
             ) : null}
@@ -190,6 +313,7 @@ export default function PublicChatPage() {
                 onInputChange={(value) => setInput(value)}
                 isPhoneValid
                 inputRef={composerRef}
+                onInteract={handleComposerInteract}
               />
             </div>
           </div>
