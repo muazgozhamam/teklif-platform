@@ -35,13 +35,7 @@ export default function LandingHeader() {
 
   return (
     <>
-      <header
-        className="sticky top-0 z-40 py-3"
-        style={{
-          background: "color-mix(in oklab, var(--color-bg) 88%, transparent)",
-          backdropFilter: "blur(8px)",
-        }}
-      >
+      <header className="py-3">
         <div className="mx-auto flex w-full max-w-[960px] items-center justify-between gap-4">
           <Link
             href="/"

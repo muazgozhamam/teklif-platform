@@ -1,10 +1,14 @@
 "use client";
 
-import React, { useMemo, useRef, useState } from "react";
+import React, { useMemo, useState } from "react";
 import LandingShell from "@/components/landing/LandingShell";
-import PromptBar from "@/components/landing/PromptBar";
 import SuggestionCard from "@/components/landing/SuggestionCard";
-import LandingHeader from "@/components/landing/LandingHeader";
+import StickyHeader from "@/components/chat/StickyHeader";
+import ChatComposer from "@/components/chat/ChatComposer";
+import MessageList from "@/components/chat/MessageList";
+import ScrollToBottomButton from "@/components/chat/ScrollToBottomButton";
+import { useRotatingSuggestions } from "@/hooks/useRotatingSuggestions";
+import { useChatScroll } from "@/hooks/useChatScroll";
 
 type Role = "assistant" | "user" | "system";
 type Message = { id: string; role: Role; text: string };
@@ -21,6 +25,10 @@ function resolvePublicApiBase() {
 }
 
 export default function PublicChatPage() {
+  const [phase, setPhase] = useState<"prechat" | "chat">("prechat");
+  const [hasStarted, setHasStarted] = useState(false);
+  const [composerFocused, setComposerFocused] = useState(false);
+
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "welcome",
@@ -32,15 +40,8 @@ export default function PublicChatPage() {
   const [isStreaming, setIsStreaming] = useState(false);
   const [lastError, setLastError] = useState<string | null>(null);
   const [showSuggestionCard, setShowSuggestionCard] = useState(true);
-  const [hasUserInteracted, setHasUserInteracted] = useState(false);
-  const [hasStartedChat, setHasStartedChat] = useState(false);
 
-  const listRef = useRef<HTMLDivElement | null>(null);
-  const composerRef = useRef<HTMLTextAreaElement | HTMLInputElement | null>(null);
-  const shouldStickToBottomRef = useRef(true);
-
-  const placeholder = useMemo(() => "", []);
-  const exampleSentences = useMemo(
+  const suggestionSentences = useMemo(
     () => [
       "Danışman olmak istiyorum.",
       "3+1 dairemin fiyatını öğrenmek istiyorum.",
@@ -55,8 +56,25 @@ export default function PublicChatPage() {
     ],
     [],
   );
-  const isCenteredComposer = !hasStartedChat && messages.length <= 1;
-  const showExampleAsValue = !hasStartedChat && !hasUserInteracted && input.trim().length === 0;
+
+  // UX rule: suggestions run only pre-chat, only when input is not focused and empty.
+  const suggestionActive = phase === "prechat" && !hasStarted && !composerFocused && input.trim().length === 0;
+  const { text: suggestionText, cursorVisible } = useRotatingSuggestions({
+    suggestions: suggestionSentences,
+    active: suggestionActive,
+  });
+
+  const dependencyKey = `${messages.map((m) => `${m.id}:${m.text.length}`).join("|")}:${isStreaming ? "1" : "0"}`;
+  const {
+    containerRef,
+    isAtBottom,
+    showScrollDown,
+    newBelowCount,
+    onScroll,
+    scrollToBottom,
+  } = useChatScroll({ dependencyKey });
+
+  const isCenteredComposer = phase === "prechat";
 
   function addMessage(role: Role, text: string) {
     const id = `m_${Date.now()}_${Math.random().toString(16).slice(2)}`;
@@ -65,36 +83,20 @@ export default function PublicChatPage() {
   }
 
   function setAssistantText(messageId: string, text: string) {
-    setMessages((prev) =>
-      prev.map((m) => (m.id === messageId ? { ...m, text } : m)),
-    );
+    setMessages((prev) => prev.map((m) => (m.id === messageId ? { ...m, text } : m)));
   }
 
   function appendAssistantText(messageId: string, deltaText: string) {
-    setMessages((prev) =>
-      prev.map((m) => (m.id === messageId ? { ...m, text: `${m.text}${deltaText}` } : m)),
-    );
+    setMessages((prev) => prev.map((m) => (m.id === messageId ? { ...m, text: `${m.text}${deltaText}` } : m)));
   }
 
-  function handleComposerInteract() {
-    setHasUserInteracted(true);
+  function onComposerInteract() {
+    // UX rule: focus/click hides suggestion text immediately, but does not start chat.
+    setComposerFocused(true);
   }
 
-  function updateScrollStickiness() {
-    const el = listRef.current;
-    if (!el) return;
-    const threshold = 80;
-    const distanceToBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
-    shouldStickToBottomRef.current = distanceToBottom <= threshold;
-  }
-
-  function scrollToBottomIfNeeded() {
-    if (!shouldStickToBottomRef.current) return;
-    const el = listRef.current;
-    if (!el) return;
-    requestAnimationFrame(() => {
-      el.scrollTop = el.scrollHeight;
-    });
+  function onComposerBlur() {
+    if (!hasStarted) setComposerFocused(false);
   }
 
   async function onSend() {
@@ -108,14 +110,18 @@ export default function PublicChatPage() {
 
     setInput("");
     setLastError(null);
-    setHasStartedChat(true);
-    setShowSuggestionCard(false);
-    shouldStickToBottomRef.current = true;
+    setComposerFocused(false);
+
+    // UX rule: chat starts only when first message is sent.
+    if (!hasStarted) {
+      setHasStarted(true);
+      setPhase("chat");
+      setShowSuggestionCard(false);
+    }
 
     addMessage("user", text);
     const assistantId = addMessage("assistant", "");
     setIsStreaming(true);
-    scrollToBottomIfNeeded();
 
     try {
       const apiBase = resolvePublicApiBase();
@@ -151,9 +157,7 @@ export default function PublicChatPage() {
       }
 
       const reader = res.body?.getReader();
-      if (!reader) {
-        throw new Error("No response stream");
-      }
+      if (!reader) throw new Error("No response stream");
 
       const decoder = new TextDecoder();
       let buffer = "";
@@ -187,11 +191,10 @@ export default function PublicChatPage() {
           }
 
           if (!dataLines.length) continue;
-          const dataText = dataLines.join("\n");
 
           let payload: { text?: string; message?: string; ok?: boolean } | null = null;
           try {
-            payload = JSON.parse(dataText);
+            payload = JSON.parse(dataLines.join("\n"));
           } catch {
             payload = null;
           }
@@ -199,7 +202,6 @@ export default function PublicChatPage() {
           if (eventName === "delta" && payload?.text) {
             sawDelta = true;
             appendAssistantText(assistantId, payload.text);
-            scrollToBottomIfNeeded();
             continue;
           }
 
@@ -221,13 +223,12 @@ export default function PublicChatPage() {
       setLastError("Bağlantı koptu. Lütfen tekrar dene.");
     } finally {
       setIsStreaming(false);
-      scrollToBottomIfNeeded();
     }
   }
 
   return (
     <LandingShell footer="SatDedi Asistanı size destek olur; önemli kararlar öncesinde teyit etmenizi öneririz.">
-      <LandingHeader />
+      <StickyHeader />
 
       {isCenteredComposer ? (
         <section className="flex flex-1 flex-col items-center justify-center">
@@ -236,107 +237,65 @@ export default function PublicChatPage() {
           </h1>
 
           <div className="w-full">
-            <PromptBar
-              phase="collect_intent"
-              input={input}
+            <ChatComposer
+              value={input}
               disabled={isStreaming}
-              placeholder={placeholder}
-              exampleSentences={exampleSentences}
-              showExampleAsValue={showExampleAsValue}
+              suggestionActive={suggestionActive}
+              suggestionText={suggestionText}
+              cursorVisible={cursorVisible}
+              onChange={setInput}
               onSend={onSend}
-              onInputChange={(value) => setInput(value)}
-              isPhoneValid
-              inputRef={composerRef}
-              onInteract={handleComposerInteract}
+              onFocusInteraction={onComposerInteract}
+              onBlurInteraction={onComposerBlur}
             />
 
             {showSuggestionCard ? (
-              <SuggestionCard onTryNow={() => composerRef.current?.focus()} onClose={() => setShowSuggestionCard(false)} />
+              <SuggestionCard
+                onTryNow={() => {
+                  setComposerFocused(true);
+                  const el = document.getElementById("landing-prompt-input") as HTMLTextAreaElement | null;
+                  el?.focus();
+                }}
+                onClose={() => setShowSuggestionCard(false)}
+              />
             ) : null}
           </div>
         </section>
       ) : (
         <>
-          <section
-            ref={listRef}
-            onScroll={updateScrollStickiness}
-            className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-6 overflow-y-auto pb-40 pt-6"
-          >
-            {messages.map((m) => (
-              <div key={m.id} className={`flex w-full ${m.role === "user" ? "justify-end" : "justify-start"}`}>
-                <div
-                  className={[
-                    "max-w-[88%] whitespace-pre-wrap rounded-3xl px-4 py-3 text-[15px] leading-7",
-                    m.role === "user" ? "text-white" : "",
-                  ].join(" ")}
-                  style={
-                    m.role === "user"
-                      ? { background: "#2f2f2f" }
-                      : m.role === "system"
-                        ? {
-                            background: "rgba(220,38,38,0.08)",
-                            border: "1px solid rgba(220,38,38,0.25)",
-                            color: "var(--color-danger-600)",
-                          }
-                        : { color: "var(--color-text-primary)" }
-                  }
-                >
-                  {m.text}
-                </div>
-              </div>
-            ))}
+          <MessageList
+            messages={messages}
+            isStreaming={isStreaming}
+            lastError={lastError}
+            containerRef={containerRef}
+            onScroll={onScroll}
+          />
 
-            {isStreaming ? (
-              <div className="flex w-full justify-start">
-                <div
-                  className="max-w-[88%] rounded-3xl px-4 py-3 text-[15px]"
-                  style={{ color: "var(--color-text-muted)" }}
-                >
-                  <div className="flex items-center gap-2">
-                    <span className="typing-dots" aria-hidden="true">
-                      <span className="typing-dot" />
-                      <span className="typing-dot" />
-                      <span className="typing-dot" />
-                    </span>
-                    <span className="text-sm">Yanıt yazıyor...</span>
-                  </div>
-                </div>
-              </div>
-            ) : null}
-
-            {lastError ? (
-              <div
-                className="mx-auto w-full max-w-2xl rounded-2xl border px-4 py-3 text-xs"
-                style={{
-                  borderColor: "rgba(220,38,38,0.3)",
-                  background: "rgba(220,38,38,0.08)",
-                  color: "var(--color-danger-600)",
-                }}
-              >
-                {lastError}
-              </div>
-            ) : null}
-          </section>
+          <ScrollToBottomButton visible={showScrollDown} count={newBelowCount} onClick={scrollToBottom} />
 
           <div className="fixed bottom-0 left-0 right-0 z-20 px-3 pb-4 pt-2 md:px-6">
             <div className="mx-auto w-full max-w-3xl">
-              <PromptBar
-                phase="collect_intent"
-                input={input}
+              <ChatComposer
+                value={input}
                 disabled={isStreaming}
-                placeholder={placeholder}
-                exampleSentences={exampleSentences}
-                showExampleAsValue={showExampleAsValue}
+                suggestionActive={false}
+                suggestionText=""
+                cursorVisible={false}
+                onChange={setInput}
                 onSend={onSend}
-                onInputChange={(value) => setInput(value)}
-                isPhoneValid
-                inputRef={composerRef}
-                onInteract={handleComposerInteract}
+                onFocusInteraction={onComposerInteract}
+                onBlurInteraction={onComposerBlur}
               />
             </div>
           </div>
         </>
       )}
+
+      {/* Explicit state exposure for UX debugging */}
+      <span className="sr-only" aria-hidden="true">
+        phase:{phase}; hasStarted:{String(hasStarted)}; isAtBottom:{String(isAtBottom)}; isStreaming:{String(isStreaming)};
+        showScrollDown:{String(showScrollDown)}; suggestionActive:{String(suggestionActive)}
+      </span>
     </LandingShell>
   );
 }

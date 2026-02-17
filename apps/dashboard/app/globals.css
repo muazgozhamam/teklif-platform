@@ -61,6 +61,17 @@ select:focus {
   animation-delay: 0.3s;
 }
 
+.typing-shimmer {
+  background: linear-gradient(
+    90deg,
+    color-mix(in oklab, var(--color-surface) 70%, transparent) 0%,
+    color-mix(in oklab, var(--color-bg) 35%, var(--color-surface) 65%) 50%,
+    color-mix(in oklab, var(--color-surface) 70%, transparent) 100%
+  );
+  background-size: 200% 100%;
+  animation: typing-shimmer-move 1.8s linear infinite;
+}
+
 @keyframes typing-dot-bounce {
   0%,
   80%,
@@ -71,5 +82,14 @@ select:focus {
   40% {
     transform: translateY(-3px);
     opacity: 1;
+  }
+}
+
+@keyframes typing-shimmer-move {
+  0% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
   }
 }
