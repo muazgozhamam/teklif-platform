@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import LandingShell from "@/components/landing/LandingShell";
 import SuggestionCard from "@/components/landing/SuggestionCard";
 import StickyHeader from "@/components/chat/StickyHeader";
@@ -12,17 +12,6 @@ import { useChatScroll } from "@/hooks/useChatScroll";
 
 type Role = "assistant" | "user" | "system";
 type Message = { id: string; role: Role; text: string };
-
-function resolvePublicApiBase() {
-  const envBase = process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
-  if (envBase) return envBase.replace(/\/+$/, "");
-
-  if (typeof window === "undefined") return "";
-  const host = window.location.hostname;
-  if (host === "stage.satdedi.com") return "https://api-stage-44dd.up.railway.app";
-  if (host === "app.satdedi.com") return "https://api.satdedi.com";
-  return "";
-}
 
 export default function PublicChatPage() {
   const [phase, setPhase] = useState<"prechat" | "chat">("prechat");
@@ -40,6 +29,9 @@ export default function PublicChatPage() {
   const [isStreaming, setIsStreaming] = useState(false);
   const [lastError, setLastError] = useState<string | null>(null);
   const [showSuggestionCard, setShowSuggestionCard] = useState(true);
+  const [guestBlocked, setGuestBlocked] = useState(false);
+  const [guestRemaining, setGuestRemaining] = useState<number | null>(null);
+  const activeRequestRef = useRef<AbortController | null>(null);
 
   const suggestionSentences = useMemo(
     () => [
@@ -99,9 +91,15 @@ export default function PublicChatPage() {
     if (!hasStarted) setComposerFocused(false);
   }
 
+  function stopStreaming() {
+    activeRequestRef.current?.abort();
+    activeRequestRef.current = null;
+    setIsStreaming(false);
+  }
+
   async function onSend() {
     const text = input.trim();
-    if (!text || isStreaming) return;
+    if (!text || isStreaming || guestBlocked) return;
 
     const history = messages
       .filter((m) => (m.role === "assistant" || m.role === "user") && m.text.trim().length > 0)
@@ -123,21 +121,37 @@ export default function PublicChatPage() {
     const assistantId = addMessage("assistant", "");
     setIsStreaming(true);
 
-    try {
-      const apiBase = resolvePublicApiBase();
-      const endpoint = apiBase ? `${apiBase}/public/chat/stream` : "/api/public/chat";
+    const controller = new AbortController();
+    activeRequestRef.current = controller;
 
-      const res = await fetch(endpoint, {
+    try {
+      const res = await fetch("/api/public/chat", {
         method: "POST",
         headers: {
           Accept: "text/event-stream, application/json",
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ message: text, history }),
+        signal: controller.signal,
       });
+
+      const remainingHeader = res.headers.get("x-guest-remaining");
+      if (remainingHeader !== null) {
+        const n = Number(remainingHeader);
+        if (Number.isFinite(n)) {
+          setGuestRemaining(n);
+          setGuestBlocked(n <= 0);
+        }
+      }
 
       if (!res.ok) {
         const bodyText = await res.text().catch(() => "");
+        if (res.status === 429) {
+          setGuestBlocked(true);
+          setLastError("Devam etmek için giriş yap.");
+          setAssistantText(assistantId, "Devam etmek için giriş yap.");
+          return;
+        }
         throw new Error(`Chat failed: ${res.status} ${bodyText}`);
       }
 
@@ -192,7 +206,7 @@ export default function PublicChatPage() {
 
           if (!dataLines.length) continue;
 
-          let payload: { text?: string; message?: string; ok?: boolean } | null = null;
+          let payload: { text?: string; message?: string; ok?: boolean; remaining?: number } | null = null;
           try {
             payload = JSON.parse(dataLines.join("\n"));
           } catch {
@@ -202,6 +216,15 @@ export default function PublicChatPage() {
           if (eventName === "delta" && payload?.text) {
             sawDelta = true;
             appendAssistantText(assistantId, payload.text);
+            continue;
+          }
+
+          if (eventName === "meta") {
+            const n = Number(payload?.remaining);
+            if (Number.isFinite(n)) {
+              setGuestRemaining(n);
+              setGuestBlocked(n <= 0);
+            }
             continue;
           }
 
@@ -218,10 +241,16 @@ export default function PublicChatPage() {
         setLastError(null);
       }
     } catch (err) {
+      if ((err as { name?: string })?.name === "AbortError") {
+        setAssistantText(assistantId, "Yanıt durduruldu.");
+        setLastError(null);
+        return;
+      }
       console.error("[chat-ui] stream failed", err);
       setAssistantText(assistantId, "Şu an yanıt üretemedim. Lütfen tekrar sorar mısın?");
       setLastError("Bağlantı koptu. Lütfen tekrar dene.");
     } finally {
+      activeRequestRef.current = null;
       setIsStreaming(false);
     }
   }
@@ -239,15 +268,27 @@ export default function PublicChatPage() {
           <div className="w-full">
             <ChatComposer
               value={input}
-              disabled={isStreaming}
+              disabled={false}
+              isStreaming={isStreaming}
+              blocked={guestBlocked}
               suggestionActive={suggestionActive}
               suggestionText={suggestionText}
               cursorVisible={cursorVisible}
               onChange={setInput}
               onSend={onSend}
+              onStop={stopStreaming}
               onFocusInteraction={onComposerInteract}
               onBlurInteraction={onComposerBlur}
             />
+            {guestBlocked ? (
+              <p className="mt-2 text-center text-xs" style={{ color: "var(--color-text-muted)" }}>
+                Devam etmek için giriş yap.
+              </p>
+            ) : guestRemaining !== null ? (
+              <p className="mt-2 text-center text-xs" style={{ color: "var(--color-text-muted)" }}>
+                Kalan mesaj hakkı: {guestRemaining}
+              </p>
+            ) : null}
 
             {showSuggestionCard ? (
               <SuggestionCard
@@ -277,12 +318,15 @@ export default function PublicChatPage() {
             <div className="mx-auto w-full max-w-3xl">
               <ChatComposer
                 value={input}
-                disabled={isStreaming}
+                disabled={false}
+                isStreaming={isStreaming}
+                blocked={guestBlocked}
                 suggestionActive={false}
                 suggestionText=""
                 cursorVisible={false}
                 onChange={setInput}
                 onSend={onSend}
+                onStop={stopStreaming}
                 onFocusInteraction={onComposerInteract}
                 onBlurInteraction={onComposerBlur}
               />

@@ -5,11 +5,14 @@ import { useAutosizeTextarea } from "@/hooks/useAutosizeTextarea";
 type ChatComposerProps = {
   value: string;
   disabled: boolean;
+  isStreaming: boolean;
+  blocked?: boolean;
   suggestionActive: boolean;
   suggestionText: string;
   cursorVisible: boolean;
   onChange: (value: string) => void;
   onSend: () => void;
+  onStop: () => void;
   onFocusInteraction: () => void;
   onBlurInteraction?: () => void;
 };
@@ -17,18 +20,21 @@ type ChatComposerProps = {
 export default function ChatComposer({
   value,
   disabled,
+  isStreaming,
+  blocked = false,
   suggestionActive,
   suggestionText,
   cursorVisible,
   onChange,
   onSend,
+  onStop,
   onFocusInteraction,
   onBlurInteraction,
 }: ChatComposerProps) {
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   useAutosizeTextarea({ ref: textareaRef, value });
 
-  const canSend = !disabled && value.trim().length > 0;
+  const canSend = !disabled && !blocked && value.trim().length > 0;
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key !== "Enter") return;
@@ -69,23 +75,38 @@ export default function ChatComposer({
 
         <button
           type="button"
-          aria-label="Ses ile giriş (yakında)"
+          aria-label="Dikte (yakında)"
           className="shrink-0 rounded-full border px-3 py-2 text-sm"
           style={{ borderColor: "var(--color-border)", color: "var(--color-text-secondary)" }}
         >
-          Ses
+          <span className="inline-flex items-center gap-1">
+            <span aria-hidden="true">🎤</span>
+            <span>Dikte</span>
+          </span>
         </button>
 
-        <button
-          type="button"
-          onClick={onSend}
-          disabled={!canSend}
-          aria-label="Mesajı gönder"
-          className="shrink-0 rounded-full px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
-          style={{ background: "#2f2f2f" }}
-        >
-          Gönder
-        </button>
+        {isStreaming ? (
+          <button
+            type="button"
+            onClick={onStop}
+            aria-label="Yanıtı durdur"
+            className="shrink-0 rounded-full px-4 py-2 text-sm font-medium text-white"
+            style={{ background: "#2f2f2f" }}
+          >
+            ■
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={onSend}
+            disabled={!canSend}
+            aria-label="Mesajı gönder"
+            className="shrink-0 rounded-full px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+            style={{ background: "#2f2f2f" }}
+          >
+            ↑
+          </button>
+        )}
       </div>
     </div>
   );
