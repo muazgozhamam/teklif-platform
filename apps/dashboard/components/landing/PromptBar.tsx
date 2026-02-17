@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useMemo, useState } from "react";
 
 type PromptBarProps = {
   phase: "collect_intent" | "wizard" | "collect_phone" | "submitting" | "done" | "error";
@@ -7,6 +7,7 @@ type PromptBarProps = {
   placeholder: string;
   exampleText?: string;
   showExampleAsValue?: boolean;
+  exampleSentences?: string[];
   onSend: () => void;
   onInputChange: (value: string) => void;
   isPhoneValid: boolean;
@@ -21,6 +22,7 @@ export default function PromptBar({
   placeholder,
   exampleText,
   showExampleAsValue = false,
+  exampleSentences,
   onSend,
   onInputChange,
   isPhoneValid,
@@ -28,6 +30,17 @@ export default function PromptBar({
   onInteract,
 }: PromptBarProps) {
   const isPhone = phase === "collect_phone";
+  const rotatingExamples = useMemo(
+    () =>
+      exampleSentences && exampleSentences.length > 0
+        ? exampleSentences
+        : [exampleText || "Danışman olmak istiyorum."],
+    [exampleSentences, exampleText],
+  );
+  const [typedText, setTypedText] = useState("");
+  const [exampleIndex, setExampleIndex] = useState(0);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [showCursor, setShowCursor] = useState(true);
   const canSend = !disabled && (isPhone ? isPhoneValid : !!input.trim());
   const handleEnterToSend = (e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     if (e.key !== "Enter") return;
@@ -41,6 +54,60 @@ export default function PromptBar({
     onInteract?.();
     if (showExampleAsValue) onInputChange("");
   };
+
+  useEffect(() => {
+    if (!showExampleAsValue) {
+      if (typedText) setTypedText("");
+      if (isDeleting) setIsDeleting(false);
+      return;
+    }
+
+    const current = rotatingExamples[exampleIndex] || "";
+    let delay = 55;
+
+    if (!isDeleting && typedText.length < current.length) delay = 42;
+    else if (!isDeleting && typedText.length === current.length) delay = 1400;
+    else if (isDeleting && typedText.length > 0) delay = 26;
+    else delay = 260;
+
+    const timer = window.setTimeout(() => {
+      if (!isDeleting && typedText.length < current.length) {
+        setTypedText(current.slice(0, typedText.length + 1));
+        return;
+      }
+
+      if (!isDeleting && typedText.length === current.length) {
+        setIsDeleting(true);
+        return;
+      }
+
+      if (isDeleting && typedText.length > 0) {
+        setTypedText(current.slice(0, typedText.length - 1));
+        return;
+      }
+
+      setIsDeleting(false);
+      setExampleIndex((prev) => (prev + 1) % rotatingExamples.length);
+    }, delay);
+
+    return () => window.clearTimeout(timer);
+  }, [exampleIndex, isDeleting, rotatingExamples, showExampleAsValue, typedText]);
+
+  useEffect(() => {
+    if (!showExampleAsValue) {
+      setShowCursor(false);
+      return;
+    }
+    setShowCursor(true);
+    const cursorTimer = window.setInterval(() => {
+      setShowCursor((prev) => !prev);
+    }, 480);
+    return () => window.clearInterval(cursorTimer);
+  }, [showExampleAsValue]);
+
+  const displayValue = showExampleAsValue
+    ? `${typedText}${showCursor ? "|" : ""}`
+    : input;
 
   return (
     <div
@@ -72,7 +139,7 @@ export default function PromptBar({
             <textarea
               id="landing-prompt-input"
               ref={inputRef as React.RefObject<HTMLTextAreaElement>}
-              value={showExampleAsValue ? (exampleText ?? "") : input}
+              value={displayValue}
               onChange={(e) => onInputChange(e.target.value)}
               onKeyDown={handleEnterToSend}
               onFocus={handleTextFocusOrClick}

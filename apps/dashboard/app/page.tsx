@@ -32,7 +32,7 @@ export default function PublicChatPage() {
   const [isStreaming, setIsStreaming] = useState(false);
   const [lastError, setLastError] = useState<string | null>(null);
   const [showSuggestionCard, setShowSuggestionCard] = useState(true);
-  const [hasInteracted, setHasInteracted] = useState(false);
+  const [hasUserInteracted, setHasUserInteracted] = useState(false);
   const [hasStartedChat, setHasStartedChat] = useState(false);
 
   const listRef = useRef<HTMLDivElement | null>(null);
@@ -40,12 +40,23 @@ export default function PublicChatPage() {
   const shouldStickToBottomRef = useRef(true);
 
   const placeholder = useMemo(() => "", []);
-  const exampleText = useMemo(
-    () => "Danışman olmak istiyorum.",
+  const exampleSentences = useMemo(
+    () => [
+      "Danışman olmak istiyorum.",
+      "3+1 dairemin fiyatını öğrenmek istiyorum.",
+      "Meram'da evimi kiraya vermek istiyorum.",
+      "Ticari mülkümü değerlendirmek istiyorum.",
+      "Evimi hızlı satmak için nasıl ilerlemeliyim?",
+      "Arsam için doğru satış planı istiyorum.",
+      "İş ortağı olarak sürece katılmak istiyorum.",
+      "Mülküm için ilan sürecini başlatmak istiyorum.",
+      "Doğru alıcıya daha hızlı ulaşmak istiyorum.",
+      "SatDedi ile satış sürecini başlatalım.",
+    ],
     [],
   );
-  const isCenteredComposer = !hasInteracted && !hasStartedChat && messages.length <= 1;
-  const showExampleAsValue = !hasStartedChat && !hasInteracted && input.trim().length === 0;
+  const isCenteredComposer = !hasStartedChat && messages.length <= 1;
+  const showExampleAsValue = !hasStartedChat && !hasUserInteracted && input.trim().length === 0;
 
   function addMessage(role: Role, text: string) {
     const id = `m_${Date.now()}_${Math.random().toString(16).slice(2)}`;
@@ -66,8 +77,7 @@ export default function PublicChatPage() {
   }
 
   function handleComposerInteract() {
-    setHasInteracted(true);
-    setShowSuggestionCard(false);
+    setHasUserInteracted(true);
   }
 
   function updateScrollStickiness() {
@@ -98,7 +108,6 @@ export default function PublicChatPage() {
 
     setInput("");
     setLastError(null);
-    setHasInteracted(true);
     setHasStartedChat(true);
     setShowSuggestionCard(false);
     shouldStickToBottomRef.current = true;
@@ -232,7 +241,7 @@ export default function PublicChatPage() {
               input={input}
               disabled={isStreaming}
               placeholder={placeholder}
-              exampleText={exampleText}
+              exampleSentences={exampleSentences}
               showExampleAsValue={showExampleAsValue}
               onSend={onSend}
               onInputChange={(value) => setInput(value)}
@@ -316,7 +325,7 @@ export default function PublicChatPage() {
                 input={input}
                 disabled={isStreaming}
                 placeholder={placeholder}
-                exampleText={exampleText}
+                exampleSentences={exampleSentences}
                 showExampleAsValue={showExampleAsValue}
                 onSend={onSend}
                 onInputChange={(value) => setInput(value)}
