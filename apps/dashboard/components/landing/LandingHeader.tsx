@@ -15,7 +15,10 @@ export default function LandingHeader() {
 
   return (
     <>
-      <header className="py-3">
+      <header
+        className="sticky top-0 z-40 py-3 backdrop-blur"
+        style={{ background: "color-mix(in srgb, var(--color-bg) 88%, transparent)" }}
+      >
         <div className="mx-auto flex w-full max-w-[960px] items-center justify-between gap-4">
           <Link
             href="/"

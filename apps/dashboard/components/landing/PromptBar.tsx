@@ -7,6 +7,7 @@ type PromptBarProps = {
   placeholder: string;
   onSend: () => void;
   onInputChange: (value: string) => void;
+  onInputFocus?: () => void;
   isPhoneValid: boolean;
   inputRef: React.RefObject<HTMLTextAreaElement | HTMLInputElement | null>;
 };
@@ -18,6 +19,7 @@ export default function PromptBar({
   placeholder,
   onSend,
   onInputChange,
+  onInputFocus,
   isPhoneValid,
   inputRef,
 }: PromptBarProps) {
@@ -100,6 +102,7 @@ export default function PromptBar({
             autoComplete="tel"
             value={input}
             onChange={(e) => onInputChange(e.target.value)}
+            onFocus={onInputFocus}
             onKeyDown={handleEnterToSend}
             placeholder="05xx xxx xx xx"
             className="h-12 w-0 min-w-0 flex-1 rounded-full bg-transparent px-4 text-sm outline-none focus:outline-none focus:ring-0 focus-visible:ring-0"
@@ -112,6 +115,7 @@ export default function PromptBar({
               ref={inputRef as React.RefObject<HTMLTextAreaElement>}
               value={input}
               onChange={(e) => onInputChange(e.target.value)}
+              onFocus={onInputFocus}
               onKeyDown={handleEnterToSend}
               placeholder=""
               disabled={disabled}
