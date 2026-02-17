@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useMemo, useState } from "react";
-import ModalShell from "@/components/ui/ModalShell";
+import Modal from "@/components/ui/Modal";
 
 type GuestLeadGateModalProps = {
   open: boolean;
@@ -44,8 +44,8 @@ export default function GuestLeadGateModal({ open, onClose, onSubmitSuccess }: G
   }
 
   return (
-    <ModalShell
-      open={open}
+    <Modal
+      isOpen={open}
       title={submitted ? "Teşekkürler" : "Devam etmek için kısa form"}
       onClose={onClose}
       maxWidthClass="max-w-lg"
@@ -130,6 +130,6 @@ export default function GuestLeadGateModal({ open, onClose, onSubmitSuccess }: G
           </button>
         </div>
       )}
-    </ModalShell>
+    </Modal>
   );
 }

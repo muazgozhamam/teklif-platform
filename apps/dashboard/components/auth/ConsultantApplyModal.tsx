@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useMemo, useState } from "react";
-import ModalShell from "@/components/ui/ModalShell";
+import Modal from "@/components/ui/Modal";
 
 type ConsultantApplyModalProps = {
   open: boolean;
@@ -120,7 +120,7 @@ export default function ConsultantApplyModal({ open, onClose }: ConsultantApplyM
   }
 
   return (
-    <ModalShell open={open} onClose={resetAndClose} title="Danışman başvurusu" maxWidthClass="max-w-[460px]">
+    <Modal isOpen={open} onClose={resetAndClose} title="Danışman başvurusu" maxWidthClass="max-w-[460px]">
       {success ? (
         <div className="grid gap-4">
           <p className="text-sm" style={{ color: "var(--color-text-secondary)" }}>
@@ -229,7 +229,7 @@ export default function ConsultantApplyModal({ open, onClose }: ConsultantApplyM
           </button>
         </div>
       )}
-    </ModalShell>
+    </Modal>
   );
 }
 

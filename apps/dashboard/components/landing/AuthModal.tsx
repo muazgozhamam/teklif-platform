@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import ModalShell from "@/components/ui/ModalShell";
+import Modal from "@/components/ui/Modal";
 import Logo from "@/components/brand/Logo";
 
 type AuthModalProps = {
@@ -25,7 +25,7 @@ export default function AuthModal({ open, onClose }: AuthModalProps) {
   }
 
   return (
-    <ModalShell open={open} onClose={onClose} title="Oturum aç veya kaydol">
+    <Modal isOpen={open} onClose={onClose} title="Oturum aç veya kaydol">
         <div className="mb-1">
           <Logo size="md" />
         </div>
@@ -110,7 +110,7 @@ export default function AuthModal({ open, onClose }: AuthModalProps) {
             Devam
           </button>
         </div>
-    </ModalShell>
+    </Modal>
   );
 }
 

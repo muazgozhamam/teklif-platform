@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import ModalShell from "@/components/ui/ModalShell";
+import Modal from "@/components/ui/Modal";
 
 type PartnerApplyModalProps = {
   open: boolean;
@@ -120,7 +120,7 @@ export default function PartnerApplyModal({ open, onClose }: PartnerApplyModalPr
   }
 
   return (
-    <ModalShell open={open} onClose={resetAndClose} title="İş ortağı başvurusu" maxWidthClass="max-w-[460px]">
+    <Modal isOpen={open} onClose={resetAndClose} title="İş ortağı başvurusu" maxWidthClass="max-w-[460px]">
       {success ? (
         <div className="grid gap-4">
           <p className="text-sm" style={{ color: "var(--color-text-secondary)" }}>
@@ -236,7 +236,7 @@ export default function PartnerApplyModal({ open, onClose }: PartnerApplyModalPr
           </button>
         </div>
       )}
-    </ModalShell>
+    </Modal>
   );
 }
 
