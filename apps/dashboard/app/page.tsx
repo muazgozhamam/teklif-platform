@@ -1,12 +1,13 @@
 "use client";
 
-import React, { useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import LandingShell from "@/components/landing/LandingShell";
 import SuggestionCard from "@/components/landing/SuggestionCard";
 import StickyHeader from "@/components/chat/StickyHeader";
 import ChatComposer from "@/components/chat/ChatComposer";
 import MessageList from "@/components/chat/MessageList";
 import ScrollToBottomButton from "@/components/chat/ScrollToBottomButton";
+import GuestLeadGateModal from "@/components/chat/GuestLeadGateModal";
 import { useRotatingSuggestions } from "@/hooks/useRotatingSuggestions";
 import { useChatScroll } from "@/hooks/useChatScroll";
 
@@ -31,7 +32,11 @@ export default function PublicChatPage() {
   const [showSuggestionCard, setShowSuggestionCard] = useState(true);
   const [guestBlocked, setGuestBlocked] = useState(false);
   const [guestRemaining, setGuestRemaining] = useState<number | null>(null);
+  const [guestMessageCount, setGuestMessageCount] = useState(0);
+  const [leadUnlocked, setLeadUnlocked] = useState(false);
+  const [showLeadGate, setShowLeadGate] = useState(false);
   const activeRequestRef = useRef<AbortController | null>(null);
+  const GUEST_LIMIT = 5;
 
   const suggestionSentences = useMemo(
     () => [
@@ -64,9 +69,24 @@ export default function PublicChatPage() {
     newBelowCount,
     onScroll,
     scrollToBottom,
-  } = useChatScroll({ dependencyKey });
+  } = useChatScroll({ dependencyKey, bottomThreshold: 120 });
 
   const isCenteredComposer = phase === "prechat";
+
+  useEffect(() => {
+    const storedCount = Number(window.localStorage.getItem("satdedi_guest_msg_count") || "0");
+    const storedUnlocked = window.localStorage.getItem("satdedi_lead_unlocked") === "1";
+    const safeCount = Number.isFinite(storedCount) && storedCount >= 0 ? Math.floor(storedCount) : 0;
+    setGuestMessageCount(safeCount);
+    setLeadUnlocked(storedUnlocked);
+    setGuestRemaining(Math.max(0, GUEST_LIMIT - safeCount));
+    setGuestBlocked(!storedUnlocked && safeCount >= GUEST_LIMIT);
+  }, []);
+
+  function persistGuestState(nextCount: number, unlocked: boolean) {
+    window.localStorage.setItem("satdedi_guest_msg_count", String(nextCount));
+    window.localStorage.setItem("satdedi_lead_unlocked", unlocked ? "1" : "0");
+  }
 
   function addMessage(role: Role, text: string) {
     const id = `m_${Date.now()}_${Math.random().toString(16).slice(2)}`;
@@ -99,7 +119,23 @@ export default function PublicChatPage() {
 
   async function onSend() {
     const text = input.trim();
-    if (!text || isStreaming || guestBlocked) return;
+    if (!text || isStreaming) return;
+    if (guestBlocked) {
+      setShowLeadGate(true);
+      return;
+    }
+
+    const nextCount = guestMessageCount + 1;
+    setGuestMessageCount(nextCount);
+    setGuestRemaining(Math.max(0, GUEST_LIMIT - nextCount));
+    persistGuestState(nextCount, leadUnlocked);
+
+    if (!leadUnlocked && nextCount > GUEST_LIMIT) {
+      setGuestBlocked(true);
+      setShowLeadGate(true);
+      setLastError("Devam etmek için giriş yap veya formu doldur.");
+      return;
+    }
 
     const history = messages
       .filter((m) => (m.role === "assistant" || m.role === "user") && m.text.trim().length > 0)
@@ -135,21 +171,13 @@ export default function PublicChatPage() {
         signal: controller.signal,
       });
 
-      const remainingHeader = res.headers.get("x-guest-remaining");
-      if (remainingHeader !== null) {
-        const n = Number(remainingHeader);
-        if (Number.isFinite(n)) {
-          setGuestRemaining(n);
-          setGuestBlocked(n <= 0);
-        }
-      }
-
       if (!res.ok) {
         const bodyText = await res.text().catch(() => "");
         if (res.status === 429) {
           setGuestBlocked(true);
-          setLastError("Devam etmek için giriş yap.");
-          setAssistantText(assistantId, "Devam etmek için giriş yap.");
+          setLastError("Devam etmek için giriş yap veya formu doldur.");
+          setAssistantText(assistantId, "Devam etmek için giriş yap veya formu doldur.");
+          setShowLeadGate(true);
           return;
         }
         throw new Error(`Chat failed: ${res.status} ${bodyText}`);
@@ -219,15 +247,6 @@ export default function PublicChatPage() {
             continue;
           }
 
-          if (eventName === "meta") {
-            const n = Number(payload?.remaining);
-            if (Number.isFinite(n)) {
-              setGuestRemaining(n);
-              setGuestBlocked(n <= 0);
-            }
-            continue;
-          }
-
           if (eventName === "error") {
             setLastError(payload?.message || "Bağlantı koptu. Lütfen tekrar dene.");
           }
@@ -242,7 +261,6 @@ export default function PublicChatPage() {
       }
     } catch (err) {
       if ((err as { name?: string })?.name === "AbortError") {
-        setAssistantText(assistantId, "Yanıt durduruldu.");
         setLastError(null);
         return;
       }
@@ -282,7 +300,7 @@ export default function PublicChatPage() {
             />
             {guestBlocked ? (
               <p className="mt-2 text-center text-xs" style={{ color: "var(--color-text-muted)" }}>
-                Devam etmek için giriş yap.
+                Devam etmek için giriş yap veya formu doldur.
               </p>
             ) : guestRemaining !== null ? (
               <p className="mt-2 text-center text-xs" style={{ color: "var(--color-text-muted)" }}>
@@ -312,9 +330,9 @@ export default function PublicChatPage() {
             onScroll={onScroll}
           />
 
-          <ScrollToBottomButton visible={showScrollDown} count={newBelowCount} onClick={scrollToBottom} />
+          <ScrollToBottomButton visible={showScrollDown} count={newBelowCount} onClick={() => scrollToBottom(true)} />
 
-          <div className="fixed bottom-0 left-0 right-0 z-20 px-3 pb-4 pt-2 md:px-6">
+          <div className="fixed bottom-0 left-0 right-0 z-20 px-3 pb-4 pt-2 md:px-6" style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom))" }}>
             <div className="mx-auto w-full max-w-3xl">
               <ChatComposer
                 value={input}
@@ -334,6 +352,17 @@ export default function PublicChatPage() {
           </div>
         </>
       )}
+
+      <GuestLeadGateModal
+        open={showLeadGate}
+        onSubmitSuccess={() => {
+          setLeadUnlocked(true);
+          setGuestBlocked(false);
+          setShowLeadGate(false);
+          persistGuestState(guestMessageCount, true);
+          setLastError(null);
+        }}
+      />
 
       {/* Explicit state exposure for UX debugging */}
       <span className="sr-only" aria-hidden="true">

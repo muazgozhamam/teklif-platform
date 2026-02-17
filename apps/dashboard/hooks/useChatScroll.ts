@@ -2,9 +2,10 @@ import { useEffect, useRef, useState } from "react";
 
 type Options = {
   dependencyKey: string;
+  bottomThreshold?: number;
 };
 
-export function useChatScroll({ dependencyKey }: Options) {
+export function useChatScroll({ dependencyKey, bottomThreshold = 120 }: Options) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [isAtBottom, setIsAtBottom] = useState(true);
   const [showScrollDown, setShowScrollDown] = useState(false);
@@ -15,9 +16,8 @@ export function useChatScroll({ dependencyKey }: Options) {
   function measureAtBottom() {
     const el = containerRef.current;
     if (!el) return true;
-    const threshold = 80;
     const distanceToBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
-    return distanceToBottom <= threshold;
+    return distanceToBottom <= bottomThreshold;
   }
 
   function onScroll() {
@@ -27,10 +27,10 @@ export function useChatScroll({ dependencyKey }: Options) {
     if (atBottom) setNewBelowCount(0);
   }
 
-  function scrollToBottom() {
+  function scrollToBottom(smooth = true) {
     const el = containerRef.current;
     if (!el) return;
-    el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+    el.scrollTo({ top: el.scrollHeight, behavior: smooth ? "smooth" : "auto" });
     setIsAtBottom(true);
     setShowScrollDown(false);
     setNewBelowCount(0);
@@ -67,4 +67,3 @@ export function useChatScroll({ dependencyKey }: Options) {
     scrollToBottom,
   };
 }
-
