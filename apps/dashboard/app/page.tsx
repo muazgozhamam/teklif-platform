@@ -21,8 +21,6 @@ export default function PublicChatPage() {
   const [isStreaming, setIsStreaming] = useState(false);
   const [lastError, setLastError] = useState<string | null>(null);
   const [showSuggestionCard, setShowSuggestionCard] = useState(true);
-  const [hasInteracted, setHasInteracted] = useState(false);
-  const [hasStartedChat, setHasStartedChat] = useState(false);
 
   const listRef = useRef<HTMLDivElement | null>(null);
   const composerRef = useRef<HTMLTextAreaElement | HTMLInputElement | null>(null);
@@ -32,7 +30,7 @@ export default function PublicChatPage() {
     [],
   );
 
-  const shouldShowHero = !hasInteracted && !hasStartedChat;
+  const isCenteredComposer = messages.length <= 1;
 
   useEffect(() => {
     const el = listRef.current;
@@ -64,7 +62,6 @@ export default function PublicChatPage() {
     setInput("");
     setLastError(null);
     setShowSuggestionCard(false);
-    setHasStartedChat(true);
     addMessage("user", text);
     const assistantId = addMessage("assistant", "");
 
@@ -104,8 +101,8 @@ export default function PublicChatPage() {
     <LandingShell footer="SatDedi Asistanı size destek olur; önemli kararlar öncesinde teyit etmenizi öneririz.">
       <LandingHeader />
 
-      {shouldShowHero ? (
-        <section className="flex flex-1 flex-col items-center justify-center pt-3 md:pt-4">
+      {isCenteredComposer ? (
+        <section className="flex flex-1 flex-col items-center justify-center">
           <h1 className="mb-6 text-center text-3xl font-semibold tracking-tight md:text-5xl">
             Nasıl yardımcı olabilirim?
           </h1>
@@ -118,7 +115,6 @@ export default function PublicChatPage() {
               placeholder={placeholder}
               onSend={onSend}
               onInputChange={(value) => setInput(value)}
-              onInputFocus={() => setHasInteracted(true)}
               isPhoneValid
               inputRef={composerRef}
             />
@@ -132,7 +128,7 @@ export default function PublicChatPage() {
         <>
           <section
             ref={listRef}
-            className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-6 overflow-y-auto pb-40 pt-6 md:pt-7"
+            className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-6 overflow-y-auto pb-40 pt-6"
           >
             {messages.map((m) => (
               <div key={m.id} className={`flex w-full ${m.role === "user" ? "justify-end" : "justify-start"}`}>
@@ -192,7 +188,6 @@ export default function PublicChatPage() {
                 placeholder={placeholder}
                 onSend={onSend}
                 onInputChange={(value) => setInput(value)}
-                onInputFocus={() => setHasInteracted(true)}
                 isPhoneValid
                 inputRef={composerRef}
               />
