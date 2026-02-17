@@ -53,7 +53,11 @@ export class PublicChatService {
       },
       ...history.map((m) => ({
         role: m.role === 'assistant' ? 'assistant' : 'user',
-        content: [{ type: 'input_text', text: m.content }],
+        content: [
+          m.role === 'assistant'
+            ? { type: 'output_text', text: m.content }
+            : { type: 'input_text', text: m.content },
+        ],
       })),
       {
         role: 'user',
