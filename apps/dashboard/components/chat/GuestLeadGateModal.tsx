@@ -5,6 +5,7 @@ import ModalShell from "@/components/ui/ModalShell";
 
 type GuestLeadGateModalProps = {
   open: boolean;
+  onClose: () => void;
   onSubmitSuccess: (data: {
     fullName: string;
     phone: string;
@@ -14,7 +15,7 @@ type GuestLeadGateModalProps = {
   }) => void;
 };
 
-export default function GuestLeadGateModal({ open, onSubmitSuccess }: GuestLeadGateModalProps) {
+export default function GuestLeadGateModal({ open, onClose, onSubmitSuccess }: GuestLeadGateModalProps) {
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
@@ -46,9 +47,7 @@ export default function GuestLeadGateModal({ open, onSubmitSuccess }: GuestLeadG
     <ModalShell
       open={open}
       title={submitted ? "Teşekkürler" : "Devam etmek için kısa form"}
-      onClose={() => {
-        // Gating modal: intentionally no close action until submit success.
-      }}
+      onClose={onClose}
       maxWidthClass="max-w-lg"
     >
       {submitted ? (
@@ -56,6 +55,14 @@ export default function GuestLeadGateModal({ open, onSubmitSuccess }: GuestLeadG
           <p className="text-sm" style={{ color: "var(--color-text-secondary)" }}>
             Bilgilerin alındı, sohbete devam edebilirsin.
           </p>
+          <button
+            type="button"
+            onClick={onClose}
+            className="mt-3 h-10 rounded-xl px-4 text-sm font-medium text-white"
+            style={{ background: "var(--color-primary-600)" }}
+          >
+            Kapat
+          </button>
         </div>
       ) : (
         <div className="grid gap-3">
@@ -126,4 +133,3 @@ export default function GuestLeadGateModal({ open, onSubmitSuccess }: GuestLeadG
     </ModalShell>
   );
 }
-

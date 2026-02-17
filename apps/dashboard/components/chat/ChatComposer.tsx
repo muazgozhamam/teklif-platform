@@ -1,6 +1,19 @@
-import React, { useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import SuggestionsOverlay from "./SuggestionsOverlay";
 import { useAutosizeTextarea } from "@/hooks/useAutosizeTextarea";
+
+type SpeechRecognitionConstructor = new () => SpeechRecognition;
+
+type SpeechRecognitionEventLike = Event & {
+  results: SpeechRecognitionResultList;
+};
+
+declare global {
+  interface Window {
+    webkitSpeechRecognition?: SpeechRecognitionConstructor;
+    SpeechRecognition?: SpeechRecognitionConstructor;
+  }
+}
 
 type ChatComposerProps = {
   value: string;
@@ -32,6 +45,10 @@ export default function ChatComposer({
   onBlurInteraction,
 }: ChatComposerProps) {
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const dictationBaseRef = useRef("");
+  const [isDictating, setIsDictating] = useState(false);
+  const [dictationSupported, setDictationSupported] = useState(false);
   useAutosizeTextarea({ ref: textareaRef, value });
 
   const canSend = !disabled && !blocked && value.trim().length > 0;
@@ -44,6 +61,51 @@ export default function ChatComposer({
     onSend();
   };
 
+  useEffect(() => {
+    const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!Recognition) return;
+
+    const recognition = new Recognition();
+    recognition.lang = "tr-TR";
+    recognition.continuous = true;
+    recognition.interimResults = true;
+
+    recognition.onresult = (event: SpeechRecognitionEventLike) => {
+      let transcript = "";
+      for (let i = event.resultIndex; i < event.results.length; i += 1) {
+        transcript += event.results[i][0]?.transcript || "";
+      }
+      if (transcript.trim()) {
+        onChange(`${dictationBaseRef.current} ${transcript}`.replace(/\s+/g, " ").trimStart());
+      }
+    };
+
+    recognition.onend = () => {
+      setIsDictating(false);
+    };
+
+    recognitionRef.current = recognition;
+    setDictationSupported(true);
+
+    return () => {
+      recognition.stop();
+      recognitionRef.current = null;
+    };
+  }, []);
+
+  function toggleDictation() {
+    const recognition = recognitionRef.current;
+    if (!recognition) return;
+    if (isDictating) {
+      recognition.stop();
+      setIsDictating(false);
+      return;
+    }
+    dictationBaseRef.current = value;
+    recognition.start();
+    setIsDictating(true);
+  }
+
   return (
     <div
       className="rounded-[32px] border p-3"
@@ -54,16 +116,6 @@ export default function ChatComposer({
       }}
     >
       <div className="flex min-w-0 items-center gap-2">
-        <button
-          type="button"
-          aria-label="Ekle (yakında)"
-          title="Yakında"
-          className="shrink-0 rounded-full border px-3 py-2 text-sm"
-          style={{ borderColor: "var(--color-border)", color: "var(--color-text-secondary)" }}
-        >
-          +
-        </button>
-
         <div className="relative w-0 min-w-0 flex-1">
           <textarea
             id="landing-prompt-input"
@@ -85,13 +137,19 @@ export default function ChatComposer({
 
         <button
           type="button"
-          aria-label="Dikte (yakında)"
-          title="Yakında"
-          className="shrink-0 rounded-full border px-3 py-2 text-sm"
-          style={{ borderColor: "var(--color-border)", color: "var(--color-text-secondary)" }}
+          onClick={toggleDictation}
+          aria-label={isDictating ? "Dikteyi durdur" : "Dikteyi başlat"}
+          disabled={!dictationSupported}
+          title={dictationSupported ? "Dikte" : "Tarayıcı dikte desteklemiyor"}
+          className="shrink-0 rounded-full border px-3 py-2 text-sm disabled:opacity-50"
+          style={{
+            borderColor: "var(--color-border)",
+            color: isDictating ? "var(--color-primary-600)" : "var(--color-text-secondary)",
+            background: isDictating ? "color-mix(in oklab, var(--color-primary-600) 12%, var(--color-surface))" : "transparent",
+          }}
         >
           <span className="inline-flex items-center gap-1">
-            <span aria-hidden="true">🎤</span>
+            <MicIcon className="h-4 w-4" />
             <span>Dikte</span>
           </span>
         </button>
@@ -120,5 +178,15 @@ export default function ChatComposer({
         )}
       </div>
     </div>
+  );
+}
+
+function MicIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className={className} fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path d="M12 15a4 4 0 0 0 4-4V7a4 4 0 0 0-8 0v4a4 4 0 0 0 4 4Z" />
+      <path d="M19 11a7 7 0 1 1-14 0" />
+      <path d="M12 18v4" />
+    </svg>
   );
 }

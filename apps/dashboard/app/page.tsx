@@ -355,6 +355,7 @@ export default function PublicChatPage() {
 
       <GuestLeadGateModal
         open={showLeadGate}
+        onClose={() => setShowLeadGate(false)}
         onSubmitSuccess={() => {
           setLeadUnlocked(true);
           setGuestBlocked(false);
