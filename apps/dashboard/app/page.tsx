@@ -40,7 +40,12 @@ export default function PublicChatPage() {
   const shouldStickToBottomRef = useRef(true);
 
   const placeholder = useMemo(() => "", []);
+  const exampleText = useMemo(
+    () => "Danışman olmak istiyorum.",
+    [],
+  );
   const isCenteredComposer = !hasInteracted && !hasStartedChat && messages.length <= 1;
+  const showExampleAsValue = !hasStartedChat && !hasInteracted && input.trim().length === 0;
 
   function addMessage(role: Role, text: string) {
     const id = `m_${Date.now()}_${Math.random().toString(16).slice(2)}`;
@@ -227,6 +232,8 @@ export default function PublicChatPage() {
               input={input}
               disabled={isStreaming}
               placeholder={placeholder}
+              exampleText={exampleText}
+              showExampleAsValue={showExampleAsValue}
               onSend={onSend}
               onInputChange={(value) => setInput(value)}
               isPhoneValid
@@ -309,6 +316,8 @@ export default function PublicChatPage() {
                 input={input}
                 disabled={isStreaming}
                 placeholder={placeholder}
+                exampleText={exampleText}
+                showExampleAsValue={showExampleAsValue}
                 onSend={onSend}
                 onInputChange={(value) => setInput(value)}
                 isPhoneValid

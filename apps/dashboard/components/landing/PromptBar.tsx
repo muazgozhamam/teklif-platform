@@ -5,6 +5,8 @@ type PromptBarProps = {
   input: string;
   disabled: boolean;
   placeholder: string;
+  exampleText?: string;
+  showExampleAsValue?: boolean;
   onSend: () => void;
   onInputChange: (value: string) => void;
   isPhoneValid: boolean;
@@ -17,6 +19,8 @@ export default function PromptBar({
   input,
   disabled,
   placeholder,
+  exampleText,
+  showExampleAsValue = false,
   onSend,
   onInputChange,
   isPhoneValid,
@@ -31,6 +35,11 @@ export default function PromptBar({
     if (!canSend) return;
     e.preventDefault();
     onSend();
+  };
+
+  const handleTextFocusOrClick = () => {
+    onInteract?.();
+    if (showExampleAsValue) onInputChange("");
   };
 
   return (
@@ -54,7 +63,7 @@ export default function PromptBar({
             onKeyDown={handleEnterToSend}
             onFocus={onInteract}
             onClick={onInteract}
-            placeholder="05xx xxx xx xx"
+            placeholder=""
             className="h-12 w-0 min-w-0 flex-1 rounded-full bg-transparent px-4 text-sm outline-none focus:outline-none focus:ring-0 focus-visible:ring-0"
             aria-label="Telefon numarası"
           />
@@ -63,12 +72,12 @@ export default function PromptBar({
             <textarea
               id="landing-prompt-input"
               ref={inputRef as React.RefObject<HTMLTextAreaElement>}
-              value={input}
+              value={showExampleAsValue ? (exampleText ?? "") : input}
               onChange={(e) => onInputChange(e.target.value)}
               onKeyDown={handleEnterToSend}
-              onFocus={onInteract}
-              onClick={onInteract}
-              placeholder={placeholder}
+              onFocus={handleTextFocusOrClick}
+              onClick={handleTextFocusOrClick}
+              placeholder=""
               disabled={disabled}
               rows={1}
               className="max-h-40 min-h-[48px] w-full min-w-0 resize-none rounded-full bg-transparent px-4 py-3 text-sm outline-none focus:outline-none focus:ring-0 focus-visible:ring-0 disabled:opacity-70"
