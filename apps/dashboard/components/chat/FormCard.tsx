@@ -33,6 +33,7 @@ function fieldsByIntent(intent: Intent) {
   }
   if (intent === 'INVESTOR') {
     return [
+      { key: 'fullName', label: 'Ad Soyad', required: true },
       { key: 'cityDistrict', label: 'İl / İlçe', required: true },
       { key: 'budgetRange', label: 'Bütçe aralığı', required: true },
       { key: 'investmentType', label: 'Yatırım tipi', required: true },
@@ -42,6 +43,7 @@ function fieldsByIntent(intent: Intent) {
   }
   if (intent === 'BUYER_HOME') {
     return [
+      { key: 'fullName', label: 'Ad Soyad', required: true },
       { key: 'cityDistrict', label: 'İl / İlçe', required: true },
       { key: 'budgetRange', label: 'Bütçe aralığı', required: true },
       { key: 'homeType', label: 'Daire tipi (1+1 / 2+1 / 3+1)', required: true },
@@ -50,6 +52,7 @@ function fieldsByIntent(intent: Intent) {
     ];
   }
   return [
+    { key: 'fullName', label: 'Ad Soyad', required: true },
     { key: 'operationType', label: 'İşlem (sat / kira)', required: true },
     { key: 'cityDistrict', label: 'İl / İlçe', required: true },
     { key: 'propertyType', label: 'Mülk tipi', required: true },
