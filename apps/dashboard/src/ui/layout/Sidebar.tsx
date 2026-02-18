@@ -24,54 +24,53 @@ export default function Sidebar({
   const pathname = usePathname();
   const storageKey = `satdedi-sidebar-open:${role}`;
 
-  const activeGroupIds = React.useMemo(() => {
-    return navSections
-      .flatMap((section) =>
-        section.groups
-          .filter((group) =>
-            group.items.some(
-              (item) => pathname === item.href || (item.href !== `/${role.toLowerCase()}` && pathname.startsWith(item.href)),
-            ),
-          )
-          .map((group) => group.id),
-      )
-      .filter(Boolean);
+  const activeGroupId = React.useMemo(() => {
+    for (const section of navSections) {
+      for (const group of section.groups) {
+        const hasActiveItem = group.items.some(
+          (item) => pathname === item.href || (item.href !== `/${role.toLowerCase()}` && pathname.startsWith(item.href)),
+        );
+        if (hasActiveItem) return group.id;
+      }
+    }
+    return null;
   }, [navSections, pathname, role]);
 
-  const [openGroups, setOpenGroups] = React.useState<string[]>(() =>
-    Array.from(
-      new Set(navSections.flatMap((section) => section.groups.filter((group) => group.defaultOpen).map((group) => group.id))),
-    ),
-  );
+  const [openGroupId, setOpenGroupId] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     const defaults = navSections.flatMap((section) => section.groups.filter((group) => group.defaultOpen).map((group) => group.id));
-    let persisted: string[] = [];
+    let persisted: string | null = null;
     try {
       const raw = window.localStorage.getItem(storageKey);
-      const parsed = raw ? (JSON.parse(raw) as unknown) : [];
-      persisted = Array.isArray(parsed) ? parsed.filter((v): v is string => typeof v === 'string') : [];
+      const parsed = raw ? (JSON.parse(raw) as unknown) : null;
+      if (Array.isArray(parsed)) {
+        // Backward compatibility for old multi-open storage format.
+        persisted = parsed.find((v): v is string => typeof v === 'string') || null;
+      } else if (typeof parsed === 'string') {
+        persisted = parsed;
+      }
     } catch {
-      persisted = [];
+      persisted = null;
     }
-    const merged = Array.from(new Set([...defaults, ...persisted, ...activeGroupIds]));
-    setOpenGroups(merged);
-  }, [storageKey, navSections, activeGroupIds]);
-
-  React.useEffect(() => {
-    setOpenGroups((prev) => Array.from(new Set([...prev, ...activeGroupIds])));
-  }, [activeGroupIds]);
+    setOpenGroupId(activeGroupId || persisted || defaults[0] || null);
+  }, [storageKey, navSections, activeGroupId]);
 
   React.useEffect(() => {
     try {
-      window.localStorage.setItem(storageKey, JSON.stringify(openGroups));
+      window.localStorage.setItem(storageKey, JSON.stringify(openGroupId));
     } catch {
       // ignore storage write errors
     }
-  }, [openGroups, storageKey]);
+  }, [openGroupId, storageKey]);
 
   function toggleGroup(groupId: string) {
-    setOpenGroups((prev) => (prev.includes(groupId) ? prev.filter((id) => id !== groupId) : [...prev, groupId]));
+    // Keep the active route's parent open; otherwise toggle single-open.
+    if (groupId === activeGroupId) {
+      setOpenGroupId(groupId);
+      return;
+    }
+    setOpenGroupId((prev) => (prev === groupId ? null : groupId));
   }
 
   return (
@@ -105,7 +104,7 @@ export default function Sidebar({
                   key={group.id}
                   title={group.title}
                   icon={group.icon}
-                  open={openGroups.includes(group.id)}
+                  open={openGroupId === group.id}
                   onToggle={() => toggleGroup(group.id)}
                 >
                   <div className="space-y-1">
