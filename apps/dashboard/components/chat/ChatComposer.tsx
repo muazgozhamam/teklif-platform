@@ -142,9 +142,8 @@ export default function ChatComposer({
             background: isDictating ? "color-mix(in oklab, var(--color-primary-600) 12%, var(--color-surface))" : "transparent",
           }}
         >
-          <span className="inline-flex items-center gap-1">
+          <span className="inline-flex items-center">
             <MicIcon className="h-4 w-4" />
-            <span>Dikte</span>
           </span>
         </button>
 
