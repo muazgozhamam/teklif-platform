@@ -9,6 +9,8 @@ import { Input } from '@/src/ui/components/Input';
 import { Button } from '@/src/ui/components/Button';
 import { api } from '@/lib/api';
 
+const API_ROOT = '/api/admin/commission';
+
 type LockRow = {
   id: string;
   periodFrom: string;
@@ -36,7 +38,7 @@ export default function CommissionPeriodLocksPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await api.get<LockRow[]>('/admin/commission/period-locks');
+      const res = await api.get<LockRow[]>(`${API_ROOT}/period-locks`);
       setRows(Array.isArray(res.data) ? res.data : []);
     } catch (e: any) {
       setError(e?.data?.message || e?.message || 'Period lock listesi alınamadı.');
@@ -55,7 +57,7 @@ export default function CommissionPeriodLocksPage() {
     setError(null);
     setOk(null);
     try {
-      await api.post('/admin/commission/period-locks', {
+      await api.post(`${API_ROOT}/period-locks`, {
         periodFrom,
         periodTo,
         reason,
@@ -73,7 +75,7 @@ export default function CommissionPeriodLocksPage() {
     setError(null);
     setOk(null);
     try {
-      await api.post(`/admin/commission/period-locks/${lockId}/release`, { reason: 'Manuel açma' });
+      await api.post(`${API_ROOT}/period-locks/${lockId}/release`, { reason: 'Manuel açma' });
       setOk('Period lock serbest bırakıldı.');
       await load();
     } catch (e: any) {
@@ -85,7 +87,7 @@ export default function CommissionPeriodLocksPage() {
     setError(null);
     setOk(null);
     try {
-      const res = await api.post<{ escalated: number }>('/admin/commission/disputes/escalate-overdue', {});
+      const res = await api.post<{ escalated: number }>(`${API_ROOT}/disputes/escalate-overdue`, {});
       setOk(`Escalation tamamlandı: ${res.data?.escalated ?? 0} kayıt`);
     } catch (e: any) {
       setError(e?.data?.message || e?.message || 'SLA escalation çalıştırılamadı.');

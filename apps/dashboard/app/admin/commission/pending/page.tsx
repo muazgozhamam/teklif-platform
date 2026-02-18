@@ -10,6 +10,8 @@ import { Alert } from '@/src/ui/components/Alert';
 import { api } from '@/lib/api';
 import { formatMinorTry } from '@/app/_components/commission-utils';
 
+const API_ROOT = '/api/admin/commission';
+
 type PendingRow = {
   id: string;
   dealId: string;
@@ -31,7 +33,7 @@ export default function AdminCommissionPendingPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await api.get<PendingRow[]>('/admin/commission/pending-approvals');
+      const res = await api.get<PendingRow[]>(`${API_ROOT}/pending-approvals`);
       setRows(Array.isArray(res.data) ? res.data : []);
     } catch (e: any) {
       setError(e?.data?.message || e?.message || 'Onay kuyruğu yüklenemedi.');
@@ -48,7 +50,7 @@ export default function AdminCommissionPendingPage() {
     setBusyId(snapshotId);
     setError(null);
     try {
-      await api.post(`/admin/commission/snapshots/${snapshotId}/approve`, { note: 'Admin onayı' });
+      await api.post(`${API_ROOT}/snapshots/${snapshotId}/approve`, { note: 'Admin onayı' });
       await load();
     } catch (e: any) {
       setError(e?.data?.message || e?.message || 'Onay işlemi başarısız.');

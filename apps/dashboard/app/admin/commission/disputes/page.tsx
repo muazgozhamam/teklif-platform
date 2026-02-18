@@ -8,6 +8,8 @@ import { Alert } from '@/src/ui/components/Alert';
 import { Button } from '@/src/ui/components/Button';
 import { api } from '@/lib/api';
 
+const API_ROOT = '/api/admin/commission';
+
 type DisputeRow = {
   id: string;
   dealId: string;
@@ -37,7 +39,7 @@ export default function AdminCommissionDisputesPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await api.get<DisputeRow[]>('/admin/commission/disputes');
+      const res = await api.get<DisputeRow[]>(`${API_ROOT}/disputes`);
       setRows(Array.isArray(res.data) ? res.data : []);
     } catch (e: any) {
       setError(e?.data?.message || e?.message || 'Dispute listesi alınamadı.');
@@ -54,7 +56,7 @@ export default function AdminCommissionDisputesPage() {
     e.preventDefault();
     setError(null);
     try {
-      await api.post('/admin/commission/disputes', {
+      await api.post(`${API_ROOT}/disputes`, {
         dealId: dealId.trim(),
         snapshotId: snapshotId.trim() || undefined,
         againstUserId: againstUserId.trim() || undefined,
@@ -76,7 +78,7 @@ export default function AdminCommissionDisputesPage() {
     setBusyId(disputeId);
     setError(null);
     try {
-      await api.post(`/admin/commission/disputes/${disputeId}/status`, { status, note: `Status -> ${status}` });
+      await api.post(`${API_ROOT}/disputes/${disputeId}/status`, { status, note: `Status -> ${status}` });
       await load();
     } catch (err: any) {
       setError(err?.data?.message || err?.message || 'Dispute status güncellenemedi.');

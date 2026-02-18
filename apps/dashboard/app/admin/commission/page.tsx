@@ -11,6 +11,8 @@ import { Alert } from '@/src/ui/components/Alert';
 import { api } from '@/lib/api';
 import { formatMinorTry } from '@/app/_components/commission-utils';
 
+const API_ROOT = '/api/admin/commission';
+
 type OverviewPayload = {
   totalEarnedMinor: string;
   totalPaidMinor: string;
@@ -30,7 +32,7 @@ export default function AdminCommissionOverviewPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await api.get<OverviewPayload>('/admin/commission/overview');
+      const res = await api.get<OverviewPayload>(`${API_ROOT}/overview`);
       setOverview(res.data);
     } catch (e: any) {
       setError(e?.data?.message || e?.message || 'Hakediş özeti alınamadı.');
@@ -48,7 +50,7 @@ export default function AdminCommissionOverviewPage() {
     setSaving(true);
     setError(null);
     try {
-      await api.post('/admin/commission/snapshots', { dealId: dealId.trim() });
+      await api.post(`${API_ROOT}/snapshots`, { dealId: dealId.trim() });
       setDealId('');
       await load();
     } catch (e: any) {

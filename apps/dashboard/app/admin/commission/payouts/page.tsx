@@ -9,6 +9,8 @@ import { Button } from '@/src/ui/components/Button';
 import { Alert } from '@/src/ui/components/Alert';
 import { api } from '@/lib/api';
 
+const API_ROOT = '/api/admin/commission';
+
 type PayoutRow = { allocationId: string; amountMinor: string };
 
 export default function AdminCommissionPayoutsPage() {
@@ -45,7 +47,7 @@ export default function AdminCommissionPayoutsPage() {
         return;
       }
 
-      await api.post('/admin/commission/payouts', {
+      await api.post(`${API_ROOT}/payouts`, {
         paidAt: new Date().toISOString(),
         method,
         referenceNo: referenceNo.trim() || undefined,

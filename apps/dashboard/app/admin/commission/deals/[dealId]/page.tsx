@@ -9,6 +9,8 @@ import { Alert } from '@/src/ui/components/Alert';
 import { api } from '@/lib/api';
 import { formatMinorTry } from '@/app/_components/commission-utils';
 
+const API_ROOT = '/api/admin/commission';
+
 type Props = { params: { dealId: string } };
 
 type Payload = {
@@ -53,7 +55,7 @@ export default function AdminCommissionDealDetailPage({ params }: Props) {
     setLoading(true);
     setError(null);
     try {
-      const res = await api.get<Payload>(`/admin/commission/deals/${params.dealId}`);
+      const res = await api.get<Payload>(`${API_ROOT}/deals/${params.dealId}`);
       setData(res.data);
     } catch (e: any) {
       setError(e?.data?.message || e?.message || 'Deal hakediş detayı alınamadı.');
@@ -73,7 +75,7 @@ export default function AdminCommissionDealDetailPage({ params }: Props) {
     if (!reasonInput) return;
     const amountInput = window.prompt('Kısmi reverse için amountMinor (boş bırak = full reverse)', '');
     try {
-      await api.post(`/admin/commission/snapshots/${snapshotId}/reverse`, {
+      await api.post(`${API_ROOT}/snapshots/${snapshotId}/reverse`, {
         reason: reasonInput,
         amountMinor: amountInput && amountInput.trim() ? amountInput.trim() : undefined,
       });
