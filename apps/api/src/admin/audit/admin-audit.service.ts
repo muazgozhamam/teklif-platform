@@ -6,6 +6,12 @@ import { PrismaService } from '../../prisma/prisma.service';
 export class AdminAuditService {
   constructor(private readonly prisma: PrismaService) {}
 
+  private isMissingTableError(error: unknown): boolean {
+    if (!(error instanceof Prisma.PrismaClientKnownRequestError)) return false;
+    if (error.code !== 'P2021') return false;
+    return String(error.message || '').includes('CommissionAuditEvent');
+  }
+
   async list(params: { q?: string; action?: string; entityType?: string; take?: string; skip?: string }) {
     const take = Math.min(Math.max(Number(params.take || 20), 1), 100);
     const skip = Math.max(Number(params.skip || 0), 0);
@@ -26,16 +32,34 @@ export class AdminAuditService {
         : {}),
     };
 
-    const [items, total] = await Promise.all([
-      this.prisma.commissionAuditEvent.findMany({
-        where,
-        orderBy: { createdAt: 'desc' },
-        take,
-        skip,
-        include: { actor: { select: { email: true, role: true } } },
-      }),
-      this.prisma.commissionAuditEvent.count({ where }),
-    ]);
+    let items: Array<{
+      id: string;
+      createdAt: Date;
+      action: CommissionAuditAction;
+      entityType: CommissionAuditEntityType;
+      entityId: string | null;
+      actor: { email: string; role: string } | null;
+      payloadJson: Prisma.JsonValue | null;
+    }> = [];
+    let total = 0;
+    try {
+      const result = await Promise.all([
+        this.prisma.commissionAuditEvent.findMany({
+          where,
+          orderBy: { createdAt: 'desc' },
+          take,
+          skip,
+          include: { actor: { select: { email: true, role: true } } },
+        }),
+        this.prisma.commissionAuditEvent.count({ where }),
+      ]);
+      items = result[0];
+      total = result[1];
+    } catch (error) {
+      if (!this.isMissingTableError(error)) throw error;
+      items = [];
+      total = 0;
+    }
 
     return {
       items: items.map((row) => ({
