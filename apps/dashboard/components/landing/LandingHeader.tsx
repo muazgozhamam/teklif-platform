@@ -36,7 +36,7 @@ export default function LandingHeader() {
   return (
     <>
       <header className="py-3">
-        <div className="mx-auto flex w-full max-w-[1280px] items-center justify-between gap-4">
+        <div className="mx-auto flex w-full max-w-[1120px] items-center justify-between gap-4 px-6 md:px-8">
           <Link
             href="/"
             aria-label="SatDedi ana sayfa"

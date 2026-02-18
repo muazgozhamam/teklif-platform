@@ -9,7 +9,7 @@ type SuggestionCardProps = {
 export default function SuggestionCard({ onTryNow, onClose }: SuggestionCardProps) {
   return (
     <section
-      className="mt-4 grid gap-4 rounded-3xl border p-4 md:grid-cols-[1fr_1.2fr]"
+      className="grid gap-4 rounded-3xl border p-4 md:grid-cols-[1fr_1.2fr]"
       style={{ borderColor: "var(--color-border)", background: "var(--color-surface)", boxShadow: "var(--shadow-md)" }}
     >
       <div>
