@@ -26,20 +26,26 @@ export default function Sidebar({
 
   const activeGroupIds = React.useMemo(() => {
     return navSections
-      .filter((section) =>
-        section.items.some(
-          (item) => pathname === item.href || (item.href !== `/${role.toLowerCase()}` && pathname.startsWith(item.href)),
-        ),
+      .flatMap((section) =>
+        section.groups
+          .filter((group) =>
+            group.items.some(
+              (item) => pathname === item.href || (item.href !== `/${role.toLowerCase()}` && pathname.startsWith(item.href)),
+            ),
+          )
+          .map((group) => group.id),
       )
-      .map((section) => section.id);
+      .filter(Boolean);
   }, [navSections, pathname, role]);
 
   const [openGroups, setOpenGroups] = React.useState<string[]>(() =>
-    Array.from(new Set(navSections.filter((section) => section.defaultOpen).map((section) => section.id))),
+    Array.from(
+      new Set(navSections.flatMap((section) => section.groups.filter((group) => group.defaultOpen).map((group) => group.id))),
+    ),
   );
 
   React.useEffect(() => {
-    const defaults = navSections.filter((section) => section.defaultOpen).map((section) => section.id);
+    const defaults = navSections.flatMap((section) => section.groups.filter((group) => group.defaultOpen).map((group) => group.id));
     let persisted: string[] = [];
     try {
       const raw = window.localStorage.getItem(storageKey);
@@ -91,39 +97,47 @@ export default function Sidebar({
 
       <nav className="space-y-4">
         {navSections.map((section) => (
-          <NavGroupAccordion
-            key={section.id}
-            title={section.title}
-            open={openGroups.includes(section.id)}
-            onToggle={() => toggleGroup(section.id)}
-          >
+          <div key={section.id} className="space-y-2">
+            <div className="px-2 text-[11px] uppercase tracking-[0.08em] text-[var(--muted)]">{section.title}</div>
             <div className="space-y-1">
-              {section.items.map((item) => {
-                const active = pathname === item.href || (item.href !== `/${role.toLowerCase()}` && pathname.startsWith(item.href));
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    data-active={active ? 'true' : 'false'}
-                    onClick={onNavigate}
-                    className={cn(
-                      'ui-interactive group relative flex items-center gap-2 rounded-xl border px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]',
-                      active
-                        ? 'border-[var(--interactive-active-border)] bg-[var(--interactive-active-bg)] text-[var(--text)]'
-                        : 'border-transparent text-[var(--muted)] hover:border-[var(--interactive-hover-border)] hover:bg-[var(--interactive-hover-bg)] hover:text-[var(--text)]',
-                    )}
-                  >
-                    <span className={cn('absolute left-0 top-1/2 h-4 w-[2px] -translate-y-1/2 rounded-r', active ? 'bg-[var(--primary)]' : 'bg-transparent group-hover:bg-[var(--border-2)]')} />
-                    <NavIcon name={item.icon ?? 'spark'} />
-                    <span className="min-w-0 flex-1 truncate">{item.label}</span>
-                    {item.badge ? (
-                      <span className="rounded-full border border-[var(--border)] px-1.5 py-0.5 text-[10px] text-[var(--muted)]">{item.badge}</span>
-                    ) : null}
-                  </Link>
-                );
-              })}
+              {section.groups.map((group) => (
+                <NavGroupAccordion
+                  key={group.id}
+                  title={group.title}
+                  icon={group.icon}
+                  open={openGroups.includes(group.id)}
+                  onToggle={() => toggleGroup(group.id)}
+                >
+                  <div className="space-y-1">
+                    {group.items.map((item) => {
+                      const active = pathname === item.href || (item.href !== `/${role.toLowerCase()}` && pathname.startsWith(item.href));
+                      return (
+                        <Link
+                          key={item.href}
+                          href={item.href}
+                          data-active={active ? 'true' : 'false'}
+                          onClick={onNavigate}
+                          className={cn(
+                            'ui-interactive group relative flex items-center gap-2 rounded-xl border px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]',
+                            active
+                              ? 'border-[var(--interactive-active-border)] bg-[var(--interactive-active-bg)] text-[var(--text)]'
+                              : 'border-transparent text-[var(--muted)] hover:border-[var(--interactive-hover-border)] hover:bg-[var(--interactive-hover-bg)] hover:text-[var(--text)]',
+                          )}
+                        >
+                          <span className={cn('absolute left-0 top-1/2 h-4 w-[2px] -translate-y-1/2 rounded-r', active ? 'bg-[var(--primary)]' : 'bg-transparent group-hover:bg-[var(--border-2)]')} />
+                          <NavIcon name={item.icon ?? 'spark'} />
+                          <span className="min-w-0 flex-1 truncate">{item.label}</span>
+                          {item.badge ? (
+                            <span className="rounded-full border border-[var(--border)] px-1.5 py-0.5 text-[10px] text-[var(--muted)]">{item.badge}</span>
+                          ) : null}
+                        </Link>
+                      );
+                    })}
+                  </div>
+                </NavGroupAccordion>
+              ))}
             </div>
-          </NavGroupAccordion>
+          </div>
         ))}
       </nav>
     </aside>
