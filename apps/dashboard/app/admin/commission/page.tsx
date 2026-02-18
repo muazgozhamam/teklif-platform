@@ -2,183 +2,104 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import React from 'react';
+import Link from 'next/link';
 import RoleShell from '@/app/_components/RoleShell';
-import { AlertMessage } from '@/app/_components/UiFeedback';
-import { requireRole } from '@/lib/auth';
+import { Card, CardDescription, CardTitle } from '@/src/ui/components/Card';
+import { Input } from '@/src/ui/components/Input';
+import { Button } from '@/src/ui/components/Button';
+import { Alert } from '@/src/ui/components/Alert';
+import { api } from '@/lib/api';
+import { formatMinorTry } from '@/app/_components/commission-utils';
 
-type Config = {
-  id: string;
-  baseRate: number;
-  hunterSplit: number;
-  brokerSplit: number;
-  consultantSplit: number;
-  platformSplit: number;
+type OverviewPayload = {
+  totalEarnedMinor: string;
+  totalPaidMinor: string;
+  totalReversedMinor: string;
+  payableOutstandingMinor: string;
+  pendingApprovalCount: number;
 };
 
-async function api<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(path, {
-    ...init,
-    headers: { 'Content-Type': 'application/json', ...(init?.headers || {}) },
-    cache: 'no-store',
-  });
-  if (!res.ok) {
-    let msg = res.statusText;
-    try {
-      const j = await res.json();
-      msg = j?.message || msg;
-    } catch {}
-    throw new Error(`${res.status} ${msg}`);
-  }
-  return (await res.json()) as T;
-}
-
-export default function AdminCommissionPage() {
-  const [allowed, setAllowed] = React.useState(false);
-  const [cfg, setCfg] = React.useState<Config | null>(null);
+export default function AdminCommissionOverviewPage() {
   const [loading, setLoading] = React.useState(true);
   const [saving, setSaving] = React.useState(false);
-  const [err, setErr] = React.useState<string | null>(null);
+  const [error, setError] = React.useState<string | null>(null);
+  const [overview, setOverview] = React.useState<OverviewPayload | null>(null);
+  const [dealId, setDealId] = React.useState('');
 
   async function load() {
     setLoading(true);
-    setErr(null);
+    setError(null);
     try {
-      const data = await api<Config>('/api/admin/commission-config');
-      setCfg(data);
+      const res = await api.get<OverviewPayload>('/admin/commission/overview');
+      setOverview(res.data);
     } catch (e: any) {
-      setErr(e?.message || 'Yükleme başarısız');
+      setError(e?.data?.message || e?.message || 'Hakediş özeti alınamadı.');
     } finally {
       setLoading(false);
     }
   }
 
   React.useEffect(() => {
-    setAllowed(requireRole(['ADMIN']));
+    load();
   }, []);
 
-  React.useEffect(() => {
-    if (!allowed) return;
-    load();
-  }, [allowed]);
-
-  if (!allowed) {
-    return (
-      <main style={{ padding: 24, maxWidth: 960, margin: '0 auto', opacity: 0.8 }}>
-        <div>Yükleniyor…</div>
-      </main>
-    );
-  }
-
-  async function save() {
-    if (!cfg) return;
+  async function createSnapshot() {
+    if (!dealId.trim()) return;
     setSaving(true);
-    setErr(null);
+    setError(null);
     try {
-      const updated = await api<Config>('/api/admin/commission-config', {
-        method: 'PATCH',
-        body: JSON.stringify({
-          baseRate: Number(cfg.baseRate),
-          hunterSplit: Number(cfg.hunterSplit),
-          brokerSplit: Number(cfg.brokerSplit),
-          consultantSplit: Number(cfg.consultantSplit),
-          platformSplit: Number(cfg.platformSplit),
-        }),
-      });
-      setCfg(updated);
+      await api.post('/admin/commission/snapshots', { dealId: dealId.trim() });
+      setDealId('');
+      await load();
     } catch (e: any) {
-      setErr(e?.message || 'Kaydetme başarısız');
+      setError(e?.data?.message || e?.message || 'Snapshot oluşturulamadı.');
     } finally {
       setSaving(false);
     }
   }
 
-  const total =
-    Number(cfg?.hunterSplit || 0) +
-    Number(cfg?.brokerSplit || 0) +
-    Number(cfg?.consultantSplit || 0) +
-    Number(cfg?.platformSplit || 0);
-
   return (
     <RoleShell
       role="ADMIN"
-      title="Komisyon Yapılandırması"
-      subtitle="Temel oran ve dağılım yüzdeleri."
-      nav={[
-        { href: '/admin', label: 'Panel' },
-        { href: '/admin/users', label: 'Kullanıcılar' },
-        { href: '/admin/audit', label: 'Denetim' },
-        { href: '/admin/onboarding', label: 'Uyum Süreci' },
-        { href: '/admin/commission', label: 'Komisyon' },
-      ]}
+      title="Hakediş Genel Bakış"
+      subtitle="Ledger bazlı hakediş özeti ve operasyon kısayolları."
+      nav={[]}
     >
+      {error ? <Alert type="error" message={error} className="mb-4" /> : null}
 
-      {err ? <AlertMessage type="error" message={err} /> : null}
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
+        <Card><CardDescription>Toplam Earned</CardDescription><CardTitle className="mt-1">{loading ? '…' : formatMinorTry(overview?.totalEarnedMinor)}</CardTitle></Card>
+        <Card><CardDescription>Toplam Paid</CardDescription><CardTitle className="mt-1">{loading ? '…' : formatMinorTry(overview?.totalPaidMinor)}</CardTitle></Card>
+        <Card><CardDescription>Toplam Reversed</CardDescription><CardTitle className="mt-1">{loading ? '…' : formatMinorTry(overview?.totalReversedMinor)}</CardTitle></Card>
+        <Card><CardDescription>Outstanding</CardDescription><CardTitle className="mt-1">{loading ? '…' : formatMinorTry(overview?.payableOutstandingMinor)}</CardTitle></Card>
+        <Card><CardDescription>Bekleyen Onay</CardDescription><CardTitle className="mt-1">{loading ? '…' : String(overview?.pendingApprovalCount || 0)}</CardTitle></Card>
+      </div>
 
-      {loading && <div style={{ marginTop: 16 }}>Yükleniyor…</div>}
-
-      {cfg && !loading && (
-        <div style={{ marginTop: 16, border: '1px solid #eee', borderRadius: 14, padding: 16, display: 'grid', gap: 12 }}>
-          <label>
-            Temel Oran (0.03 = %3)
-            <input
-              type="number"
-              step="0.001"
-              value={cfg.baseRate}
-              onChange={(e) => setCfg({ ...cfg, baseRate: Number(e.target.value) })}
-              style={{ width: '100%', marginTop: 6, padding: 10, borderRadius: 10, border: '1px solid #ddd' }}
-            />
-          </label>
-          <label>
-            Hunter Dağılımı (%)
-            <input
-              type="number"
-              value={cfg.hunterSplit}
-              onChange={(e) => setCfg({ ...cfg, hunterSplit: Number(e.target.value) })}
-              style={{ width: '100%', marginTop: 6, padding: 10, borderRadius: 10, border: '1px solid #ddd' }}
-            />
-          </label>
-          <label>
-            Broker Dağılımı (%)
-            <input
-              type="number"
-              value={cfg.brokerSplit}
-              onChange={(e) => setCfg({ ...cfg, brokerSplit: Number(e.target.value) })}
-              style={{ width: '100%', marginTop: 6, padding: 10, borderRadius: 10, border: '1px solid #ddd' }}
-            />
-          </label>
-          <label>
-            Danışman Dağılımı (%)
-            <input
-              type="number"
-              value={cfg.consultantSplit}
-              onChange={(e) => setCfg({ ...cfg, consultantSplit: Number(e.target.value) })}
-              style={{ width: '100%', marginTop: 6, padding: 10, borderRadius: 10, border: '1px solid #ddd' }}
-            />
-          </label>
-          <label>
-            Platform Dağılımı (%)
-            <input
-              type="number"
-              value={cfg.platformSplit}
-              onChange={(e) => setCfg({ ...cfg, platformSplit: Number(e.target.value) })}
-              style={{ width: '100%', marginTop: 6, padding: 10, borderRadius: 10, border: '1px solid #ddd' }}
-            />
-          </label>
-
-          <div style={{ fontSize: 13, opacity: 0.8 }}>
-            Dağılım toplamı: <b>{total}</b> (100 olmalı)
-          </div>
-
-          <div style={{ display: 'flex', gap: 10 }}>
-            <button onClick={save} disabled={saving} style={{ padding: '10px 14px', borderRadius: 10, border: '1px solid #111', background: '#111', color: '#fff' }}>
-              {saving ? 'Kaydediliyor...' : 'Kaydet'}
-            </button>
-            <button onClick={load} disabled={loading || saving} style={{ padding: '10px 14px', borderRadius: 10, border: '1px solid #ddd', background: '#fff' }}>
-              Yenile
-            </button>
-          </div>
+      <Card className="mt-4">
+        <CardTitle>Deal’den Snapshot Oluştur</CardTitle>
+        <CardDescription>Deal status = WON olmalı, listing.price dolu olmalı.</CardDescription>
+        <div className="mt-3 flex flex-col gap-2 md:flex-row">
+          <Input value={dealId} onChange={(e) => setDealId(e.target.value)} placeholder="Deal ID" className="md:max-w-xl" />
+          <Button onClick={createSnapshot} disabled={saving || !dealId.trim()}>
+            {saving ? 'Oluşturuluyor…' : 'Snapshot Oluştur'}
+          </Button>
         </div>
-      )}
+      </Card>
+
+      <div className="mt-4 grid gap-3 md:grid-cols-3">
+        <Link href="/admin/commission/pending" className="ui-interactive rounded-xl border border-[var(--border)] bg-[var(--card)] p-4 hover:bg-[var(--interactive-hover-bg)]">
+          <div className="text-sm font-medium">Onay Kuyruğu</div>
+          <div className="mt-1 text-xs text-[var(--muted)]">PENDING_APPROVAL snapshot’ları yönet.</div>
+        </Link>
+        <Link href="/admin/commission/payouts" className="ui-interactive rounded-xl border border-[var(--border)] bg-[var(--card)] p-4 hover:bg-[var(--interactive-hover-bg)]">
+          <div className="text-sm font-medium">Ödeme Planı</div>
+          <div className="mt-1 text-xs text-[var(--muted)]">Onaylı satırlara payout oluştur.</div>
+        </Link>
+        <Link href="/admin/commission/disputes" className="ui-interactive rounded-xl border border-[var(--border)] bg-[var(--card)] p-4 hover:bg-[var(--interactive-hover-bg)]">
+          <div className="text-sm font-medium">Uyuşmazlıklar</div>
+          <div className="mt-1 text-xs text-[var(--muted)]">Faz 2 için dispute yönetimi placeholder.</div>
+        </Link>
+      </div>
     </RoleShell>
   );
 }

@@ -30,6 +30,15 @@ model User {
   isActive         Boolean   @default(false)
   approvedAt       DateTime?
   approvedByUserId String?
+
+  commissionSnapshotsCreated  CommissionSnapshot[] @relation("CommissionSnapshotCreatedBy")
+  commissionSnapshotsApproved CommissionSnapshot[] @relation("CommissionSnapshotApprovedBy")
+  commissionAllocations       CommissionAllocation[]
+  commissionLedgerEntries     CommissionLedgerEntry[] @relation("CommissionLedgerCreatedBy")
+  commissionPayouts           CommissionPayout[] @relation("CommissionPayoutCreatedBy")
+  commissionDisputesOpened    CommissionDispute[] @relation("CommissionDisputeOpenedBy")
+  commissionDisputesResolved  CommissionDispute[] @relation("CommissionDisputeResolvedBy")
+  commissionDisputesAgainst   CommissionDispute[] @relation("CommissionDisputeAgainstUser")
 }
 
 enum Role {
@@ -142,6 +151,10 @@ model Deal {
 
   lead Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
 
+  commissionSnapshots CommissionSnapshot[]
+  commissionLedger    CommissionLedgerEntry[]
+  commissionDisputes  CommissionDispute[]
+
   @@index([status])
   @@index([listingId])
 }
@@ -215,4 +228,228 @@ model HunterApplication {
   @@index([email])
   @@index([brokerId])
   @@index([sponsorId])
+}
+
+enum CommissionCalcMethod {
+  PERCENTAGE
+  FIXED
+}
+
+enum CommissionSnapshotStatus {
+  DRAFT
+  EARNED
+  PENDING_APPROVAL
+  APPROVED
+  REVERSED
+}
+
+enum CommissionRole {
+  HUNTER
+  CONSULTANT
+  BROKER
+  SYSTEM
+}
+
+enum CommissionLineStatus {
+  PENDING
+  APPROVED
+  PARTIAL
+  PAID
+  REVERSED
+}
+
+enum CommissionTaxModel {
+  NONE
+  WITHHOLDING
+  VAT
+}
+
+enum CommissionLedgerEntryType {
+  EARN
+  PAYOUT
+  REVERSAL
+  ADJUSTMENT
+}
+
+enum LedgerDirection {
+  CREDIT
+  DEBIT
+}
+
+enum CommissionPayoutMethod {
+  BANK_TRANSFER
+  CASH
+  OTHER
+}
+
+enum CommissionDisputeType {
+  ATTRIBUTION
+  AMOUNT
+  ROLE
+  OTHER
+}
+
+enum CommissionDisputeStatus {
+  OPEN
+  UNDER_REVIEW
+  ESCALATED
+  RESOLVED_APPROVED
+  RESOLVED_REJECTED
+}
+
+enum CommissionRoundingRule {
+  ROUND_HALF_UP
+  BANKERS
+}
+
+model CommissionPolicyVersion {
+  id                            String                 @id @default(cuid())
+  name                          String
+  calcMethod                    CommissionCalcMethod   @default(PERCENTAGE)
+  commissionRateBasisPoints     Int?
+  fixedCommissionMinor          BigInt?
+  currency                      String                 @default("TRY")
+  hunterPercentBasisPoints      Int
+  consultantPercentBasisPoints  Int
+  brokerPercentBasisPoints      Int
+  systemPercentBasisPoints      Int
+  roundingRule                  CommissionRoundingRule @default(ROUND_HALF_UP)
+  effectiveFrom                 DateTime
+  effectiveTo                   DateTime?
+  isActive                      Boolean                @default(true)
+  createdAt                     DateTime               @default(now())
+
+  snapshots                     CommissionSnapshot[]
+
+  @@index([isActive, effectiveFrom, effectiveTo])
+}
+
+model CommissionSnapshot {
+  id                 String                   @id @default(cuid())
+  dealId             String
+  version            Int                      @default(1)
+  idempotencyKey     String                   @unique
+  status             CommissionSnapshotStatus @default(PENDING_APPROVAL)
+  baseAmountMinor    BigInt
+  poolAmountMinor    BigInt
+  currency           String                   @default("TRY")
+  policyVersionId    String
+  policySnapshotJson Json
+  createdBy          String
+  createdAt          DateTime                 @default(now())
+  approvedBy         String?
+  approvedAt         DateTime?
+  reversedAt         DateTime?
+  notes              String?
+
+  deal           Deal                    @relation(fields: [dealId], references: [id], onDelete: Restrict)
+  policyVersion  CommissionPolicyVersion @relation(fields: [policyVersionId], references: [id], onDelete: Restrict)
+  maker          User                    @relation("CommissionSnapshotCreatedBy", fields: [createdBy], references: [id], onDelete: Restrict)
+  checker        User?                   @relation("CommissionSnapshotApprovedBy", fields: [approvedBy], references: [id], onDelete: SetNull)
+  allocations    CommissionAllocation[]
+  ledgerEntries  CommissionLedgerEntry[]
+  disputes       CommissionDispute[]
+
+  @@unique([dealId, version])
+  @@index([status, createdAt])
+}
+
+model CommissionAllocation {
+  id                String               @id @default(cuid())
+  snapshotId        String
+  role              CommissionRole
+  userId            String?
+  percentBasisPoints Int
+  amountMinor       BigInt
+  taxModel          CommissionTaxModel   @default(NONE)
+  taxRateBasisPoints Int                 @default(0)
+  status            CommissionLineStatus @default(PENDING)
+  createdAt         DateTime             @default(now())
+
+  snapshot          CommissionSnapshot   @relation(fields: [snapshotId], references: [id], onDelete: Restrict)
+  user              User?                @relation(fields: [userId], references: [id], onDelete: SetNull)
+  ledgerEntries     CommissionLedgerEntry[]
+  payoutAllocations CommissionPayoutAllocation[]
+
+  @@index([snapshotId, userId, role])
+  @@index([status])
+}
+
+model CommissionLedgerEntry {
+  id          String                    @id @default(cuid())
+  snapshotId  String?
+  allocationId String?
+  dealId      String
+  entryType   CommissionLedgerEntryType
+  direction   LedgerDirection
+  amountMinor BigInt
+  currency    String                    @default("TRY")
+  occurredAt  DateTime                  @default(now())
+  referenceId String?
+  createdBy   String
+  memo        String?
+
+  snapshot    CommissionSnapshot?       @relation(fields: [snapshotId], references: [id], onDelete: SetNull)
+  allocation  CommissionAllocation?     @relation(fields: [allocationId], references: [id], onDelete: SetNull)
+  deal        Deal                      @relation(fields: [dealId], references: [id], onDelete: Restrict)
+  creator     User                      @relation("CommissionLedgerCreatedBy", fields: [createdBy], references: [id], onDelete: Restrict)
+
+  @@index([dealId, occurredAt])
+  @@index([allocationId, occurredAt])
+  @@index([entryType, occurredAt])
+}
+
+model CommissionPayout {
+  id               String                      @id @default(cuid())
+  payoutBatchId    String?
+  paidAt           DateTime
+  method           CommissionPayoutMethod
+  referenceNo      String?
+  totalAmountMinor BigInt
+  currency         String                      @default("TRY")
+  createdBy        String
+  createdAt        DateTime                    @default(now())
+
+  creator          User                        @relation("CommissionPayoutCreatedBy", fields: [createdBy], references: [id], onDelete: Restrict)
+  allocations      CommissionPayoutAllocation[]
+
+  @@index([paidAt])
+}
+
+model CommissionPayoutAllocation {
+  id           String               @id @default(cuid())
+  payoutId     String
+  allocationId String
+  amountMinor  BigInt
+
+  payout       CommissionPayout    @relation(fields: [payoutId], references: [id], onDelete: Restrict)
+  allocation   CommissionAllocation @relation(fields: [allocationId], references: [id], onDelete: Restrict)
+
+  @@unique([payoutId, allocationId])
+  @@index([allocationId])
+}
+
+model CommissionDispute {
+  id               String                  @id @default(cuid())
+  dealId           String
+  snapshotId       String?
+  openedBy         String
+  againstUserId    String?
+  type             CommissionDisputeType
+  status           CommissionDisputeStatus @default(OPEN)
+  slaDueAt         DateTime
+  resolvedAt       DateTime?
+  resolvedBy       String?
+  resolutionNote   String?
+  evidenceMetaJson Json?
+  createdAt        DateTime                @default(now())
+
+  deal             Deal                    @relation(fields: [dealId], references: [id], onDelete: Restrict)
+  snapshot         CommissionSnapshot?     @relation(fields: [snapshotId], references: [id], onDelete: SetNull)
+  opener           User                    @relation("CommissionDisputeOpenedBy", fields: [openedBy], references: [id], onDelete: Restrict)
+  resolver         User?                   @relation("CommissionDisputeResolvedBy", fields: [resolvedBy], references: [id], onDelete: SetNull)
+  againstUser      User?                   @relation("CommissionDisputeAgainstUser", fields: [againstUserId], references: [id], onDelete: SetNull)
+
+  @@index([status, slaDueAt])
+  @@index([dealId, createdAt])
 }

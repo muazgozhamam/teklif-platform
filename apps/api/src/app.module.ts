@@ -12,6 +12,7 @@ import { DealsModule } from './deals/deals.module';
 import { ListingsModule } from './listings/listings.module';
 import { DevSeedModule } from './dev-seed/dev-seed.module';
 import { PublicModule } from './public/public.module';
+import { CommissionModule } from './commission/commission.module';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { PublicModule } from './public/public.module';
     ListingsModule,
     DevSeedModule,
     PublicModule,
+    CommissionModule,
   ],
 })
 export class AppModule {}

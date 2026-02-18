@@ -60,6 +60,24 @@ const roleSections: Record<ShellRole, NavSection[]> = {
       ],
     },
     {
+      id: 'commission',
+      title: 'Hakediş',
+      groups: [
+        {
+          id: 'commission-admin',
+          title: 'Hakediş Operasyonu',
+          icon: 'percent',
+          defaultOpen: true,
+          items: [
+            { href: '/admin/commission', label: 'Genel Bakış', icon: 'dashboard' },
+            { href: '/admin/commission/pending', label: 'Onay Kuyruğu', icon: 'clipboard-check' },
+            { href: '/admin/commission/payouts', label: 'Ödemeler', icon: 'handshake' },
+            { href: '/admin/commission/disputes', label: 'Uyuşmazlıklar', icon: 'shield-check' },
+          ],
+        },
+      ],
+    },
+    {
       id: 'performance',
       title: 'Performans',
       groups: [
@@ -121,6 +139,19 @@ const roleSections: Record<ShellRole, NavSection[]> = {
       ],
     },
     {
+      id: 'broker-commission',
+      title: 'Hakediş',
+      groups: [
+        {
+          id: 'broker-commission-ops',
+          title: 'Onay',
+          icon: 'percent',
+          defaultOpen: true,
+          items: [{ href: '/broker/commission/approval', label: 'Bekleyen Onaylar', icon: 'clipboard-check' }],
+        },
+      ],
+    },
+    {
       id: 'broker-account',
       title: 'Hesap',
       groups: [
@@ -164,6 +195,19 @@ const roleSections: Record<ShellRole, NavSection[]> = {
       ],
     },
     {
+      id: 'consultant-commission',
+      title: 'Hakediş',
+      groups: [
+        {
+          id: 'consultant-commission-my',
+          title: 'Kazanç',
+          icon: 'percent',
+          defaultOpen: true,
+          items: [{ href: '/consultant/commission', label: 'Hakedişim', icon: 'percent' }],
+        },
+      ],
+    },
+    {
       id: 'consultant-account',
       title: 'Hesap',
       groups: [
@@ -191,6 +235,19 @@ const roleSections: Record<ShellRole, NavSection[]> = {
             { href: '/hunter/leads', label: 'Leadler', icon: 'list' },
             { href: '/hunter/leads/new', label: 'Yeni Lead', icon: 'plus' },
           ],
+        },
+      ],
+    },
+    {
+      id: 'hunter-commission',
+      title: 'Hakediş',
+      groups: [
+        {
+          id: 'hunter-commission-my',
+          title: 'Kazanç',
+          icon: 'percent',
+          defaultOpen: true,
+          items: [{ href: '/hunter/commission', label: 'Hakedişim', icon: 'percent' }],
         },
       ],
     },
