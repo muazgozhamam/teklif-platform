@@ -83,7 +83,7 @@ export default function AdminHomePage() {
       </div>
       {statsErr ? <AlertMessage type="error" message={statsErr} /> : null}
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1.45fr 1fr', gap: 12 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(320px,1fr))', gap: 12 }}>
         <section style={{ border: '1px solid #e2dbd1', borderRadius: 16, padding: 16, background: '#fff' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
             <div>
@@ -158,7 +158,7 @@ function KpiCard({ label, value, loading }: { label: string; value: number; load
   return (
     <div style={{ border: '1px solid #eee', borderRadius: 12, padding: 12, background: '#fff' }}>
       <div style={{ fontSize: 12, color: '#666' }}>{label}</div>
-      <div style={{ fontSize: 26, fontWeight: 800, minHeight: 36 }}>{loading ? '…' : value}</div>
+      <div style={{ fontSize: 'clamp(22px, 5vw, 26px)', fontWeight: 800, minHeight: 36 }}>{loading ? '…' : value}</div>
     </div>
   );
 }
