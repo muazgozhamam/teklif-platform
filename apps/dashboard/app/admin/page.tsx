@@ -38,14 +38,23 @@ export default function AdminHomePage() {
       setStatsLoading(true);
       setStatsErr(null);
       try {
-        const res = await api.get<AdminStats | { role?: string }>('/stats/me');
-        const data = res.data;
+        const [perfRes, usersRes] = await Promise.all([
+          api.get<{
+            totalLeads?: number;
+            totalDealsWon?: number;
+            totalPortfolio?: number;
+          }>('/admin/performance/overview'),
+          api.get<Array<{ id: string }>>('/api/admin/users'),
+        ]);
         if (!mounted) return;
-        if (data && (data as { role?: string }).role === 'ADMIN') {
-          setStats(data as AdminStats);
-        } else {
-          setStats(null);
-        }
+
+        setStats({
+          role: 'ADMIN',
+          usersTotal: Array.isArray(usersRes.data) ? usersRes.data.length : 0,
+          leadsTotal: Number(perfRes.data?.totalLeads || 0),
+          dealsTotal: Number(perfRes.data?.totalDealsWon || 0),
+          listingsTotal: Number(perfRes.data?.totalPortfolio || 0),
+        });
       } catch (e: unknown) {
         if (!mounted) return;
         const msg = e && typeof e === 'object' && 'message' in e ? String((e as { message?: string }).message || '') : '';

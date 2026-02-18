@@ -43,6 +43,12 @@ const BLOCKING_DISPUTE_STATUSES: CommissionDisputeStatus[] = [
 export class CommissionService {
   constructor(private readonly prisma: PrismaService) {}
 
+  private isMissingTableError(error: unknown, tableName: string): boolean {
+    if (!(error instanceof Prisma.PrismaClientKnownRequestError)) return false;
+    if (error.code !== 'P2021') return false;
+    return String(error.message || '').includes(tableName);
+  }
+
   private asBigInt(value: string | number | bigint | null | undefined, fieldName: string): bigint {
     if (value === null || value === undefined || value === '') {
       throw new BadRequestException(`${fieldName} zorunlu`);
@@ -325,14 +331,21 @@ export class CommissionService {
     at: Date,
     actionName: string,
   ): Promise<void> {
-    const lock = await tx.commissionPeriodLock.findFirst({
-      where: {
-        isActive: true,
-        periodFrom: { lte: at },
-        periodTo: { gte: at },
-      },
-      orderBy: { periodFrom: 'desc' },
-    });
+    let lock: { periodFrom: Date; periodTo: Date } | null = null;
+    try {
+      lock = await tx.commissionPeriodLock.findFirst({
+        where: {
+          isActive: true,
+          periodFrom: { lte: at },
+          periodTo: { gte: at },
+        },
+        orderBy: { periodFrom: 'desc' },
+        select: { periodFrom: true, periodTo: true },
+      });
+    } catch (error) {
+      if (this.isMissingTableError(error, 'CommissionPeriodLock')) return;
+      throw error;
+    }
 
     if (lock) {
       throw new BadRequestException(
@@ -918,14 +931,19 @@ export class CommissionService {
   }
 
   async listPeriodLocks() {
-    const rows = await this.prisma.commissionPeriodLock.findMany({
-      include: {
-        creator: { select: { id: true, name: true, email: true, role: true } },
-        unlocker: { select: { id: true, name: true, email: true, role: true } },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
-    return this.jsonSafe(rows);
+    try {
+      const rows = await this.prisma.commissionPeriodLock.findMany({
+        include: {
+          creator: { select: { id: true, name: true, email: true, role: true } },
+          unlocker: { select: { id: true, name: true, email: true, role: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+      return this.jsonSafe(rows);
+    } catch (error) {
+      if (this.isMissingTableError(error, 'CommissionPeriodLock')) return [];
+      throw error;
+    }
   }
 
   async createPeriodLock(actorUserId: string, dto: CreatePeriodLockDto) {
@@ -941,50 +959,64 @@ export class CommissionService {
       throw new BadRequestException('reason zorunlu');
     }
 
-    return this.prisma.$transaction(async (tx) => {
-      const created = await tx.commissionPeriodLock.create({
-        data: {
-          periodFrom,
-          periodTo,
-          reason: dto.reason.trim(),
-          createdBy: actorUserId,
-        },
+    try {
+      return await this.prisma.$transaction(async (tx) => {
+        const created = await tx.commissionPeriodLock.create({
+          data: {
+            periodFrom,
+            periodTo,
+            reason: dto.reason.trim(),
+            createdBy: actorUserId,
+          },
+        });
+        await this.writeAudit(tx, {
+          action: CommissionAuditAction.PERIOD_LOCK_CREATED,
+          entityType: CommissionAuditEntityType.PERIOD_LOCK,
+          entityId: created.id,
+          actorUserId,
+          payload: { periodFrom: created.periodFrom.toISOString(), periodTo: created.periodTo.toISOString() },
+        });
+        return created;
       });
-      await this.writeAudit(tx, {
-        action: CommissionAuditAction.PERIOD_LOCK_CREATED,
-        entityType: CommissionAuditEntityType.PERIOD_LOCK,
-        entityId: created.id,
-        actorUserId,
-        payload: { periodFrom: created.periodFrom.toISOString(), periodTo: created.periodTo.toISOString() },
-      });
-      return created;
-    });
+    } catch (error) {
+      if (this.isMissingTableError(error, 'CommissionPeriodLock')) {
+        throw new BadRequestException('CommissionPeriodLock tablosu eksik. Lütfen stage/prod migration çalıştırın.');
+      }
+      throw error;
+    }
   }
 
   async releasePeriodLock(actorUserId: string, lockId: string, dto: ReleasePeriodLockDto) {
-    return this.prisma.$transaction(async (tx) => {
-      const lock = await tx.commissionPeriodLock.findUnique({ where: { id: lockId } });
-      if (!lock) throw new NotFoundException('Period lock bulunamadı');
-      if (!lock.isActive) return lock;
+    try {
+      return await this.prisma.$transaction(async (tx) => {
+        const lock = await tx.commissionPeriodLock.findUnique({ where: { id: lockId } });
+        if (!lock) throw new NotFoundException('Period lock bulunamadı');
+        if (!lock.isActive) return lock;
 
-      const released = await tx.commissionPeriodLock.update({
-        where: { id: lockId },
-        data: {
-          isActive: false,
-          unlockedBy: actorUserId,
-          unlockedAt: new Date(),
-          reason: dto.reason?.trim() ? `${lock.reason} | release: ${dto.reason.trim()}` : lock.reason,
-        },
+        const released = await tx.commissionPeriodLock.update({
+          where: { id: lockId },
+          data: {
+            isActive: false,
+            unlockedBy: actorUserId,
+            unlockedAt: new Date(),
+            reason: dto.reason?.trim() ? `${lock.reason} | release: ${dto.reason.trim()}` : lock.reason,
+          },
+        });
+        await this.writeAudit(tx, {
+          action: CommissionAuditAction.PERIOD_LOCK_RELEASED,
+          entityType: CommissionAuditEntityType.PERIOD_LOCK,
+          entityId: released.id,
+          actorUserId,
+          payload: { unlockedAt: released.unlockedAt?.toISOString() || null },
+        });
+        return released;
       });
-      await this.writeAudit(tx, {
-        action: CommissionAuditAction.PERIOD_LOCK_RELEASED,
-        entityType: CommissionAuditEntityType.PERIOD_LOCK,
-        entityId: released.id,
-        actorUserId,
-        payload: { unlockedAt: released.unlockedAt?.toISOString() || null },
-      });
-      return released;
-    });
+    } catch (error) {
+      if (this.isMissingTableError(error, 'CommissionPeriodLock')) {
+        throw new BadRequestException('CommissionPeriodLock tablosu eksik. Lütfen stage/prod migration çalıştırın.');
+      }
+      throw error;
+    }
   }
 
   async escalateOverdueDisputes(actorUserId: string) {
