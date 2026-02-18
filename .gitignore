@@ -1,6 +1,8 @@
 node_modules
 dist
 .next
+.next*
+.next_*
 .DS_Store
 .env
 apps/api/prisma/dev.db
