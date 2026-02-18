@@ -8,8 +8,9 @@ type LandingShellProps = {
 
 export default function LandingShell({ children, footer }: LandingShellProps) {
   return (
-    <main className="min-h-screen" style={{ background: "var(--color-bg)", color: "var(--color-text-primary)" }}>
-      <div className="mx-auto flex min-h-screen w-full max-w-[960px] flex-col px-4 py-6 md:px-6">
+    <main className="min-h-screen w-full" style={{ background: "var(--color-bg)", color: "var(--color-text-primary)" }}>
+      <div className="flex min-h-screen w-full flex-col px-4 py-6 md:px-6">
+        <div className="mx-auto flex w-full max-w-[1280px] flex-1 flex-col">
         {children}
         {footer ? (
           <div className="pb-2 pt-4 text-center text-xs" style={{ color: "var(--color-text-muted)" }}>
@@ -19,8 +20,8 @@ export default function LandingShell({ children, footer }: LandingShellProps) {
             {footer}
           </div>
         ) : null}
+        </div>
       </div>
     </main>
   );
 }
-

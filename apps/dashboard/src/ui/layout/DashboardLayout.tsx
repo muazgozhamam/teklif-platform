@@ -24,13 +24,13 @@ export default function DashboardLayout({
   const mergedNav = React.useMemo(() => getRoleNav(role, nav ?? []), [role, nav]);
 
   return (
-    <div className="min-h-screen bg-[var(--bg)] text-[var(--text)]">
+    <div className="h-screen w-full overflow-hidden bg-[var(--bg)] text-[var(--text)]">
       {mobileOpen ? <button type="button" className="fixed inset-0 z-40 bg-black/40 md:hidden" onClick={() => setMobileOpen(false)} aria-label="Menüyü kapat" /> : null}
-      <div className="mx-auto flex w-full max-w-[1440px]">
+      <div className="flex h-full w-full">
         <Sidebar role={role} nav={mergedNav} mobileOpen={mobileOpen} onNavigate={() => setMobileOpen(false)} />
-        <div className="min-w-0 flex-1 md:ml-0">
+        <div className="min-w-0 flex h-full flex-1 flex-col overflow-hidden md:ml-0">
           <Topbar title={title} envLabel={envLabel} onMenu={() => setMobileOpen((s) => !s)} />
-          <main className={cn('px-4 py-5 md:px-6 md:py-6')}>{children}</main>
+          <main className={cn('flex-1 overflow-auto px-4 py-5 md:px-6 md:py-6')}>{children}</main>
         </div>
       </div>
     </div>

@@ -11,7 +11,7 @@ export default function Sidebar({ role, nav, mobileOpen, onNavigate }: { role: S
   return (
     <aside
       className={cn(
-        'fixed inset-y-0 left-0 z-50 w-[240px] border-r border-[var(--border)] bg-[var(--sidebar)] p-3 transition-transform md:static md:translate-x-0',
+        'fixed inset-y-0 left-0 z-50 h-screen w-[240px] overflow-y-auto border-r border-[var(--border)] bg-[var(--sidebar)] p-3 transition-transform md:static md:translate-x-0',
         mobileOpen ? 'translate-x-0' : '-translate-x-full',
       )}
     >
