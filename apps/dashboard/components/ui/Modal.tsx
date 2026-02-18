@@ -41,37 +41,40 @@ export default function Modal({
   if (!canUseDom || !isOpen) return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-[9999]" role="presentation" onClick={onClose}>
-      <div className="absolute inset-0 bg-slate-900/45 backdrop-blur-[6px]" />
+    <div className="fixed inset-0 z-[9999]" role="presentation">
+      <button
+        type="button"
+        aria-label="Modal arka planını kapat"
+        onClick={onClose}
+        className="absolute inset-0 h-full w-full cursor-default bg-slate-900/45 backdrop-blur-[6px]"
+      />
 
-      <div className="relative z-[10000] grid min-h-full place-items-center overflow-y-auto p-4 sm:p-6" role="presentation">
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-label={title ? undefined : "Modal"}
-          aria-labelledby={titleId}
-          onClick={(e) => e.stopPropagation()}
-          className={`relative w-full ${maxWidthClass} max-h-[85dvh] overflow-auto rounded-3xl border p-5 shadow-2xl sm:p-6`}
-          style={{ borderColor: "var(--color-border)", background: "var(--color-surface)" }}
-        >
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label="Modalı kapat"
-          className="absolute right-4 top-4 rounded-full border px-2 py-1 text-xs"
-          style={{ borderColor: "var(--color-border)", color: "var(--color-text-secondary)" }}
-        >
-          ×
-        </button>
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={title ? undefined : "Modal"}
+        aria-labelledby={titleId}
+        onClick={(e) => e.stopPropagation()}
+        className={`fixed left-1/2 top-1/2 z-[10000] w-[calc(100%-2rem)] ${maxWidthClass} max-h-[calc(100dvh-2rem)] -translate-x-1/2 -translate-y-1/2 overflow-auto rounded-3xl border p-5 shadow-2xl sm:w-full sm:p-6`}
+        style={{ borderColor: "var(--color-border)", background: "var(--color-surface)" }}
+      >
+      <button
+        type="button"
+        onClick={onClose}
+        aria-label="Modalı kapat"
+        className="absolute right-4 top-4 rounded-full border px-2 py-1 text-xs"
+        style={{ borderColor: "var(--color-border)", color: "var(--color-text-secondary)" }}
+      >
+        ×
+      </button>
 
-          {title ? (
-            <h2 id={titleId} className="text-xl font-semibold tracking-tight" style={{ color: "var(--color-text-primary)" }}>
-              {title}
-            </h2>
-          ) : null}
+        {title ? (
+          <h2 id={titleId} className="text-xl font-semibold tracking-tight" style={{ color: "var(--color-text-primary)" }}>
+            {title}
+          </h2>
+        ) : null}
 
-          <div className={title ? "mt-4" : ""}>{children}</div>
-        </div>
+        <div className={title ? "mt-4" : ""}>{children}</div>
       </div>
     </div>,
     document.body,
