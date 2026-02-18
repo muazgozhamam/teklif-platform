@@ -2,8 +2,6 @@ import {
   BadRequestException,
   Body,
   Controller,
-  HttpCode,
-  HttpStatus,
   InternalServerErrorException,
   Logger,
   Post,
@@ -12,16 +10,6 @@ import {
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { PublicChatService } from './public-chat.service';
-
-type ApplicationBody = {
-  type: 'CONSULTANT' | 'PARTNER';
-  fullName: string;
-  email: string;
-  phone: string;
-  city?: string;
-  district?: string;
-  data?: Record<string, unknown>;
-};
 
 type ChatRole = 'user' | 'assistant' | 'system';
 type ChatMessage = { role: ChatRole; content: string };
@@ -33,15 +21,6 @@ type ChatStreamBody =
 export class PublicController {
   private readonly logger = new Logger(PublicController.name);
   constructor(private readonly publicChatService: PublicChatService) {}
-
-  @Post('applications')
-  @HttpCode(HttpStatus.CREATED)
-  createApplication(@Body() body: ApplicationBody) {
-    this.logger.log(
-      `Application received type=${body?.type || 'UNKNOWN'} email=${body?.email || 'N/A'} phone=${body?.phone || 'N/A'}`,
-    );
-    return { ok: true };
-  }
 
   @Post('chat/stream')
   async streamChat(

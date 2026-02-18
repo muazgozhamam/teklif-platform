@@ -42,6 +42,10 @@ model User {
   commissionPeriodLocksCreated CommissionPeriodLock[] @relation("CommissionPeriodLockCreatedBy")
   commissionPeriodLocksUnlocked CommissionPeriodLock[] @relation("CommissionPeriodLockUnlockedBy")
   commissionAuditEvents        CommissionAuditEvent[]
+
+  assignedApplications         Application[]      @relation("ApplicationAssignee")
+  applicationNotes             ApplicationNote[]  @relation("ApplicationNoteAuthor")
+  applicationEvents            ApplicationEvent[] @relation("ApplicationEventActor")
 }
 
 enum Role {
@@ -231,6 +235,106 @@ model HunterApplication {
   @@index([email])
   @@index([brokerId])
   @@index([sponsorId])
+}
+
+enum ApplicationType {
+  CUSTOMER_LEAD
+  PORTFOLIO_LEAD
+  CONSULTANT_CANDIDATE
+  HUNTER_CANDIDATE
+  BROKER_CANDIDATE
+  PARTNER_CANDIDATE
+  CORPORATE_LEAD
+  SUPPORT_REQUEST
+  COMPLAINT
+}
+
+enum ApplicationPipelineStatus {
+  NEW
+  QUALIFIED
+  IN_REVIEW
+  MEETING_SCHEDULED
+  APPROVED
+  ONBOARDED
+  REJECTED
+  CLOSED
+}
+
+enum ApplicationPriority {
+  P0
+  P1
+  P2
+}
+
+enum ApplicationEventType {
+  CREATED
+  STATUS_CHANGED
+  ASSIGNED
+  NOTE_ADDED
+  TAG_ADDED
+  TAG_REMOVED
+  CLOSED
+}
+
+model Application {
+  id                  String                    @id @default(cuid())
+  type                ApplicationType
+  status              ApplicationPipelineStatus @default(NEW)
+  createdAt           DateTime                  @default(now())
+  updatedAt           DateTime                  @updatedAt
+  fullName            String
+  phone               String
+  email               String?
+  city                String?
+  district            String?
+  notes               String?
+  source              String?
+  payload             Json?
+  assignedToUserId    String?
+  priority            ApplicationPriority       @default(P2)
+  slaFirstResponseAt  DateTime?
+  firstResponseAt     DateTime?
+  lastActivityAt      DateTime                  @default(now())
+  tags                String[]                  @default([])
+  dedupeKey           String?                   @unique
+
+  assignedTo          User?                     @relation("ApplicationAssignee", fields: [assignedToUserId], references: [id], onDelete: SetNull)
+  appNotes            ApplicationNote[]
+  events              ApplicationEvent[]
+
+  @@index([type, status, createdAt])
+  @@index([assignedToUserId, status])
+  @@index([priority, createdAt])
+  @@index([phone])
+  @@index([email])
+}
+
+model ApplicationNote {
+  id            String      @id @default(cuid())
+  applicationId String
+  authorUserId  String
+  body          String
+  createdAt     DateTime    @default(now())
+
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  author        User        @relation("ApplicationNoteAuthor", fields: [authorUserId], references: [id], onDelete: Restrict)
+
+  @@index([applicationId, createdAt])
+}
+
+model ApplicationEvent {
+  id            String               @id @default(cuid())
+  applicationId String
+  actorUserId   String?
+  eventType     ApplicationEventType
+  meta          Json?
+  createdAt     DateTime             @default(now())
+
+  application   Application          @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  actor         User?                @relation("ApplicationEventActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([applicationId, createdAt])
+  @@index([eventType, createdAt])
 }
 
 enum CommissionCalcMethod {

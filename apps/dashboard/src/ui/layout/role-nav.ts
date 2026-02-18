@@ -119,6 +119,48 @@ const roleSections: Record<ShellRole, NavSection[]> = {
         },
       ],
     },
+    {
+      id: 'applications',
+      title: 'Aday & Talepler',
+      groups: [
+        {
+          id: 'applications-core',
+          title: 'CRM',
+          icon: 'inbox',
+          defaultOpen: true,
+          items: [
+            { href: '/admin/applications', label: 'Genel Bakış', icon: 'dashboard' },
+            { href: '/admin/applications/pool', label: 'Aday Havuzu', icon: 'list' },
+            { href: '/admin/applications/customers', label: 'Müşteri Adayları', icon: 'users' },
+            { href: '/admin/applications/portfolio', label: 'Portföy Adayları', icon: 'home' },
+            { href: '/admin/applications/consultants', label: 'Danışman Adayları', icon: 'briefcase' },
+            { href: '/admin/applications/hunters', label: 'Hunter Adayları', icon: 'target' },
+            { href: '/admin/applications/brokers', label: 'Broker Adayları', icon: 'handshake' },
+            { href: '/admin/applications/partners', label: 'İş Ortağı Adayları', icon: 'users' },
+            { href: '/admin/applications/corporate', label: 'Kurumsal Talepler', icon: 'file-text' },
+            { href: '/admin/applications/support', label: 'Destek / Şikayet', icon: 'shield-check' },
+          ],
+        },
+      ],
+    },
+    {
+      id: 'leaderboards',
+      title: 'Performans Sıralama',
+      groups: [
+        {
+          id: 'leaderboards-core',
+          title: 'Sıralamalar',
+          icon: 'spark',
+          defaultOpen: true,
+          items: [
+            { href: '/admin/leaderboards', label: 'Genel', icon: 'dashboard' },
+            { href: '/admin/leaderboards/hunter', label: 'Hunter Sıralama', icon: 'target' },
+            { href: '/admin/leaderboards/consultant', label: 'Danışman Sıralama', icon: 'briefcase' },
+            { href: '/admin/leaderboards/broker', label: 'Broker Sıralama', icon: 'handshake' },
+          ],
+        },
+      ],
+    },
   ],
   BROKER: [
     {

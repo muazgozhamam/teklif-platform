@@ -13,6 +13,7 @@ import { ListingsModule } from './listings/listings.module';
 import { DevSeedModule } from './dev-seed/dev-seed.module';
 import { PublicModule } from './public/public.module';
 import { CommissionModule } from './commission/commission.module';
+import { ApplicationsModule } from './applications/applications.module';
 
 @Module({
   imports: [
@@ -35,6 +36,7 @@ import { CommissionModule } from './commission/commission.module';
     ListingsModule,
     DevSeedModule,
     PublicModule,
+    ApplicationsModule,
     CommissionModule,
   ],
 })

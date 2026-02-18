@@ -1,0 +1,353 @@
+'use client';
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
+import React from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import RoleShell from '@/app/_components/RoleShell';
+import { api } from '@/lib/api';
+import { Alert } from '@/src/ui/components/Alert';
+import { Badge } from '@/src/ui/components/Badge';
+import { Button } from '@/src/ui/components/Button';
+import { Card, CardDescription, CardTitle } from '@/src/ui/components/Card';
+import { Input } from '@/src/ui/components/Input';
+import { Select } from '@/src/ui/components/Select';
+import { Table, Td, Th } from '@/src/ui/components/Table';
+
+export const TYPE_LABELS: Record<string, string> = {
+  CUSTOMER_LEAD: 'Müşteri Adayı',
+  PORTFOLIO_LEAD: 'Portföy Adayı',
+  CONSULTANT_CANDIDATE: 'Danışman Adayı',
+  HUNTER_CANDIDATE: 'Hunter Adayı',
+  BROKER_CANDIDATE: 'Broker Adayı',
+  PARTNER_CANDIDATE: 'İş Ortağı Adayı',
+  CORPORATE_LEAD: 'Kurumsal Talep',
+  SUPPORT_REQUEST: 'Destek Talebi',
+  COMPLAINT: 'Şikayet',
+};
+
+export const STATUS_LABELS: Record<string, string> = {
+  NEW: 'Yeni',
+  QUALIFIED: 'Nitelikli',
+  IN_REVIEW: 'İncelemede',
+  MEETING_SCHEDULED: 'Görüşme',
+  APPROVED: 'Onaylandı',
+  ONBOARDED: 'Onboarded',
+  REJECTED: 'Reddedildi',
+  CLOSED: 'Kapalı',
+};
+
+function badgeForStatus(status: string): 'neutral' | 'warning' | 'primary' | 'success' | 'danger' {
+  if (status === 'NEW') return 'warning';
+  if (status === 'QUALIFIED' || status === 'IN_REVIEW' || status === 'MEETING_SCHEDULED') return 'primary';
+  if (status === 'APPROVED' || status === 'ONBOARDED') return 'success';
+  if (status === 'REJECTED' || status === 'CLOSED') return 'danger';
+  return 'neutral';
+}
+
+function badgeForPriority(priority: string): 'neutral' | 'warning' | 'danger' {
+  if (priority === 'P0') return 'danger';
+  if (priority === 'P1') return 'warning';
+  return 'neutral';
+}
+
+type ApplicationRow = {
+  id: string;
+  createdAt: string;
+  type: string;
+  status: string;
+  fullName: string;
+  phone: string;
+  email?: string | null;
+  city?: string | null;
+  district?: string | null;
+  priority: 'P0' | 'P1' | 'P2';
+  assignedTo?: { id: string; name?: string | null; email?: string | null } | null;
+  lastActivityAt: string;
+};
+
+export function ApplicationsOverviewPage() {
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
+  const [data, setData] = React.useState<{
+    newToday: number;
+    qualified: number;
+    inReview: number;
+    totalOpen: number;
+    avgFirstResponseMinutes: number;
+    slaBreaches: number;
+  } | null>(null);
+
+  const load = React.useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await api.get<any>('/api/admin/applications/overview');
+      setData(res.data);
+    } catch (e: any) {
+      setError(e?.data?.message || e?.message || 'Applications overview alınamadı.');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    load();
+  }, [load]);
+
+  return (
+    <RoleShell role="ADMIN" title="Aday & Talepler - Genel Bakış" subtitle="Homepage formlarından gelen CRM havuzu." nav={[]}>
+      {error ? <Alert type="error" message={error} className="mb-4" /> : null}
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-6">
+        <KpiCard label="Bugün Yeni" value={loading ? '…' : String(data?.newToday || 0)} />
+        <KpiCard label="Nitelikli" value={loading ? '…' : String(data?.qualified || 0)} />
+        <KpiCard label="İncelemede" value={loading ? '…' : String(data?.inReview || 0)} />
+        <KpiCard label="Açık Kayıt" value={loading ? '…' : String(data?.totalOpen || 0)} />
+        <KpiCard label="Ort. İlk Dönüş" value={loading ? '…' : `${data?.avgFirstResponseMinutes || 0} dk`} />
+        <KpiCard label="SLA Breach" value={loading ? '…' : String(data?.slaBreaches || 0)} />
+      </div>
+
+      <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+        <QuickLink href="/admin/applications/pool" title="Aday Havuzu" desc="Tüm başvuruları tek listede yönet." />
+        <QuickLink href="/admin/applications/customers" title="Müşteri Adayları" desc="Alıcı/kiracı leadlerini yönet." />
+        <QuickLink href="/admin/applications/portfolio" title="Portföy Adayları" desc="Satıcı/ev sahibi talepleri." />
+        <QuickLink href="/admin/applications/consultants" title="Danışman Adayları" desc="Danışman başvuruları." />
+        <QuickLink href="/admin/applications/hunters" title="Hunter Adayları" desc="Avcı aday havuzu." />
+        <QuickLink href="/admin/applications/support" title="Destek / Şikayet" desc="Destek ve complaint kayıtları." />
+      </div>
+    </RoleShell>
+  );
+}
+
+export function ApplicationsListPage({
+  title,
+  subtitle,
+  forcedType,
+}: {
+  title: string;
+  subtitle: string;
+  forcedType?: string;
+}) {
+  const router = useRouter();
+  const [q, setQ] = React.useState('');
+  const [status, setStatus] = React.useState('');
+  const [priority, setPriority] = React.useState('');
+  const [type, setType] = React.useState(forcedType || '');
+  const [rows, setRows] = React.useState<ApplicationRow[]>([]);
+  const [total, setTotal] = React.useState(0);
+  const [take, setTake] = React.useState(20);
+  const [skip, setSkip] = React.useState(0);
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    setType(forcedType || '');
+  }, [forcedType]);
+
+  const load = React.useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await api.get<any>('/api/admin/applications', {
+        params: {
+          q: q || undefined,
+          status: status || undefined,
+          priority: priority || undefined,
+          type: forcedType || type || undefined,
+          take,
+          skip,
+        },
+      });
+      setRows(Array.isArray(res.data?.items) ? res.data.items : []);
+      setTotal(Number(res.data?.total || 0));
+    } catch (e: any) {
+      setError(e?.data?.message || e?.message || 'Başvuru listesi alınamadı.');
+    } finally {
+      setLoading(false);
+    }
+  }, [forcedType, type, q, status, priority, take, skip]);
+
+  React.useEffect(() => {
+    load();
+  }, [load]);
+
+  return (
+    <RoleShell role="ADMIN" title={title} subtitle={subtitle} nav={[]}>
+      {error ? <Alert type="error" message={error} className="mb-4" /> : null}
+      <Card>
+        <div className="flex flex-wrap items-center gap-2">
+          <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Ad / email / telefon ara" className="min-w-[220px] flex-1" />
+          <Select value={status} onChange={(e) => setStatus(e.target.value)} className="w-full sm:w-[170px]">
+            <option value="">Tüm Durumlar</option>
+            {Object.entries(STATUS_LABELS).map(([v, l]) => (
+              <option key={v} value={v}>{l}</option>
+            ))}
+          </Select>
+          <Select value={priority} onChange={(e) => setPriority(e.target.value)} className="w-full sm:w-[130px]">
+            <option value="">Tüm Öncelik</option>
+            <option value="P0">P0</option>
+            <option value="P1">P1</option>
+            <option value="P2">P2</option>
+          </Select>
+          {!forcedType ? (
+            <Select value={type} onChange={(e) => setType(e.target.value)} className="w-full sm:w-[220px]">
+              <option value="">Tüm Tipler</option>
+              {Object.entries(TYPE_LABELS).map(([v, l]) => (
+                <option key={v} value={v}>{l}</option>
+              ))}
+            </Select>
+          ) : null}
+          <Button variant="secondary" onClick={() => { setSkip(0); load(); }} loading={loading}>Yenile</Button>
+        </div>
+      </Card>
+
+      <Card className="mt-4 overflow-hidden p-0">
+        <div className="border-b border-[var(--border)] px-4 py-3 text-xs text-[var(--muted)]">
+          Toplam: <b className="text-[var(--text)]">{total}</b> | Sayfa: <b className="text-[var(--text)]">{Math.floor(skip / take) + 1}</b>
+        </div>
+        <div className="overflow-x-auto">
+          <Table className="min-w-[1050px]">
+            <thead>
+              <tr>
+                <Th>Tarih</Th>
+                <Th>Tip</Th>
+                <Th>Ad</Th>
+                <Th>Konum</Th>
+                <Th>Durum</Th>
+                <Th>Atanan</Th>
+                <Th>Öncelik</Th>
+                <Th>Son Aktivite</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row) => (
+                <tr key={row.id} className="cursor-pointer hover:bg-[var(--interactive-hover-bg)]" onClick={() => router.push(`/admin/applications/${row.id}`)}>
+                  <Td>{new Date(row.createdAt).toLocaleString('tr-TR')}</Td>
+                  <Td>{TYPE_LABELS[row.type] || row.type}</Td>
+                  <Td>
+                    <div className="font-medium">{row.fullName}</div>
+                    <div className="text-xs text-[var(--muted)]">{row.phone}</div>
+                  </Td>
+                  <Td>{[row.city, row.district].filter(Boolean).join(' / ') || '-'}</Td>
+                  <Td><Badge variant={badgeForStatus(row.status)}>{STATUS_LABELS[row.status] || row.status}</Badge></Td>
+                  <Td>{row.assignedTo?.name || row.assignedTo?.email || '-'}</Td>
+                  <Td><Badge variant={badgeForPriority(row.priority)}>{row.priority}</Badge></Td>
+                  <Td>{new Date(row.lastActivityAt).toLocaleString('tr-TR')}</Td>
+                </tr>
+              ))}
+              {!loading && rows.length === 0 ? (
+                <tr><Td colSpan={8} className="text-[var(--muted)]">Kayıt bulunamadı.</Td></tr>
+              ) : null}
+            </tbody>
+          </Table>
+        </div>
+      </Card>
+
+      <div className="mt-3 flex justify-end gap-2">
+        <Select value={String(take)} onChange={(e) => { setTake(Number(e.target.value)); setSkip(0); }} className="w-[100px]">
+          <option value="20">20</option>
+          <option value="50">50</option>
+          <option value="100">100</option>
+        </Select>
+        <Button variant="secondary" onClick={() => setSkip((s) => Math.max(s - take, 0))} disabled={skip <= 0}>Önceki</Button>
+        <Button variant="secondary" onClick={() => setSkip((s) => s + take)} disabled={skip + take >= total}>Sonraki</Button>
+      </div>
+    </RoleShell>
+  );
+}
+
+export function LeaderboardPage({
+  title,
+  role,
+}: {
+  title: string;
+  role: 'HUNTER' | 'CONSULTANT' | 'BROKER';
+}) {
+  const [range, setRange] = React.useState<'7d' | '30d' | '90d'>('30d');
+  const [rows, setRows] = React.useState<any[]>([]);
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
+
+  const load = React.useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const to = new Date();
+      const from = new Date(to.getTime() - (range === '7d' ? 7 : range === '90d' ? 90 : 30) * 86400000);
+      const res = await api.get<any>('/api/admin/leaderboards', {
+        params: { role, from: from.toISOString(), to: to.toISOString() },
+      });
+      setRows(Array.isArray(res.data?.rows) ? res.data.rows : []);
+    } catch (e: any) {
+      setError(e?.data?.message || e?.message || 'Leaderboard alınamadı.');
+    } finally {
+      setLoading(false);
+    }
+  }, [range, role]);
+
+  React.useEffect(() => {
+    load();
+  }, [load]);
+
+  return (
+    <RoleShell role="ADMIN" title={title} subtitle="Kalite + dönüşüm ağırlıklı skorlar." nav={[]}>
+      {error ? <Alert type="error" message={error} className="mb-4" /> : null}
+      <Card>
+        <div className="flex items-center gap-2">
+          <Select value={range} onChange={(e) => setRange(e.target.value as any)} className="w-[160px]">
+            <option value="7d">Son 7 gün</option>
+            <option value="30d">Son 30 gün</option>
+            <option value="90d">Son 90 gün</option>
+          </Select>
+          <Button variant="secondary" onClick={load} loading={loading}>Yenile</Button>
+        </div>
+      </Card>
+
+      <Card className="mt-4 overflow-hidden p-0">
+        <div className="overflow-x-auto">
+          <Table className="min-w-[760px]">
+            <thead>
+              <tr>
+                <Th>#</Th>
+                <Th>İsim</Th>
+                <Th>Rol</Th>
+                <Th>Skor</Th>
+                <Th>Breakdown</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row, i) => (
+                <tr key={row.userId} className="hover:bg-[var(--interactive-hover-bg)]">
+                  <Td>{i + 1}</Td>
+                  <Td>{row.name}</Td>
+                  <Td>{row.role}</Td>
+                  <Td><b>{row.score}</b></Td>
+                  <Td className="text-xs text-[var(--muted)]">{Object.entries(row.breakdown || {}).map(([k, v]) => `${k}: ${v}`).join(' | ')}</Td>
+                </tr>
+              ))}
+              {!loading && rows.length === 0 ? <tr><Td colSpan={5} className="text-[var(--muted)]">Kayıt yok.</Td></tr> : null}
+            </tbody>
+          </Table>
+        </div>
+      </Card>
+    </RoleShell>
+  );
+}
+
+function KpiCard({ label, value }: { label: string; value: string }) {
+  return (
+    <Card>
+      <CardDescription>{label}</CardDescription>
+      <CardTitle className="mt-1">{value}</CardTitle>
+    </Card>
+  );
+}
+
+function QuickLink({ href, title, desc }: { href: string; title: string; desc: string }) {
+  return (
+    <Link href={href} className="ui-interactive rounded-2xl border border-[var(--border)] bg-[var(--card)] p-4 hover:border-[var(--interactive-hover-border)] hover:bg-[var(--interactive-hover-bg)]">
+      <div className="text-sm font-semibold text-[var(--text)]">{title}</div>
+      <div className="mt-1 text-xs text-[var(--muted)]">{desc}</div>
+    </Link>
+  );
+}
