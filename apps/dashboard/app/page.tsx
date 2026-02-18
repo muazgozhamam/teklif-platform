@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import LandingShell from "@/components/landing/LandingShell";
 import CenterColumn from "@/components/landing/CenterColumn";
 import SuggestionCard from "@/components/landing/SuggestionCard";
@@ -32,12 +32,8 @@ export default function PublicChatPage() {
   const [lastError, setLastError] = useState<string | null>(null);
   const [showSuggestionCard, setShowSuggestionCard] = useState(true);
   const [guestBlocked, setGuestBlocked] = useState(false);
-  const [guestRemaining, setGuestRemaining] = useState<number | null>(null);
-  const [guestMessageCount, setGuestMessageCount] = useState(0);
-  const [leadUnlocked, setLeadUnlocked] = useState(false);
   const [showLeadGate, setShowLeadGate] = useState(false);
   const activeRequestRef = useRef<AbortController | null>(null);
-  const GUEST_LIMIT = 5;
 
   const suggestionSentences = useMemo(
     () => [
@@ -74,21 +70,6 @@ export default function PublicChatPage() {
 
   const isCenteredComposer = phase === "prechat";
 
-  useEffect(() => {
-    const storedCount = Number(window.localStorage.getItem("satdedi_guest_msg_count") || "0");
-    const storedUnlocked = window.localStorage.getItem("satdedi_lead_unlocked") === "1";
-    const safeCount = Number.isFinite(storedCount) && storedCount >= 0 ? Math.floor(storedCount) : 0;
-    setGuestMessageCount(safeCount);
-    setLeadUnlocked(storedUnlocked);
-    setGuestRemaining(Math.max(0, GUEST_LIMIT - safeCount));
-    setGuestBlocked(!storedUnlocked && safeCount >= GUEST_LIMIT);
-  }, []);
-
-  function persistGuestState(nextCount: number, unlocked: boolean) {
-    window.localStorage.setItem("satdedi_guest_msg_count", String(nextCount));
-    window.localStorage.setItem("satdedi_lead_unlocked", unlocked ? "1" : "0");
-  }
-
   function addMessage(role: Role, text: string) {
     const id = `m_${Date.now()}_${Math.random().toString(16).slice(2)}`;
     setMessages((prev) => [...prev, { id, role, text }]);
@@ -123,18 +104,6 @@ export default function PublicChatPage() {
     if (!text || isStreaming) return;
     if (guestBlocked) {
       setShowLeadGate(true);
-      return;
-    }
-
-    const nextCount = guestMessageCount + 1;
-    setGuestMessageCount(nextCount);
-    setGuestRemaining(Math.max(0, GUEST_LIMIT - nextCount));
-    persistGuestState(nextCount, leadUnlocked);
-
-    if (!leadUnlocked && nextCount > GUEST_LIMIT) {
-      setGuestBlocked(true);
-      setShowLeadGate(true);
-      setLastError("Devam etmek için giriş yap veya formu doldur.");
       return;
     }
 
@@ -303,10 +272,6 @@ export default function PublicChatPage() {
               <p className="mt-2 text-center text-xs" style={{ color: "var(--color-text-muted)" }}>
                 Devam etmek için giriş yap veya formu doldur.
               </p>
-            ) : guestRemaining !== null ? (
-              <p className="mt-2 text-center text-xs" style={{ color: "var(--color-text-muted)" }}>
-                Kalan mesaj hakkı: {guestRemaining}
-              </p>
             ) : null}
 
             {showSuggestionCard ? (
@@ -358,10 +323,8 @@ export default function PublicChatPage() {
         open={showLeadGate}
         onClose={() => setShowLeadGate(false)}
         onSubmitSuccess={() => {
-          setLeadUnlocked(true);
           setGuestBlocked(false);
           setShowLeadGate(false);
-          persistGuestState(guestMessageCount, true);
           setLastError(null);
         }}
       />
