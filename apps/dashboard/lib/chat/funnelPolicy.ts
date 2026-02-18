@@ -2,7 +2,7 @@ import { truncateToTwoSentences } from './sentenceLimit';
 import type { ChatIntent } from './funnelState';
 
 export const INTENT_CLASSIFY_PROMPT_TR = `Aşağıdaki kullanıcı mesajını intent kategorilerinden birine ayır:
-CONSULTANT_APPLY, HUNTER_APPLY, OWNER_SELL, OWNER_RENT, INVESTOR, GENERIC.
+CONSULTANT_APPLY, HUNTER_APPLY, BUYER_HOME, OWNER_SELL, OWNER_RENT, INVESTOR, GENERIC.
 Türkçe anahtarlar: danışman, avcı, iş ortağı, portföy, ilan, sat, kira.
 JSON döndür: {"intent":"...","confidence":0-1,"nextQuestion":"..."}.`;
 
@@ -19,6 +19,10 @@ export function classifyIntentTr(text: string): { intent: ChatIntent; confidence
 
   if (/yatırım|yatirim|yatırımcı|yatirimci|getiri|değer artışı|deger artisi/.test(t)) {
     return { intent: 'INVESTOR', confidence: 0.88 };
+  }
+
+  if (/daire al|ev al|satın al|satin al|ev satın|konut satın|ilk evim|oturum için ev|oturum icin ev|ev bakıyorum|ev arıyorum/.test(t)) {
+    return { intent: 'BUYER_HOME', confidence: 0.9 };
   }
 
   if (/kiraya ver|kiraya vermek|kiralama|kiralık|kiralik/.test(t)) {
@@ -46,6 +50,9 @@ export function buildClarifyQuestion(intent: ChatIntent) {
   if (intent === 'OWNER_RENT') {
     return truncateToTwoSentences('Kiralama talebini doğru eşleştirmek için mülk tipini netleştirelim. Hangi il/ilçede ve mülk türü nedir?');
   }
+  if (intent === 'BUYER_HOME') {
+    return truncateToTwoSentences('Daire satın alma talebini hızlıca netleştirelim. Hangi il/ilçede ve bütçe aralığında arıyorsun?');
+  }
   if (intent === 'OWNER_SELL') {
     return truncateToTwoSentences('Satış sürecini hızlı başlatmak için temel bilgileri alalım. Hangi il/ilçede ve mülk türü nedir?');
   }
@@ -62,6 +69,7 @@ export function reminderToCompleteForm() {
 export function openingFormMessage(intent: ChatIntent) {
   if (intent === 'CONSULTANT_APPLY') return truncateToTwoSentences('Sana uygun danışman başvuru formunu açıyorum. Lütfen kısa formu tamamla, hemen değerlendirmeye alalım.');
   if (intent === 'HUNTER_APPLY') return truncateToTwoSentences('Sana uygun iş ortağı başvuru formunu açıyorum. Lütfen kısa formu tamamla, süreci başlatalım.');
+  if (intent === 'BUYER_HOME') return truncateToTwoSentences('Daire satın alma talebin için alıcı formunu açıyorum. Formu tamamladığında uygun portföy eşleşmesine geçeceğiz.');
   if (intent === 'INVESTOR') return truncateToTwoSentences('Yatırım talep formunu açıyorum. Formu tamamladıktan sonra uygun fırsat akışıyla devam edeceğiz.');
   return truncateToTwoSentences('Mülk sahibi talep formunu açıyorum. Formu tamamladıktan sonra sana uygun eşleştirmeyi başlatacağız.');
 }
@@ -69,6 +77,7 @@ export function openingFormMessage(intent: ChatIntent) {
 export function submittedMessage(intent: ChatIntent) {
   if (intent === 'CONSULTANT_APPLY') return truncateToTwoSentences('Teşekkürler, danışman başvurun alındı. Ekibimiz kısa sürede değerlendirme adımı için seninle iletişime geçecek.');
   if (intent === 'HUNTER_APPLY') return truncateToTwoSentences('Teşekkürler, iş ortağı başvurun alındı. Uygunluk kontrolünden sonra bir sonraki adımı paylaşacağız.');
+  if (intent === 'BUYER_HOME') return truncateToTwoSentences('Teşekkürler, daire satın alma talebin alındı. Uygun portföy seçenekleri için kısa sürede seninle iletişime geçeceğiz.');
   if (intent === 'INVESTOR') return truncateToTwoSentences('Teşekkürler, yatırım talebin alındı. Profiline uygun fırsatlarla kısa sürede dönüş yapacağız.');
   return truncateToTwoSentences('Teşekkürler, mülk talebin alındı. Ekibimiz en uygun eşleşme için kısa sürede dönüş yapacak.');
 }

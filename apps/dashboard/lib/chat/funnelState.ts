@@ -3,6 +3,7 @@ import type { NextRequest } from 'next/server';
 export type ChatIntent =
   | 'CONSULTANT_APPLY'
   | 'HUNTER_APPLY'
+  | 'BUYER_HOME'
   | 'OWNER_SELL'
   | 'OWNER_RENT'
   | 'INVESTOR'

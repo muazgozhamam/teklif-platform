@@ -25,6 +25,7 @@ function validIntent(intent: unknown): intent is ChatIntent {
   return (
     intent === 'CONSULTANT_APPLY' ||
     intent === 'HUNTER_APPLY' ||
+    intent === 'BUYER_HOME' ||
     intent === 'OWNER_SELL' ||
     intent === 'OWNER_RENT' ||
     intent === 'INVESTOR' ||

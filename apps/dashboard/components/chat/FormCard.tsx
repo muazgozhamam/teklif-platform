@@ -2,7 +2,7 @@
 
 import React from 'react';
 
-type Intent = 'CONSULTANT_APPLY' | 'HUNTER_APPLY' | 'OWNER_SELL' | 'OWNER_RENT' | 'INVESTOR' | 'GENERIC';
+type Intent = 'CONSULTANT_APPLY' | 'HUNTER_APPLY' | 'BUYER_HOME' | 'OWNER_SELL' | 'OWNER_RENT' | 'INVESTOR' | 'GENERIC';
 
 type Props = {
   intent: Intent;
@@ -40,6 +40,15 @@ function fieldsByIntent(intent: Intent) {
       { key: 'phone', label: 'Telefon', required: true },
     ];
   }
+  if (intent === 'BUYER_HOME') {
+    return [
+      { key: 'cityDistrict', label: 'İl / İlçe', required: true },
+      { key: 'budgetRange', label: 'Bütçe aralığı', required: true },
+      { key: 'homeType', label: 'Daire tipi (1+1 / 2+1 / 3+1)', required: true },
+      { key: 'timeline', label: 'Satın alma zamanı', required: true },
+      { key: 'phone', label: 'Telefon', required: true },
+    ];
+  }
   return [
     { key: 'operationType', label: 'İşlem (sat / kira)', required: true },
     { key: 'cityDistrict', label: 'İl / İlçe', required: true },
@@ -60,6 +69,8 @@ export default function FormCard({ intent, submitting, submitted, onSubmit }: Pr
       ? 'Danışman Başvuru Formu'
       : intent === 'HUNTER_APPLY'
         ? 'Avcı / İş Ortağı Formu'
+        : intent === 'BUYER_HOME'
+          ? 'Daire Satın Alma Formu'
         : intent === 'INVESTOR'
           ? 'Yatırım Talep Formu'
           : 'Mülk Sahibi Talep Formu';

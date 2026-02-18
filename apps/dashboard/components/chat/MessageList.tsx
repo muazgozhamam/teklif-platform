@@ -4,7 +4,7 @@ import TypingIndicator from './TypingIndicator';
 import FormCard from './FormCard';
 
 type Role = 'assistant' | 'user' | 'system';
-type FormIntent = 'CONSULTANT_APPLY' | 'HUNTER_APPLY' | 'OWNER_SELL' | 'OWNER_RENT' | 'INVESTOR' | 'GENERIC';
+type FormIntent = 'CONSULTANT_APPLY' | 'HUNTER_APPLY' | 'BUYER_HOME' | 'OWNER_SELL' | 'OWNER_RENT' | 'INVESTOR' | 'GENERIC';
 
 type Message = {
   id: string;

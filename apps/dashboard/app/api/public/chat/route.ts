@@ -25,7 +25,7 @@ type ChatPayload = {
 
 type UpstreamMessage = { role: 'user' | 'assistant'; content: string };
 
-type FormType = 'CONSULTANT_FORM' | 'HUNTER_FORM' | 'OWNER_FORM' | 'INVESTOR_FORM';
+type FormType = 'CONSULTANT_FORM' | 'HUNTER_FORM' | 'BUYER_FORM' | 'OWNER_FORM' | 'INVESTOR_FORM';
 
 function extractMessages(payload: ChatPayload): UpstreamMessage[] {
   if (Array.isArray(payload.messages)) {
@@ -71,6 +71,7 @@ function getLatestUserMessage(messages: UpstreamMessage[]) {
 function toFormType(intent: ChatIntent): FormType {
   if (intent === 'CONSULTANT_APPLY') return 'CONSULTANT_FORM';
   if (intent === 'HUNTER_APPLY') return 'HUNTER_FORM';
+  if (intent === 'BUYER_HOME') return 'BUYER_FORM';
   if (intent === 'INVESTOR') return 'INVESTOR_FORM';
   return 'OWNER_FORM';
 }

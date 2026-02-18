@@ -12,7 +12,7 @@ import { useRotatingSuggestions } from '@/hooks/useRotatingSuggestions';
 import { useChatScroll } from '@/hooks/useChatScroll';
 
 type Role = 'assistant' | 'user' | 'system';
-type FormIntent = 'CONSULTANT_APPLY' | 'HUNTER_APPLY' | 'OWNER_SELL' | 'OWNER_RENT' | 'INVESTOR' | 'GENERIC';
+type FormIntent = 'CONSULTANT_APPLY' | 'HUNTER_APPLY' | 'BUYER_HOME' | 'OWNER_SELL' | 'OWNER_RENT' | 'INVESTOR' | 'GENERIC';
 
 type Message = {
   id: string;
@@ -47,6 +47,7 @@ export default function PublicChatPage() {
   const suggestionSentences = useMemo(
     () => [
       'Danışman olmak istiyorum.',
+      'Daire satın almak istiyorum.',
       '3+1 dairemin satışı için talep oluşturmak istiyorum.',
       "Meram'da evimi kiraya vermek istiyorum.",
       'Ticari mülkümü değerlendirmek istiyorum.',
