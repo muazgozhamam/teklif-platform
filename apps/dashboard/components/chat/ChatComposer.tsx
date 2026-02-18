@@ -2,19 +2,6 @@ import React, { useEffect, useRef, useState } from "react";
 import SuggestionsOverlay from "./SuggestionsOverlay";
 import { useAutosizeTextarea } from "@/hooks/useAutosizeTextarea";
 
-type SpeechRecognitionConstructor = new () => SpeechRecognition;
-
-type SpeechRecognitionEventLike = Event & {
-  results: SpeechRecognitionResultList;
-};
-
-declare global {
-  interface Window {
-    webkitSpeechRecognition?: SpeechRecognitionConstructor;
-    SpeechRecognition?: SpeechRecognitionConstructor;
-  }
-}
-
 type ChatComposerProps = {
   value: string;
   disabled: boolean;
@@ -45,7 +32,7 @@ export default function ChatComposer({
   onBlurInteraction,
 }: ChatComposerProps) {
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
-  const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const recognitionRef = useRef<any>(null);
   const dictationBaseRef = useRef("");
   const [isDictating, setIsDictating] = useState(false);
   const [dictationSupported, setDictationSupported] = useState(false);
@@ -61,8 +48,13 @@ export default function ChatComposer({
     onSend();
   };
 
+  function getRecognizerConstructor(): any | null {
+    if (typeof window === "undefined") return null;
+    return window.SpeechRecognition || window.webkitSpeechRecognition || null;
+  }
+
   useEffect(() => {
-    const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const Recognition = getRecognizerConstructor();
     if (!Recognition) return;
 
     const recognition = new Recognition();
@@ -70,10 +62,12 @@ export default function ChatComposer({
     recognition.continuous = true;
     recognition.interimResults = true;
 
-    recognition.onresult = (event: SpeechRecognitionEventLike) => {
+    recognition.onresult = (event: any) => {
       let transcript = "";
-      for (let i = event.resultIndex; i < event.results.length; i += 1) {
-        transcript += event.results[i][0]?.transcript || "";
+      const resultIndex = typeof event?.resultIndex === "number" ? event.resultIndex : 0;
+      const results = event?.results ?? [];
+      for (let i = resultIndex; i < results.length; i += 1) {
+        transcript += results[i]?.[0]?.transcript || "";
       }
       if (transcript.trim()) {
         onChange(`${dictationBaseRef.current} ${transcript}`.replace(/\s+/g, " ").trimStart());
@@ -88,7 +82,7 @@ export default function ChatComposer({
     setDictationSupported(true);
 
     return () => {
-      recognition.stop();
+      recognition.stop?.();
       recognitionRef.current = null;
     };
   }, []);
