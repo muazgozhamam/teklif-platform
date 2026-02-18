@@ -54,6 +54,7 @@ const roleSections: Record<ShellRole, NavSection[]> = {
           defaultOpen: true,
           items: [
             { href: '/admin/users', label: 'Kullanıcılar', icon: 'users' },
+            { href: '/admin/commission/policies', label: 'Komisyon', icon: 'percent' },
           ],
         },
       ],
