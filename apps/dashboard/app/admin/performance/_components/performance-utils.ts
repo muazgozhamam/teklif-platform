@@ -1,4 +1,5 @@
 export type DatePreset = '7d' | '30d' | 'month' | 'custom';
+type SearchLike = { get: (key: string) => string | null };
 
 export function isoDate(d: Date) {
   return d.toISOString().slice(0, 10);
@@ -10,7 +11,7 @@ export function getDefaultRange() {
   return { from: isoDate(from), to: isoDate(to) };
 }
 
-export function getRangeFromSearch(search: URLSearchParams | ReadonlyURLSearchParams) {
+export function getRangeFromSearch(search: SearchLike) {
   const defaults = getDefaultRange();
   const from = search.get('from') || defaults.from;
   const to = search.get('to') || defaults.to;
