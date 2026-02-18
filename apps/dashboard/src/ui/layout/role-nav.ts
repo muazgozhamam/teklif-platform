@@ -129,7 +129,7 @@ const roleSections: Record<ShellRole, NavSection[]> = {
           icon: 'inbox',
           defaultOpen: true,
           items: [
-            { href: '/admin/applications', label: 'Genel Bakış', icon: 'dashboard' },
+            { href: '/admin/CRM', label: 'Genel Bakış', icon: 'dashboard' },
             { href: '/admin/applications/pool', label: 'Aday Havuzu', icon: 'list' },
             { href: '/admin/applications/customers', label: 'Müşteri Adayları', icon: 'users' },
             { href: '/admin/applications/portfolio', label: 'Portföy Adayları', icon: 'home' },
