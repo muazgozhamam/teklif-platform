@@ -56,6 +56,10 @@ function resolveBaseUrl() {
   return base.replace(/\/+$/, '');
 }
 
+function shouldUseSameOrigin(path: string) {
+  return path.startsWith('/api/');
+}
+
 function withAuth(init?: ApiInit): RequestInit {
   const token = getToken();
   const headers = new Headers(init?.headers || {});
@@ -121,7 +125,7 @@ async function requestJson<T = any>(
   }
 
   const base = resolveBaseUrl();
-  const rawUrl = path.startsWith('http') ? path : `${base}${path}`;
+  const rawUrl = path.startsWith('http') ? path : shouldUseSameOrigin(path) ? path : `${base}${path}`;
   const { url, init: init2 } = appendParamsToUrl(rawUrl, init);
 
   const res = await fetch(url, withAuth({ ...(init2 || init), method, headers, body: finalBody }));
@@ -142,7 +146,7 @@ async function requestJson<T = any>(
 // callable base (generic fetch wrapper)
 const baseCallable = async function apiCallable<T = any>(path: string, init: ApiInit = {}): Promise<T> {
   const base = resolveBaseUrl();
-  const rawUrl = path.startsWith('http') ? path : `${base}${path}`;
+  const rawUrl = path.startsWith('http') ? path : shouldUseSameOrigin(path) ? path : `${base}${path}`;
   const { url, init: init2 } = appendParamsToUrl(rawUrl, init);
   const res = await fetch(url, withAuth(init2 || init));
 

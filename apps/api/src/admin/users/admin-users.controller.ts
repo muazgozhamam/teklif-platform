@@ -1,4 +1,5 @@
-import {Body, Controller, Delete, Get, Param, Post, UseGuards, BadRequestException} from '@nestjs/common';
+import {Body, Controller, Delete, Get, Param, Post, UseGuards, BadRequestException, Patch, Query} from '@nestjs/common';
+import { Role } from '@prisma/client';
 import { Roles } from '../../common/roles/roles.decorator';
 import { RolesGuard } from '../../common/roles/roles.guard';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
@@ -11,8 +12,8 @@ export class AdminUsersController {
   constructor(private users: AdminUsersService) {}
 
   @Get()
-  list() {
-    return this.users.findAll();
+  list(@Query('q') q?: string) {
+    return this.users.findAll(q);
   }
 
   @Post()
@@ -23,6 +24,28 @@ export class AdminUsersController {
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.users.remove(id);
+  }
+
+  @Patch(':id')
+  patchUser(
+    @Param('id') id: string,
+    @Body() body: { role?: Role; isActive?: boolean },
+  ) {
+    return this.users.patchUser(id, {
+      role: body?.role,
+      isActive: body?.isActive,
+    });
+  }
+
+  @Patch(':id/role')
+  patchRole(
+    @Param('id') id: string,
+    @Body() body: { role?: Role; isActive?: boolean },
+  ) {
+    return this.users.patchUser(id, {
+      role: body?.role,
+      isActive: body?.isActive,
+    });
   }
 
   @Post(':id/set-password')

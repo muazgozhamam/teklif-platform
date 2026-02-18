@@ -29,7 +29,9 @@ export async function proxyToApi(req: Request | NextRequest, path: string) {
   const cookieHeader = h.get('cookie') || c.toString();
 
   // Authorization forward: önce gelen request header, yoksa cookie’den türet
-  const auth = h.get('authorization') || h.get('Authorization') || '';
+  const authFromHeader = h.get('authorization') || h.get('Authorization') || '';
+  const tokenFromCookie = c.get('accessToken')?.value || '';
+  const auth = authFromHeader || (tokenFromCookie ? `Bearer ${tokenFromCookie}` : '');
 
   const url = `${apiBase}${path}`;
 
