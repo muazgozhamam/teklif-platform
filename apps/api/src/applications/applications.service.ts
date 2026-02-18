@@ -87,6 +87,12 @@ export class ApplicationsService {
     return this.prisma as any;
   }
 
+  private isMissingApplicationTable(error: unknown): boolean {
+    if (!error || typeof error !== 'object') return false;
+    const e = error as { code?: string; message?: string };
+    return e.code === 'P2021' || String(e.message || '').includes('public.Application');
+  }
+
   private normalizeType(raw: string): AppType {
     const fromLegacy = LEGACY_TYPE_MAP[String(raw || '').toUpperCase()];
     if (fromLegacy) return fromLegacy;
@@ -228,35 +234,50 @@ export class ApplicationsService {
       ];
     }
 
-    const [items, total] = await Promise.all([
-      this.db.application.findMany({
-        where,
-        take,
-        skip,
-        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
-        include: {
-          assignedTo: { select: { id: true, name: true, email: true, role: true } },
-          _count: { select: { appNotes: true, events: true } },
-        },
-      }),
-      this.db.application.count({ where }),
-    ]);
+    try {
+      const [items, total] = await Promise.all([
+        this.db.application.findMany({
+          where,
+          take,
+          skip,
+          orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+          include: {
+            assignedTo: { select: { id: true, name: true, email: true, role: true } },
+            _count: { select: { appNotes: true, events: true } },
+          },
+        }),
+        this.db.application.count({ where }),
+      ]);
 
-    return { items, total, take, skip };
+      return { items, total, take, skip };
+    } catch (error) {
+      if (this.isMissingApplicationTable(error)) {
+        return { items: [], total: 0, take, skip, migrationRequired: true };
+      }
+      throw error;
+    }
   }
 
   async getOneForAdmin(id: string) {
-    const row = await this.db.application.findUnique({
-      where: { id },
-      include: {
-        assignedTo: { select: { id: true, name: true, email: true, role: true } },
-        appNotes: {
-          orderBy: { createdAt: 'desc' },
-          include: { author: { select: { id: true, name: true, email: true, role: true } } },
+    let row: any;
+    try {
+      row = await this.db.application.findUnique({
+        where: { id },
+        include: {
+          assignedTo: { select: { id: true, name: true, email: true, role: true } },
+          appNotes: {
+            orderBy: { createdAt: 'desc' },
+            include: { author: { select: { id: true, name: true, email: true, role: true } } },
+          },
+          events: { orderBy: { createdAt: 'desc' }, take: 50 },
         },
-        events: { orderBy: { createdAt: 'desc' }, take: 50 },
-      },
-    });
+      });
+    } catch (error) {
+      if (this.isMissingApplicationTable(error)) {
+        throw new BadRequestException('CRM tabloları henüz migrate edilmedi: Application');
+      }
+      throw error;
+    }
     if (!row) throw new NotFoundException('Application not found');
     return row;
   }
@@ -404,28 +425,39 @@ export class ApplicationsService {
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);
 
-    const [newToday, qualified, inReview, totalOpen, breaches] = await Promise.all([
-      this.db.application.count({ where: { createdAt: { gte: todayStart }, status: 'NEW' } }),
-      this.db.application.count({ where: { status: 'QUALIFIED' } }),
-      this.db.application.count({ where: { status: 'IN_REVIEW' } }),
-      this.db.application.count({
-        where: { status: { in: ['NEW', 'QUALIFIED', 'IN_REVIEW', 'MEETING_SCHEDULED'] } },
-      }),
-      this.db.application.count({
-        where: {
-          status: { in: ['NEW', 'QUALIFIED', 'IN_REVIEW'] },
-          slaFirstResponseAt: { not: null, lt: new Date() },
-          firstResponseAt: null,
-        },
-      }),
-    ]);
+    let newToday = 0;
+    let qualified = 0;
+    let inReview = 0;
+    let totalOpen = 0;
+    let breaches = 0;
+    let responded: Array<{ createdAt: Date; firstResponseAt: Date | null }> = [];
 
-    const responded = await this.db.application.findMany({
-      where: { firstResponseAt: { not: null } },
-      select: { createdAt: true, firstResponseAt: true },
-      take: 500,
-      orderBy: { firstResponseAt: 'desc' },
-    });
+    try {
+      [newToday, qualified, inReview, totalOpen, breaches] = await Promise.all([
+        this.db.application.count({ where: { createdAt: { gte: todayStart }, status: 'NEW' } }),
+        this.db.application.count({ where: { status: 'QUALIFIED' } }),
+        this.db.application.count({ where: { status: 'IN_REVIEW' } }),
+        this.db.application.count({
+          where: { status: { in: ['NEW', 'QUALIFIED', 'IN_REVIEW', 'MEETING_SCHEDULED'] } },
+        }),
+        this.db.application.count({
+          where: {
+            status: { in: ['NEW', 'QUALIFIED', 'IN_REVIEW'] },
+            slaFirstResponseAt: { not: null, lt: new Date() },
+            firstResponseAt: null,
+          },
+        }),
+      ]);
+
+      responded = await this.db.application.findMany({
+        where: { firstResponseAt: { not: null } },
+        select: { createdAt: true, firstResponseAt: true },
+        take: 500,
+        orderBy: { firstResponseAt: 'desc' },
+      });
+    } catch (error) {
+      if (!this.isMissingApplicationTable(error)) throw error;
+    }
 
     const avgFirstResponseMinutes = responded.length
       ? Math.round(
