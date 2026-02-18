@@ -12,7 +12,7 @@ type BootstrapUser = {
 
 async function bootstrap() {
   const app = await NestFactory.createApplicationContext(AppModule);
-  const prisma = app.get(PrismaService);
+  const prisma = app.get(PrismaService) as any;
 
   const users: BootstrapUser[] = [
     {
