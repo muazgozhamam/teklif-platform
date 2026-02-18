@@ -16,6 +16,7 @@ export function requireRole(allowedRoles: string[]): boolean {
   if (!requireAuth()) return false;
 
   const role = getSessionRoleFromToken();
+  if (role === 'ADMIN') return true;
   const allowed = new Set(allowedRoles.map((r) => String(r).toUpperCase()));
   if (!allowed.has(role)) {
     window.location.href = roleHomePath(role);

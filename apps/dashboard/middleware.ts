@@ -47,7 +47,7 @@ export function middleware(req: NextRequest) {
   const requiredRole = requiredRoleForPath(pathname);
   if (requiredRole) {
     const actualRole = decodeJwtRole(token);
-    if (actualRole !== requiredRole) {
+    if (actualRole !== 'ADMIN' && actualRole !== requiredRole) {
       const url = req.nextUrl.clone();
       url.pathname = roleHomePath(actualRole);
       if (url.pathname === '/login') {
