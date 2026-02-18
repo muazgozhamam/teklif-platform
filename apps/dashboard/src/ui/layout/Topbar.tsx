@@ -15,8 +15,10 @@ export default function Topbar({ title, envLabel, onMenu }: { title: string; env
           <button type="button" onClick={onMenu} className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--border)] text-[var(--muted)] md:hidden" aria-label="Menü">
             ☰
           </button>
-          <Link href="/" className="hidden md:inline-flex"><Logo size="md" /></Link>
-          <div className="hidden h-5 w-px bg-[var(--border)] md:block" />
+          <Link href="/" className="inline-flex" aria-label="Ana sayfaya dön">
+            <Logo size="md" />
+          </Link>
+          <div className="h-5 w-px bg-[var(--border)]" />
           <div className="text-sm font-medium text-[var(--text)]">{title}</div>
         </div>
 
