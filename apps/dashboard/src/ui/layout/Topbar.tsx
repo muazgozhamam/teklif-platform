@@ -12,7 +12,13 @@ export default function Topbar({ title, envLabel, onMenu }: { title: string; env
     <header className="sticky top-0 z-40 border-b border-[var(--border)] bg-[color-mix(in_srgb,var(--bg)_88%,transparent)] backdrop-blur">
       <div className="flex h-14 items-center justify-between gap-3 px-4 md:px-6">
         <div className="flex items-center gap-3">
-          <button type="button" onClick={onMenu} className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--border)] text-[var(--muted)] md:hidden" aria-label="Menü">
+          <button
+            type="button"
+            onClick={onMenu}
+            data-interactive="true"
+            className="ui-interactive inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--border)] text-[var(--muted)] hover:border-[var(--interactive-hover-border)] hover:bg-[var(--interactive-hover-bg)] hover:text-[var(--text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] md:hidden"
+            aria-label="Menü"
+          >
             ☰
           </button>
           <Link href="/" className="inline-flex" aria-label="Ana sayfaya dön">

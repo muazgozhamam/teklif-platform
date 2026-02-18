@@ -13,12 +13,17 @@ export function Button({
   return (
     <button
       className={cn(
-        'inline-flex h-10 items-center justify-center rounded-xl border px-4 text-sm font-medium transition-colors',
-        'focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--bg)]',
-        variant === 'primary' && 'border-transparent bg-[var(--primary)] text-white hover:opacity-95',
-        variant === 'secondary' && 'border-[var(--border)] bg-[var(--card)] text-[var(--text)] hover:border-[var(--border-2)]',
-        variant === 'danger' && 'border-transparent bg-[var(--danger)] text-white hover:opacity-95',
-        variant === 'ghost' && 'border-transparent bg-transparent text-[var(--muted)] hover:bg-[var(--card-2)] hover:text-[var(--text)]',
+        'ui-interactive inline-flex h-10 items-center justify-center rounded-xl border px-4 text-sm font-medium',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]',
+        variant === 'primary' &&
+          'border-transparent bg-[var(--primary)] text-white hover:bg-[color-mix(in_srgb,var(--primary)_92%,black)] data-[active=true]:bg-[color-mix(in_srgb,var(--primary)_85%,black)]',
+        variant === 'secondary' &&
+          'border-[var(--border)] bg-[var(--card)] text-[var(--text)] hover:bg-[var(--interactive-hover-bg)] hover:border-[var(--interactive-hover-border)] data-[active=true]:bg-[var(--interactive-active-bg)] data-[active=true]:border-[var(--interactive-active-border)]',
+        variant === 'danger' &&
+          'border-transparent bg-[var(--danger)] text-white hover:bg-[color-mix(in_srgb,var(--danger)_90%,black)] data-[active=true]:bg-[color-mix(in_srgb,var(--danger)_82%,black)]',
+        variant === 'ghost' &&
+          'border-transparent bg-transparent text-[var(--muted)] hover:bg-[var(--interactive-hover-bg)] hover:text-[var(--text)] data-[active=true]:bg-[var(--interactive-active-bg)] data-[active=true]:text-[var(--text)]',
+        'disabled:opacity-50 disabled:pointer-events-none',
         className,
       )}
       {...props}

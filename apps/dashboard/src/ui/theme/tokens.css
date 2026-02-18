@@ -12,6 +12,11 @@
   --danger: #dc2626;
   --success: #16a34a;
   --warning: #d97706;
+  --interactive-hover-bg: rgba(0, 0, 0, 0.04);
+  --interactive-active-bg: rgba(0, 0, 0, 0.06);
+  --interactive-hover-border: rgba(0, 0, 0, 0.1);
+  --interactive-active-border: rgba(0, 0, 0, 0.14);
+  --focus-ring: var(--primary);
 
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
   --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.06);
@@ -53,6 +58,11 @@
   --danger: #ef4444;
   --success: #22c55e;
   --warning: #f59e0b;
+  --interactive-hover-bg: rgba(255, 255, 255, 0.04);
+  --interactive-active-bg: rgba(255, 255, 255, 0.08);
+  --interactive-hover-border: rgba(255, 255, 255, 0.1);
+  --interactive-active-border: rgba(255, 255, 255, 0.14);
+  --focus-ring: var(--primary);
 
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.14);
   --shadow-md: 0 8px 20px rgba(0, 0, 0, 0.2);
@@ -77,6 +87,11 @@
     --danger: #ef4444;
     --success: #22c55e;
     --warning: #f59e0b;
+    --interactive-hover-bg: rgba(255, 255, 255, 0.04);
+    --interactive-active-bg: rgba(255, 255, 255, 0.08);
+    --interactive-hover-border: rgba(255, 255, 255, 0.1);
+    --interactive-active-border: rgba(255, 255, 255, 0.14);
+    --focus-ring: var(--primary);
 
     --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.14);
     --shadow-md: 0 8px 20px rgba(0, 0, 0, 0.2);
