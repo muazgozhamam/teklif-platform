@@ -31,6 +31,7 @@ export class AuthService {
 
     const user = await this.prisma.user.findUnique({
       where: { email: ident },
+      select: { id: true, email: true, password: true, role: true },
     });
 
     if (!user) return null;
@@ -59,7 +60,10 @@ export class AuthService {
       throw new UnauthorizedException('Şifre en az 6 karakter olmalı');
     }
 
-    const exists = await this.prisma.user.findUnique({ where: { email } });
+    const exists = await this.prisma.user.findUnique({
+      where: { email },
+      select: { id: true },
+    });
     if (exists) {
       throw new ConflictException('Bu e-posta ile bir hesap zaten var');
     }
@@ -132,7 +136,10 @@ export class AuthService {
       throw new UnauthorizedException('Google email required');
     }
 
-    const existing = await this.prisma.user.findUnique({ where: { email } });
+    const existing = await this.prisma.user.findUnique({
+      where: { email },
+      select: { id: true, email: true, password: true, role: true },
+    });
     if (existing) return existing;
 
     // Schema password zorunlu olduğu için rastgele hash üretiyoruz.
