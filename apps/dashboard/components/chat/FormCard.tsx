@@ -70,7 +70,7 @@ export default function FormCard({ intent, submitting, submitted, onSubmit }: Pr
       : intent === 'HUNTER_APPLY'
         ? 'Avcı / İş Ortağı Formu'
         : intent === 'BUYER_HOME'
-          ? 'Daire Satın Alma Formu'
+          ? 'Aday Müşteri Formu'
         : intent === 'INVESTOR'
           ? 'Yatırım Talep Formu'
           : 'Mülk Sahibi Talep Formu';

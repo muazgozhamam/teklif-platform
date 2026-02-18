@@ -76,6 +76,14 @@ function toFormType(intent: ChatIntent): FormType {
   return 'OWNER_FORM';
 }
 
+function toFormLabel(intent: ChatIntent) {
+  if (intent === 'CONSULTANT_APPLY') return 'Danışman Başvuru Formu';
+  if (intent === 'HUNTER_APPLY') return 'Avcı / İş Ortağı Formu';
+  if (intent === 'BUYER_HOME') return 'Aday Müşteri Formu';
+  if (intent === 'INVESTOR') return 'Yatırım Talep Formu';
+  return 'Mülk Sahibi Talep Formu';
+}
+
 function delay(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -174,7 +182,7 @@ export async function POST(req: NextRequest) {
               write(toSse('delta', { text: `${chunk} ` }));
               await delay(30);
             }
-            write(toSse('form', { intent: enforcedIntent, formType: toFormType(enforcedIntent), required: true }));
+            write(toSse('form', { intent: enforcedIntent, formType: toFormType(enforcedIntent), label: toFormLabel(enforcedIntent), required: true }));
             write('event: done\ndata: {"ok":true}\n\n');
             saveConversationState(identity, state);
             cleanup();
@@ -190,7 +198,7 @@ export async function POST(req: NextRequest) {
               write(toSse('delta', { text: `${chunk} ` }));
               await delay(30);
             }
-            write(toSse('form', { intent: enforcedIntent, formType: toFormType(enforcedIntent), required: true }));
+            write(toSse('form', { intent: enforcedIntent, formType: toFormType(enforcedIntent), label: toFormLabel(enforcedIntent), required: true }));
             write('event: done\ndata: {"ok":true}\n\n');
             saveConversationState(identity, state);
             cleanup();
