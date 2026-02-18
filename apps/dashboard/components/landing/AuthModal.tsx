@@ -1,8 +1,11 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import Modal from "@/components/ui/Modal";
 import Logo from "@/components/brand/Logo";
+import { setToken } from "@/lib/api";
+import { roleHomePath } from "@/lib/roles";
+import { decodeJwtPayload } from "@/lib/session";
 
 type AuthModalProps = {
   open: boolean;
@@ -18,10 +21,68 @@ const API_BASE = (
 ).replace(/\/+$/, "");
 
 export default function AuthModal({ open, onClose }: AuthModalProps) {
+  const [mode, setMode] = useState<"login" | "register">("login");
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
   function startGoogleAuth() {
     if (typeof window === "undefined") return;
     const redirect = `${window.location.origin}/login`;
     window.location.href = `${API_BASE}/auth/google?redirect=${encodeURIComponent(redirect)}`;
+  }
+
+  async function submitWithEmail() {
+    setError(null);
+    if (!email.trim() || !password.trim()) {
+      setError("E-posta ve şifre zorunlu.");
+      return;
+    }
+    if (mode === "register" && password !== confirmPassword) {
+      setError("Şifreler eşleşmiyor.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const endpoint = mode === "register" ? "/auth/register" : "/auth/login";
+      const body =
+        mode === "register"
+          ? { email: email.trim(), password, name: name.trim() || undefined }
+          : { email: email.trim(), password };
+
+      const res = await fetch(`${API_BASE}${endpoint}`, {
+        method: "POST",
+        headers: { "content-type": "application/json", accept: "application/json" },
+        body: JSON.stringify(body),
+      });
+
+      const data = (await res.json()) as { access_token?: string; accessToken?: string; message?: string };
+      if (!res.ok) {
+        throw new Error(data?.message || "İşlem başarısız.");
+      }
+
+      const token = String(data.access_token || data.accessToken || "");
+      if (!token) throw new Error("Token alınamadı.");
+
+      setToken(token);
+      const jwt = decodeJwtPayload(token);
+      const sub = String(jwt?.sub || "").trim();
+      const role = String(jwt?.role || "").trim();
+
+      if (typeof window !== "undefined") {
+        if (sub) window.localStorage.setItem("x-user-id", sub);
+        window.location.href = roleHomePath(role);
+      }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "İşlem başarısız.";
+      setError(msg);
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -88,9 +149,59 @@ export default function AuthModal({ open, onClose }: AuthModalProps) {
           <div className="h-px flex-1" style={{ background: "var(--color-border)" }} />
         </div>
 
+        <div className="mb-3 flex gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              setMode("login");
+              setError(null);
+            }}
+            className="rounded-full border px-3 py-1.5 text-xs font-medium"
+            style={{
+              borderColor: "var(--color-border)",
+              color: mode === "login" ? "white" : "var(--color-text-secondary)",
+              background: mode === "login" ? "var(--color-primary-600)" : "transparent",
+            }}
+          >
+            Giriş Yap
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setMode("register");
+              setError(null);
+            }}
+            className="rounded-full border px-3 py-1.5 text-xs font-medium"
+            style={{
+              borderColor: "var(--color-border)",
+              color: mode === "register" ? "white" : "var(--color-text-secondary)",
+              background: mode === "register" ? "var(--color-primary-600)" : "transparent",
+            }}
+          >
+            Kayıt Ol
+          </button>
+        </div>
+
         <div className="grid gap-2">
+          {mode === "register" ? (
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Ad Soyad"
+              aria-label="Ad Soyad"
+              className="rounded-2xl border px-4 py-3 text-sm outline-none focus:outline-none focus:ring-0 focus-visible:ring-0"
+              style={{
+                borderColor: "var(--color-border)",
+                color: "var(--color-text-primary)",
+                background: "var(--color-surface)",
+              }}
+            />
+          ) : null}
           <input
             type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
             placeholder="E-posta adresin"
             aria-label="E-posta adresi"
             className="rounded-2xl border px-4 py-3 text-sm outline-none focus:outline-none focus:ring-0 focus-visible:ring-0"
@@ -100,14 +211,44 @@ export default function AuthModal({ open, onClose }: AuthModalProps) {
               background: "var(--color-surface)",
             }}
           />
+          <input
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="Şifren"
+            aria-label="Şifre"
+            className="rounded-2xl border px-4 py-3 text-sm outline-none focus:outline-none focus:ring-0 focus-visible:ring-0"
+            style={{
+              borderColor: "var(--color-border)",
+              color: "var(--color-text-primary)",
+              background: "var(--color-surface)",
+            }}
+          />
+          {mode === "register" ? (
+            <input
+              type="password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              placeholder="Şifre tekrar"
+              aria-label="Şifre tekrar"
+              className="rounded-2xl border px-4 py-3 text-sm outline-none focus:outline-none focus:ring-0 focus-visible:ring-0"
+              style={{
+                borderColor: "var(--color-border)",
+                color: "var(--color-text-primary)",
+                background: "var(--color-surface)",
+              }}
+            />
+          ) : null}
+          {error ? <p className="text-xs text-red-500">{error}</p> : null}
           <button
             type="button"
-            aria-label="E-posta ile devam et (yakında)"
-            className="rounded-2xl px-4 py-3 text-sm font-medium text-white opacity-70"
+            aria-label={mode === "register" ? "Kayıt ol" : "Giriş yap"}
+            onClick={submitWithEmail}
+            disabled={loading}
+            className="rounded-2xl px-4 py-3 text-sm font-medium text-white disabled:opacity-70"
             style={{ background: "var(--color-primary-600)" }}
-            disabled
           >
-            Devam
+            {loading ? "İşleniyor..." : mode === "register" ? "Kayıt Ol" : "Giriş Yap"}
           </button>
         </div>
     </Modal>
