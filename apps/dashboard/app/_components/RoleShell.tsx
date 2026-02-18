@@ -11,12 +11,13 @@ type RoleShellProps = {
   title: string;
   subtitle?: string;
   nav: NavItem[];
+  headerControls?: React.ReactNode;
   children: React.ReactNode;
 };
 
-export default function RoleShell({ role, title, subtitle, nav, children }: RoleShellProps) {
+export default function RoleShell({ role, title, subtitle, nav, headerControls, children }: RoleShellProps) {
   return (
-    <DashboardLayout role={role} title={title} nav={nav}>
+    <DashboardLayout role={role} title={title} nav={nav} headerControls={headerControls}>
       <Card className="mb-4 border-[var(--border)] bg-[var(--card-2)]">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>

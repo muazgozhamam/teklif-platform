@@ -11,11 +11,13 @@ export default function DashboardLayout({
   role,
   title,
   nav,
+  headerControls,
   children,
 }: {
   role: ShellRole;
   title: string;
   nav?: NavItem[];
+  headerControls?: React.ReactNode;
   children: React.ReactNode;
 }) {
   const [mobileOpen, setMobileOpen] = React.useState(false);
@@ -29,7 +31,7 @@ export default function DashboardLayout({
       <div className="flex h-full w-full">
         <Sidebar role={role} navSections={navSections} mobileOpen={mobileOpen} onNavigate={() => setMobileOpen(false)} />
         <div className="min-w-0 flex h-full flex-1 flex-col overflow-hidden md:ml-0">
-          <Topbar title={title} envLabel={envLabel} onMenu={() => setMobileOpen((s) => !s)} />
+          <Topbar title={title} envLabel={envLabel} onMenu={() => setMobileOpen((s) => !s)} headerControls={headerControls} />
           <main className={cn('flex-1 overflow-auto px-4 py-5 md:px-6 md:py-6')}>{children}</main>
         </div>
       </div>

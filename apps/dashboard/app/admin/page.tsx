@@ -73,6 +73,24 @@ export default function AdminHomePage() {
       role="ADMIN"
       title="Admin Komuta Ekranı"
       subtitle="Lead akışı, ekip operasyonu ve kritik aksiyonlar tek ekranda."
+      headerControls={
+        <div className="flex min-w-0 items-center gap-2">
+          <select
+            value={targetRole}
+            onChange={(e) => setTargetRole(e.target.value as 'ADMIN' | 'BROKER' | 'CONSULTANT' | 'HUNTER')}
+            className="ui-interactive h-8 min-w-0 rounded-md border border-[var(--border)] bg-transparent px-2 text-xs text-[var(--text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] md:h-9 md:w-[138px] md:px-3 md:text-sm"
+            aria-label="Rol seç"
+          >
+            <option value="ADMIN">Admin</option>
+            <option value="BROKER">Broker</option>
+            <option value="CONSULTANT">Danışman</option>
+            <option value="HUNTER">İş Ortağı</option>
+          </select>
+          <Button type="button" className="h-8 rounded-md px-3 text-xs md:h-9 md:text-sm" onClick={() => router.push(roleRoute(targetRole))}>
+            Aç
+          </Button>
+        </div>
+      }
       nav={[
         { href: '/admin', label: 'Panel' },
         { href: '/admin/users', label: 'Kullanıcılar' },
@@ -89,25 +107,6 @@ export default function AdminHomePage() {
       </div>
 
       {statsErr ? <AlertMessage type="error" message={statsErr} /> : null}
-
-      <Card className="mt-4">
-        <CardTitle>Rol Ekranına Geçiş</CardTitle>
-        <CardDescription>Rol seç ve ilgili paneli aç.</CardDescription>
-        <div className="mt-3 flex flex-wrap items-center gap-2">
-          <select
-            value={targetRole}
-            onChange={(e) => setTargetRole(e.target.value as 'ADMIN' | 'BROKER' | 'CONSULTANT' | 'HUNTER')}
-            className="h-10 min-w-52 rounded-xl border border-[var(--border)] bg-[var(--card)] px-3 text-sm text-[var(--text)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--primary)]"
-            aria-label="Rol seç"
-          >
-            <option value="ADMIN">Admin</option>
-            <option value="BROKER">Broker</option>
-            <option value="CONSULTANT">Danışman</option>
-            <option value="HUNTER">İş Ortağı</option>
-          </select>
-          <Button type="button" onClick={() => router.push(roleRoute(targetRole))}>Ekranı Aç</Button>
-        </div>
-      </Card>
 
       <div className="mt-4 grid grid-cols-1 gap-4 xl:grid-cols-2">
         <Card>
