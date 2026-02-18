@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import RoleShell from '@/app/_components/RoleShell';
 import { AlertMessage } from '@/app/_components/UiFeedback';
 import { api } from '@/lib/api';
@@ -16,10 +17,12 @@ type AdminStats = {
 };
 
 export default function AdminHomePage() {
+  const router = useRouter();
   const [allowed, setAllowed] = React.useState(false);
   const [stats, setStats] = React.useState<AdminStats | null>(null);
   const [statsLoading, setStatsLoading] = React.useState(true);
   const [statsErr, setStatsErr] = React.useState<string | null>(null);
+  const [targetRole, setTargetRole] = React.useState<'ADMIN' | 'BROKER' | 'CONSULTANT' | 'HUNTER'>('ADMIN');
 
   React.useEffect(() => {
     setAllowed(requireRole(['ADMIN']));
@@ -82,6 +85,30 @@ export default function AdminHomePage() {
         <KpiCard label="Toplam İlan" value={stats?.listingsTotal ?? 0} loading={statsLoading} />
       </div>
       {statsErr ? <AlertMessage type="error" message={statsErr} /> : null}
+      <section style={{ border: '1px solid #e2dbd1', borderRadius: 16, padding: 16, background: '#fff', marginBottom: 12 }}>
+        <div style={{ fontWeight: 700, color: '#1f1b16', marginBottom: 6 }}>Rol Ekranına Geçiş</div>
+        <div style={{ color: '#6f665c', fontSize: 13, marginBottom: 10 }}>Rol seç ve ilgili paneli aç.</div>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <select
+            value={targetRole}
+            onChange={(e) => setTargetRole(e.target.value as 'ADMIN' | 'BROKER' | 'CONSULTANT' | 'HUNTER')}
+            style={{ border: '1px solid #d8cdbc', borderRadius: 10, padding: '10px 12px', minWidth: 200, background: '#fff' }}
+            aria-label="Rol seç"
+          >
+            <option value="ADMIN">Admin</option>
+            <option value="BROKER">Broker</option>
+            <option value="CONSULTANT">Danışman</option>
+            <option value="HUNTER">İş Ortağı</option>
+          </select>
+          <button
+            type="button"
+            onClick={() => router.push(roleRoute(targetRole))}
+            style={{ border: '1px solid #d8cdbc', borderRadius: 10, padding: '10px 14px', background: '#f8f3ec', color: '#5c3b12', fontWeight: 700, cursor: 'pointer' }}
+          >
+            Ekranı Aç
+          </button>
+        </div>
+      </section>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(320px,1fr))', gap: 12 }}>
         <section style={{ border: '1px solid #e2dbd1', borderRadius: 16, padding: 16, background: '#fff' }}>
@@ -225,6 +252,13 @@ function computeConversion(deals: number, leads: number) {
 function computeDensity(listings: number, users: number) {
   if (!users) return '0.00';
   return (listings / users).toFixed(2);
+}
+
+function roleRoute(role: 'ADMIN' | 'BROKER' | 'CONSULTANT' | 'HUNTER') {
+  if (role === 'BROKER') return '/broker';
+  if (role === 'CONSULTANT') return '/consultant';
+  if (role === 'HUNTER') return '/hunter';
+  return '/admin';
 }
 
 const linkCardStyle: React.CSSProperties = {
