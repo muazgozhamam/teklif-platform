@@ -8,6 +8,8 @@ import {
   CommissionLedgerEntryType,
   CommissionLineStatus,
   CommissionRole,
+  CommissionDisputeType,
+  CommissionDisputeStatus,
   CommissionSnapshotStatus,
   DealStatus,
   LedgerDirection,
@@ -19,11 +21,18 @@ import { CreateSnapshotDto } from './dto/create-snapshot.dto';
 import { ApproveSnapshotDto } from './dto/approve-snapshot.dto';
 import { CreatePayoutDto } from './dto/create-payout.dto';
 import { ReverseSnapshotDto } from './dto/reverse-snapshot.dto';
+import { CreateDisputeDto } from './dto/create-dispute.dto';
+import { UpdateDisputeStatusDto } from './dto/update-dispute-status.dto';
 
 type DateRange = { from: Date; to: Date };
 
 const BP_DENOMINATOR = 10_000n;
 const TRY_CURRENCY = 'TRY';
+const BLOCKING_DISPUTE_STATUSES: CommissionDisputeStatus[] = [
+  CommissionDisputeStatus.OPEN,
+  CommissionDisputeStatus.UNDER_REVIEW,
+  CommissionDisputeStatus.ESCALATED,
+];
 
 @Injectable()
 export class CommissionService {
@@ -173,6 +182,21 @@ export class CommissionService {
     }
 
     return amounts;
+  }
+
+  private async hasBlockingDispute(
+    tx: Prisma.TransactionClient,
+    dealId: string,
+    snapshotId?: string,
+  ): Promise<boolean> {
+    const count = await tx.commissionDispute.count({
+      where: {
+        dealId,
+        status: { in: BLOCKING_DISPUTE_STATUSES },
+        ...(snapshotId ? { OR: [{ snapshotId: null }, { snapshotId }] } : {}),
+      },
+    });
+    return count > 0;
   }
 
   async createSnapshot(actorUserId: string, payload: CreateSnapshotDto) {
@@ -327,6 +351,11 @@ export class CommissionService {
         throw new ForbiddenException('Maker-checker kuralı: oluşturan kullanıcı onaylayamaz');
       }
 
+      const blockedByDispute = await this.hasBlockingDispute(tx, snapshot.dealId, snapshot.id);
+      if (blockedByDispute) {
+        throw new BadRequestException('Açık dispute varken snapshot onaylanamaz');
+      }
+
       const updated = await tx.commissionSnapshot.update({
         where: { id: snapshotId },
         data: {
@@ -368,14 +397,38 @@ export class CommissionService {
       });
       const paidMap = new Map(paidByAllocation.map((row) => [row.allocationId, BigInt(row._sum.amountMinor || 0)]));
 
+      const reversedByAllocation = await tx.commissionLedgerEntry.groupBy({
+        by: ['allocationId'],
+        where: {
+          allocationId: { in: snapshot.allocations.map((a) => a.id) },
+          entryType: CommissionLedgerEntryType.REVERSAL,
+          direction: LedgerDirection.DEBIT,
+        },
+        _sum: { amountMinor: true },
+      });
+      const reversedMap = new Map(
+        reversedByAllocation
+          .filter((row): row is typeof row & { allocationId: string } => Boolean(row.allocationId))
+          .map((row) => [row.allocationId, BigInt(row._sum.amountMinor || 0)]),
+      );
+
       let remainingToReverse = dto.amountMinor !== undefined ? this.asBigInt(dto.amountMinor, 'amountMinor') : null;
+      let reversedTotal = 0n;
+      let totalReversible = 0n;
 
       for (const allocation of snapshot.allocations) {
-        const paid = paidMap.get(allocation.id) || 0n;
-        const outstanding = allocation.amountMinor - paid;
-        if (outstanding <= 0n) continue;
+        const reversedAlready = reversedMap.get(allocation.id) || 0n;
+        const reversible = allocation.amountMinor - reversedAlready;
+        if (reversible > 0n) totalReversible += reversible;
+      }
 
-        const reverseAmount = remainingToReverse === null ? outstanding : outstanding < remainingToReverse ? outstanding : remainingToReverse;
+      for (const allocation of snapshot.allocations) {
+        const reversedAlready = reversedMap.get(allocation.id) || 0n;
+        const reversible = allocation.amountMinor - reversedAlready;
+        if (reversible <= 0n) continue;
+
+        const reverseAmount =
+          remainingToReverse === null ? reversible : reversible < remainingToReverse ? reversible : remainingToReverse;
         if (reverseAmount <= 0n) continue;
 
         await tx.commissionLedgerEntry.create({
@@ -394,8 +447,15 @@ export class CommissionService {
 
         await tx.commissionAllocation.update({
           where: { id: allocation.id },
-          data: { status: CommissionLineStatus.REVERSED },
+          data: {
+            status:
+              reversedAlready + reverseAmount >= allocation.amountMinor
+                ? CommissionLineStatus.REVERSED
+                : CommissionLineStatus.PARTIAL,
+          },
         });
+
+        reversedTotal += reverseAmount;
 
         if (remainingToReverse !== null) {
           remainingToReverse -= reverseAmount;
@@ -403,13 +463,115 @@ export class CommissionService {
         }
       }
 
+      if (reversedTotal <= 0n) {
+        throw new BadRequestException('Reverse edilebilir bakiye bulunamadı');
+      }
+
+      const isFullReverse = reversedTotal >= totalReversible;
+
       const updated = await tx.commissionSnapshot.update({
         where: { id: snapshot.id },
-        data: { status: CommissionSnapshotStatus.REVERSED, reversedAt: new Date(), notes: dto.reason },
+        data: {
+          status: isFullReverse ? CommissionSnapshotStatus.REVERSED : snapshot.status,
+          reversedAt: isFullReverse ? new Date() : snapshot.reversedAt,
+          notes: dto.reason,
+        },
       });
 
       return this.jsonSafe(updated);
     });
+  }
+
+  async listDisputes(status?: string) {
+    const normalized = status ? String(status).toUpperCase() : undefined;
+    const where = normalized ? { status: normalized as CommissionDisputeStatus } : undefined;
+
+    const rows = await this.prisma.commissionDispute.findMany({
+      where,
+      include: {
+        deal: { select: { id: true, city: true, district: true, type: true, rooms: true } },
+        snapshot: { select: { id: true, status: true, version: true } },
+        opener: { select: { id: true, name: true, email: true, role: true } },
+        resolver: { select: { id: true, name: true, email: true, role: true } },
+        againstUser: { select: { id: true, name: true, email: true, role: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return this.jsonSafe(rows);
+  }
+
+  async createDispute(actorUserId: string, dto: CreateDisputeDto) {
+    const dealId = String(dto.dealId || '').trim();
+    if (!dealId) throw new BadRequestException('dealId zorunlu');
+
+    const type = String(dto.type || 'OTHER').toUpperCase() as CommissionDisputeType;
+    const allowedTypes = new Set<CommissionDisputeType>(['ATTRIBUTION', 'AMOUNT', 'ROLE', 'OTHER']);
+    if (!allowedTypes.has(type)) throw new BadRequestException('Geçersiz dispute type');
+
+    const slaDays = dto.slaDays && Number.isFinite(Number(dto.slaDays)) ? Math.max(1, Number(dto.slaDays)) : 3;
+    const slaDueAt = new Date(Date.now() + slaDays * 24 * 60 * 60 * 1000);
+
+    const deal = await this.prisma.deal.findUnique({ where: { id: dealId }, select: { id: true } });
+    if (!deal) throw new NotFoundException('Deal bulunamadı');
+
+    let snapshotId: string | null = null;
+    if (dto.snapshotId) {
+      const snapshot = await this.prisma.commissionSnapshot.findUnique({
+        where: { id: String(dto.snapshotId) },
+        select: { id: true, dealId: true },
+      });
+      if (!snapshot) throw new NotFoundException('Snapshot bulunamadı');
+      if (snapshot.dealId !== dealId) throw new BadRequestException('snapshotId, dealId ile eşleşmiyor');
+      snapshotId = snapshot.id;
+    }
+
+    const created = await this.prisma.commissionDispute.create({
+      data: {
+        dealId,
+        snapshotId,
+        openedBy: actorUserId,
+        againstUserId: dto.againstUserId ? String(dto.againstUserId) : null,
+        type,
+        status: CommissionDisputeStatus.OPEN,
+        slaDueAt,
+        resolutionNote: dto.note || null,
+        evidenceMetaJson: dto.evidenceMetaJson
+          ? (dto.evidenceMetaJson as Prisma.InputJsonValue)
+          : Prisma.JsonNull,
+      },
+    });
+
+    return this.jsonSafe(created);
+  }
+
+  async updateDisputeStatus(actorUserId: string, disputeId: string, dto: UpdateDisputeStatusDto) {
+    const status = String(dto.status || '').toUpperCase() as CommissionDisputeStatus;
+    const allowed = new Set<CommissionDisputeStatus>([
+      CommissionDisputeStatus.UNDER_REVIEW,
+      CommissionDisputeStatus.ESCALATED,
+      CommissionDisputeStatus.RESOLVED_APPROVED,
+      CommissionDisputeStatus.RESOLVED_REJECTED,
+    ]);
+    if (!allowed.has(status)) throw new BadRequestException('Geçersiz dispute status');
+
+    const current = await this.prisma.commissionDispute.findUnique({ where: { id: disputeId } });
+    if (!current) throw new NotFoundException('Dispute bulunamadı');
+
+    const isResolved =
+      status === CommissionDisputeStatus.RESOLVED_APPROVED || status === CommissionDisputeStatus.RESOLVED_REJECTED;
+
+    const updated = await this.prisma.commissionDispute.update({
+      where: { id: disputeId },
+      data: {
+        status,
+        resolvedAt: isResolved ? new Date() : null,
+        resolvedBy: isResolved ? actorUserId : null,
+        resolutionNote: dto.note || current.resolutionNote || null,
+      },
+    });
+
+    return this.jsonSafe(updated);
   }
 
   async createPayout(actorUserId: string, dto: CreatePayoutDto) {
@@ -426,6 +588,15 @@ export class CommissionService {
 
       if (allocations.length !== allocationIds.length) {
         throw new BadRequestException('Bazı allocation kayıtları bulunamadı');
+      }
+
+      const uniqueDealSnapshot = new Set(allocations.map((a) => `${a.snapshot.dealId}:${a.snapshot.id}`));
+      for (const key of uniqueDealSnapshot) {
+        const [dealId, snapId] = key.split(':');
+        const blockedByDispute = await this.hasBlockingDispute(tx, dealId, snapId);
+        if (blockedByDispute) {
+          throw new BadRequestException(`Açık dispute varken payout yapılamaz (deal=${dealId})`);
+        }
       }
 
       const alreadyPaid = await tx.commissionPayoutAllocation.groupBy({
