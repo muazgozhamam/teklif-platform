@@ -16,6 +16,7 @@ type Role = "assistant" | "user" | "system";
 type Message = { id: string; role: Role; text: string };
 
 export default function PublicChatPage() {
+  const helperDisclaimer = "SatDedi Asistanı size destek olur; önemli kararlar öncesinde teyit etmenizi öneririz.";
   const [phase, setPhase] = useState<"prechat" | "chat">("prechat");
   const [hasStarted, setHasStarted] = useState(false);
   const [composerFocused, setComposerFocused] = useState(false);
@@ -244,7 +245,7 @@ export default function PublicChatPage() {
   }
 
   return (
-    <LandingShell footer="SatDedi Asistanı size destek olur; önemli kararlar öncesinde teyit etmenizi öneririz.">
+    <LandingShell>
       <StickyHeader />
 
       {isCenteredComposer ? (
@@ -273,6 +274,9 @@ export default function PublicChatPage() {
                 Devam etmek için giriş yap veya formu doldur.
               </p>
             ) : null}
+            <p className="mt-2 text-center text-xs" style={{ color: "var(--color-text-muted)" }}>
+              {helperDisclaimer}
+            </p>
 
             {showSuggestionCard ? (
               <SuggestionCard
@@ -314,6 +318,9 @@ export default function PublicChatPage() {
                 onFocusInteraction={onComposerInteract}
                 onBlurInteraction={onComposerBlur}
               />
+              <p className="mt-2 text-center text-xs" style={{ color: "var(--color-text-muted)" }}>
+                {helperDisclaimer}
+              </p>
             </div>
           </div>
         </>
