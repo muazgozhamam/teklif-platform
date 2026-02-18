@@ -11,14 +11,18 @@ export type NavItem = {
 };
 
 export type NavSection = {
+  id: string;
   title: string;
+  defaultOpen?: boolean;
   items: NavItem[];
 };
 
 const roleSections: Record<ShellRole, NavSection[]> = {
   ADMIN: [
     {
+      id: 'ops',
       title: 'Operasyon',
+      defaultOpen: true,
       items: [
         { href: '/admin', label: 'Panel', icon: 'dashboard' },
         { href: '/admin/onboarding', label: 'Uyum Süreci', icon: 'clipboard-check' },
@@ -26,6 +30,7 @@ const roleSections: Record<ShellRole, NavSection[]> = {
       ],
     },
     {
+      id: 'management',
       title: 'Yönetim',
       items: [
         { href: '/admin/users', label: 'Kullanıcılar', icon: 'users' },
@@ -33,13 +38,16 @@ const roleSections: Record<ShellRole, NavSection[]> = {
       ],
     },
     {
+      id: 'tools',
       title: 'Araçlar',
       items: [{ href: '/admin/audit', label: 'Loglar / Raporlar', icon: 'file-text' }],
     },
   ],
   BROKER: [
     {
+      id: 'broker-core',
       title: 'Broker',
+      defaultOpen: true,
       items: [
         { href: '/broker', label: 'Panel', icon: 'handshake' },
         { href: '/broker/leads/pending', label: 'Bekleyen Leadler', icon: 'list' },
@@ -50,20 +58,25 @@ const roleSections: Record<ShellRole, NavSection[]> = {
   ],
   CONSULTANT: [
     {
+      id: 'workspace',
       title: 'Çalışma Alanı',
+      defaultOpen: true,
       items: [
         { href: '/consultant', label: 'Panel', icon: 'dashboard' },
         { href: '/consultant/inbox', label: 'Inbox / Talepler', icon: 'inbox' },
       ],
     },
     {
+      id: 'operations',
       title: 'İşlemler',
       items: [{ href: '/consultant/listings', label: 'İlanlar', icon: 'home' }],
     },
   ],
   HUNTER: [
     {
+      id: 'hunter-core',
       title: 'Avcı',
+      defaultOpen: true,
       items: [
         { href: '/hunter', label: 'Panel', icon: 'target' },
         { href: '/hunter/leads', label: 'Leadler', icon: 'list' },
@@ -75,22 +88,23 @@ const roleSections: Record<ShellRole, NavSection[]> = {
 
 export function getRoleNavSections(role: ShellRole, extra: NavItem[] = []): NavSection[] {
   const normalizedExtras = extra.map((item) => ({ ...item, icon: item.icon ?? 'spark' }));
-  if (normalizedExtras.length === 0) return roleSections[role];
-
   const sections = roleSections[role].map((section) => ({
     ...section,
-    items: [...section.items],
+    items: section.items.filter((item) => !item.roles || item.roles.includes(role)),
   }));
+  const filteredSections = sections.filter((section) => section.items.length > 0);
+  if (normalizedExtras.length === 0) return filteredSections;
 
-  const known = new Set<string>(sections.flatMap((section) => section.items.map((item) => item.href)));
-  const extraItems = normalizedExtras.filter((item) => !known.has(item.href));
+  const known = new Set<string>(filteredSections.flatMap((section) => section.items.map((item) => item.href)));
+  const extraItems = normalizedExtras.filter((item) => !known.has(item.href) && (!item.roles || item.roles.includes(role)));
 
   if (extraItems.length > 0) {
-    sections.push({
+    filteredSections.push({
+      id: 'other',
       title: 'Diğer',
       items: extraItems,
     });
   }
 
-  return sections;
+  return filteredSections;
 }

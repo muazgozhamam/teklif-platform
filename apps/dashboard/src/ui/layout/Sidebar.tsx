@@ -1,10 +1,12 @@
 'use client';
 
+import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '../lib/cn';
 import type { NavSection, ShellRole } from './role-nav';
 import { NavIcon } from './nav-icons';
+import NavGroupAccordion from './NavGroupAccordion';
 import { roleLabelTr } from '@/lib/roles';
 import Logo from '@/components/brand/Logo';
 
@@ -20,6 +22,52 @@ export default function Sidebar({
   onNavigate: () => void;
 }) {
   const pathname = usePathname();
+  const storageKey = `satdedi-sidebar-open:${role}`;
+
+  const activeGroupIds = React.useMemo(() => {
+    return navSections
+      .filter((section) =>
+        section.items.some(
+          (item) => pathname === item.href || (item.href !== `/${role.toLowerCase()}` && pathname.startsWith(item.href)),
+        ),
+      )
+      .map((section) => section.id);
+  }, [navSections, pathname, role]);
+
+  const [openGroups, setOpenGroups] = React.useState<string[]>(() =>
+    Array.from(new Set(navSections.filter((section) => section.defaultOpen).map((section) => section.id))),
+  );
+
+  React.useEffect(() => {
+    const defaults = navSections.filter((section) => section.defaultOpen).map((section) => section.id);
+    let persisted: string[] = [];
+    try {
+      const raw = window.localStorage.getItem(storageKey);
+      const parsed = raw ? (JSON.parse(raw) as unknown) : [];
+      persisted = Array.isArray(parsed) ? parsed.filter((v): v is string => typeof v === 'string') : [];
+    } catch {
+      persisted = [];
+    }
+    const merged = Array.from(new Set([...defaults, ...persisted, ...activeGroupIds]));
+    setOpenGroups(merged);
+  }, [storageKey, navSections, activeGroupIds]);
+
+  React.useEffect(() => {
+    setOpenGroups((prev) => Array.from(new Set([...prev, ...activeGroupIds])));
+  }, [activeGroupIds]);
+
+  React.useEffect(() => {
+    try {
+      window.localStorage.setItem(storageKey, JSON.stringify(openGroups));
+    } catch {
+      // ignore storage write errors
+    }
+  }, [openGroups, storageKey]);
+
+  function toggleGroup(groupId: string) {
+    setOpenGroups((prev) => (prev.includes(groupId) ? prev.filter((id) => id !== groupId) : [...prev, groupId]));
+  }
+
   return (
     <aside
       className={cn(
@@ -43,8 +91,12 @@ export default function Sidebar({
 
       <nav className="space-y-4">
         {navSections.map((section) => (
-          <div key={section.title}>
-            <div className="mb-2 px-2 text-[11px] uppercase tracking-[0.08em] text-[var(--muted)]">{section.title}</div>
+          <NavGroupAccordion
+            key={section.id}
+            title={section.title}
+            open={openGroups.includes(section.id)}
+            onToggle={() => toggleGroup(section.id)}
+          >
             <div className="space-y-1">
               {section.items.map((item) => {
                 const active = pathname === item.href || (item.href !== `/${role.toLowerCase()}` && pathname.startsWith(item.href));
@@ -71,7 +123,7 @@ export default function Sidebar({
                 );
               })}
             </div>
-          </div>
+          </NavGroupAccordion>
         ))}
       </nav>
     </aside>

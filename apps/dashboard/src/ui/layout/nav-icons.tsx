@@ -16,7 +16,9 @@ export type NavIconName =
   | 'handshake'
   | 'plus'
   | 'list'
-  | 'spark';
+  | 'spark'
+  | 'chevron-right'
+  | 'chevron-down';
 
 type IconProps = { className?: string };
 
@@ -138,6 +140,16 @@ const ICONS: Record<NavIconName, React.ComponentType<IconProps>> = {
   spark: (p) => (
     <BaseIcon {...p}>
       <path d="m12 3 1.8 4.2L18 9l-4.2 1.8L12 15l-1.8-4.2L6 9l4.2-1.8L12 3Z" />
+    </BaseIcon>
+  ),
+  'chevron-right': (p) => (
+    <BaseIcon {...p}>
+      <path d="m9 6 6 6-6 6" />
+    </BaseIcon>
+  ),
+  'chevron-down': (p) => (
+    <BaseIcon {...p}>
+      <path d="m6 9 6 6 6-6" />
     </BaseIcon>
   ),
 };
