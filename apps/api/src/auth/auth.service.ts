@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { ConflictException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma/prisma.service';
@@ -43,6 +43,38 @@ export class AuthService {
   }
   async login(user: { id: string; role: string }) {
     return {
+      access_token: this.signAccessToken(user.id, user.role),
+    };
+  }
+
+  async register(input: { email: string; password: string; name?: string }) {
+    const email = String(input.email || '').trim().toLowerCase();
+    const password = String(input.password || '');
+    const name = String(input.name || '').trim();
+
+    if (!email || !password) {
+      throw new UnauthorizedException('E-posta ve şifre zorunlu');
+    }
+    if (password.length < 6) {
+      throw new UnauthorizedException('Şifre en az 6 karakter olmalı');
+    }
+
+    const exists = await this.prisma.user.findUnique({ where: { email } });
+    if (exists) {
+      throw new ConflictException('Bu e-posta ile bir hesap zaten var');
+    }
+
+    const hash = await bcrypt.hash(password, 10);
+    const user = await this.prisma.user.create({
+      data: {
+        email,
+        password: hash,
+        name: name || email.split('@')[0],
+      },
+    });
+
+    return {
+      user: { id: user.id, email: user.email, role: user.role },
       access_token: this.signAccessToken(user.id, user.role),
     };
   }

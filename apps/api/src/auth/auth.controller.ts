@@ -1,5 +1,6 @@
 import {
   Body,
+  ConflictException,
   Controller,
   Get,
   Post,
@@ -39,6 +40,26 @@ export class AuthController {
     }
 
     return this.auth.login({ id: user.id, role: user.role });
+  }
+
+  @Post('register')
+  async register(
+    @Body() body: { email?: string; password?: string; name?: string },
+  ) {
+    const email = (body.email ?? '').toString().trim();
+    const password = (body.password ?? '').toString();
+    const name = (body.name ?? '').toString().trim();
+
+    if (!email || !password) {
+      throw new UnauthorizedException('E-posta ve şifre zorunlu');
+    }
+
+    try {
+      return await this.auth.register({ email, password, name });
+    } catch (err) {
+      if (err instanceof ConflictException) throw err;
+      throw err;
+    }
   }
 
   // Token doğrulama + payload görme
