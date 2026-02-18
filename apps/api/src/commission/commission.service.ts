@@ -9,6 +9,7 @@ import {
   CommissionAuditEntityType,
   CommissionLedgerEntryType,
   CommissionLineStatus,
+  CommissionRoundingRule,
   CommissionRole,
   CommissionDisputeType,
   CommissionDisputeStatus,
@@ -72,8 +73,74 @@ export class CommissionService {
     ) as T;
   }
 
-  private applyBasisPoints(amountMinor: bigint, bp: number): bigint {
-    return (amountMinor * BigInt(bp)) / BP_DENOMINATOR;
+  private divideWithRounding(
+    numerator: bigint,
+    denominator: bigint,
+    rule: CommissionRoundingRule | string,
+  ): bigint {
+    if (denominator === 0n) return 0n;
+    const quotient = numerator / denominator;
+    const remainder = numerator % denominator;
+    if (remainder === 0n) return quotient;
+
+    const absRemainder = remainder < 0n ? -remainder : remainder;
+    const absDenominator = denominator < 0n ? -denominator : denominator;
+    const absQuotient = quotient < 0n ? -quotient : quotient;
+    const isNegative = numerator < 0n;
+    const twice = absRemainder * 2n;
+
+    let roundUp = false;
+    if (twice > absDenominator) {
+      roundUp = true;
+    } else if (twice === absDenominator) {
+      if (String(rule || '') === 'BANKERS') {
+        roundUp = absQuotient % 2n !== 0n;
+      } else {
+        roundUp = true;
+      }
+    }
+
+    if (!roundUp) return quotient;
+    return isNegative ? quotient - 1n : quotient + 1n;
+  }
+
+  private parseAmountMinor(raw: string | number | null | undefined): bigint | null {
+    if (raw === null || raw === undefined) return null;
+    if (typeof raw === 'number' && Number.isFinite(raw)) return BigInt(Math.trunc(raw));
+
+    const cleaned = String(raw).replace(/[^\d.,-]/g, '').trim();
+    if (!cleaned) return null;
+    const normalized = cleaned.replace(/\./g, '').replace(',', '.');
+    const parsed = Number(normalized);
+    if (Number.isNaN(parsed) || !Number.isFinite(parsed)) return null;
+    return BigInt(Math.round(parsed * 100));
+  }
+
+  private resolveBaseAmountFromLeadAnswers(
+    answers: Array<{ key: string; answer: string }>,
+  ): bigint | null {
+    const priorityKeys = [
+      'commissionBaseAmount',
+      'commission_base_amount',
+      'closeSummary.commissionBaseAmount',
+      'close_summary_commission_base_amount',
+      'salePrice',
+      'sale_price',
+      'price',
+      'fiyat',
+      'listingPrice',
+      'listing_price',
+    ];
+
+    const lowered = new Map(
+      answers.map((row) => [String(row.key || '').trim().toLowerCase(), String(row.answer || '').trim()]),
+    );
+    for (const key of priorityKeys) {
+      const found = lowered.get(key.toLowerCase());
+      const parsed = this.parseAmountMinor(found);
+      if (parsed && parsed > 0n) return parsed;
+    }
+    return null;
   }
 
   private async resolveActivePolicy(tx: Prisma.TransactionClient, at: Date) {
@@ -110,7 +177,13 @@ export class CommissionService {
       where: { id: dealId },
       include: {
         listing: { select: { id: true, price: true, currency: true } },
-        lead: { select: { id: true, sourceUserId: true } },
+        lead: {
+          select: {
+            id: true,
+            sourceUserId: true,
+            answers: { select: { key: true, answer: true } },
+          },
+        },
       },
     });
 
@@ -119,14 +192,19 @@ export class CommissionService {
       throw new BadRequestException('Snapshot yalnızca WON deal için oluşturulabilir');
     }
 
-    const listingPrice = deal.listing?.price ? BigInt(deal.listing.price) : null;
-    if (!listingPrice) {
-      throw new BadRequestException('Base Amount Missing: listing.price bulunamadı');
+    const fromCloseSummary = this.resolveBaseAmountFromLeadAnswers(deal.lead?.answers || []);
+    const fromListing = deal.listing?.price ? BigInt(deal.listing.price) : null;
+    const fromDeal = null;
+    const resolvedBaseAmountMinor = fromCloseSummary || fromListing || fromDeal;
+    if (!resolvedBaseAmountMinor || resolvedBaseAmountMinor <= 0n) {
+      throw new BadRequestException(
+        'Base Amount Missing: closeSummary.commissionBaseAmount / listing.price / deal.salePrice bulunamadı',
+      );
     }
 
     return {
       deal,
-      baseAmountMinor: listingPrice,
+      baseAmountMinor: resolvedBaseAmountMinor,
       currency: deal.listing?.currency || TRY_CURRENCY,
       wonAt: deal.updatedAt,
     };
@@ -134,6 +212,7 @@ export class CommissionService {
 
   private buildAllocationPlan(input: {
     poolAmountMinor: bigint;
+    roundingRule: CommissionRoundingRule | string;
     policy: {
       hunterPercentBasisPoints: number;
       consultantPercentBasisPoints: number;
@@ -146,7 +225,7 @@ export class CommissionService {
       brokerUserId: string | null;
     };
   }) {
-    const { poolAmountMinor, policy, participants } = input;
+    const { poolAmountMinor, policy, participants, roundingRule } = input;
 
     let hunterBp = policy.hunterPercentBasisPoints;
     let consultantBp = policy.consultantPercentBasisPoints;
@@ -173,16 +252,54 @@ export class CommissionService {
       { role: CommissionRole.SYSTEM, userId: null, bp: systemBp },
     ].filter((row) => row.bp > 0);
 
-    const amounts = draft.map((row) => ({
-      ...row,
-      amountMinor: this.applyBasisPoints(poolAmountMinor, row.bp),
+    const raw = draft.map((row) => {
+      const numerator = poolAmountMinor * BigInt(row.bp);
+      const floored = numerator / BP_DENOMINATOR;
+      const remainder = numerator % BP_DENOMINATOR;
+      return { ...row, amountMinor: floored, remainder };
+    });
+
+    const sum = raw.reduce((acc, row) => acc + row.amountMinor, 0n);
+    let undistributed = poolAmountMinor - sum;
+    if (undistributed > 0n && raw.length > 0) {
+      const ranking = [...raw].sort((a, b) => {
+        if (a.remainder === b.remainder) return a.role.localeCompare(b.role);
+        return a.remainder > b.remainder ? -1 : 1;
+      });
+      let cursor = 0;
+      while (undistributed > 0n) {
+        ranking[cursor % ranking.length].amountMinor += 1n;
+        undistributed -= 1n;
+        cursor += 1;
+      }
+    } else if (undistributed < 0n && raw.length > 0) {
+      const ranking = [...raw].sort((a, b) => {
+        if (a.remainder === b.remainder) return b.role.localeCompare(a.role);
+        return a.remainder < b.remainder ? -1 : 1;
+      });
+      let cursor = 0;
+      while (undistributed < 0n) {
+        const row = ranking[cursor % ranking.length];
+        if (row.amountMinor > 0n) {
+          row.amountMinor -= 1n;
+          undistributed += 1n;
+        }
+        cursor += 1;
+      }
+    }
+
+    const amounts = raw.map(({ role, userId, bp, amountMinor }) => ({
+      role,
+      userId,
+      bp,
+      amountMinor,
     }));
 
-    const sum = amounts.reduce((acc, row) => acc + row.amountMinor, 0n);
-    const remainder = poolAmountMinor - sum;
-    if (remainder !== 0n && amounts.length > 0) {
-      const target = amounts.find((row) => row.role === CommissionRole.CONSULTANT) || amounts[amounts.length - 1];
-      target.amountMinor += remainder;
+    const finalSum = amounts.reduce((acc, row) => acc + row.amountMinor, 0n);
+    const finalRemainder = poolAmountMinor - finalSum;
+    if (finalRemainder !== 0n && amounts.length > 0) {
+      const target = amounts.find((row) => row.role === CommissionRole.SYSTEM) || amounts[amounts.length - 1];
+      target.amountMinor += finalRemainder;
     }
 
     return amounts;
@@ -264,7 +381,11 @@ export class CommissionService {
       let poolAmountMinor = 0n;
       if (policy.calcMethod === 'PERCENTAGE') {
         const rate = BigInt(policy.commissionRateBasisPoints ?? 0);
-        poolAmountMinor = (baseAmountMinor * rate + (BP_DENOMINATOR / 2n)) / BP_DENOMINATOR;
+        poolAmountMinor = this.divideWithRounding(
+          baseAmountMinor * rate,
+          BP_DENOMINATOR,
+          policy.roundingRule,
+        );
       } else {
         poolAmountMinor = BigInt(policy.fixedCommissionMinor ?? 0);
       }
@@ -288,6 +409,7 @@ export class CommissionService {
 
       const plan = this.buildAllocationPlan({
         poolAmountMinor,
+        roundingRule: policy.roundingRule,
         policy: {
           hunterPercentBasisPoints: policy.hunterPercentBasisPoints,
           consultantPercentBasisPoints: policy.consultantPercentBasisPoints,

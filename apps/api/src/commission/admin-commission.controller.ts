@@ -68,6 +68,11 @@ export class AdminCommissionController {
     return this.service.updateDisputeStatus(String(req.user?.sub || ''), disputeId, body);
   }
 
+  @Post('disputes/:disputeId/resolve')
+  resolveDispute(@Req() req: any, @Param('disputeId') disputeId: string, @Body() body: UpdateDisputeStatusDto) {
+    return this.service.updateDisputeStatus(String(req.user?.sub || ''), disputeId, body);
+  }
+
   @Get('period-locks')
   periodLocks() {
     return this.service.listPeriodLocks();

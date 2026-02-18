@@ -6,6 +6,11 @@
 - Silme yapılmaz, düzeltme `REVERSAL` / `ADJUSTMENT` ile yapılır.
 - `idempotencyKey` ile snapshot oluşturma idempotenttir.
 - Maker-checker: oluşturan kullanıcı onaylayamaz (override hariç).
+- Base amount precedence:
+  1. `closeSummary.commissionBaseAmount` (lead answer key üzerinden)
+  2. `listing.price`
+  3. `deal.salePrice` (modelde mevcut değilse TODO)
+  4. hiçbiri yoksa snapshot oluşturma engellenir (`Base Amount Missing`)
 
 ## Yaşam Döngüsü
 1. Deal `WON` olunca admin snapshot oluşturur.
@@ -21,6 +26,7 @@
   - `POST /admin/commission/period-locks/:lockId/release`
 - Dispute SLA escalation:
   - `POST /admin/commission/disputes/escalate-overdue`
+  - `POST /admin/commission/disputes/:disputeId/resolve` (`/status` ile aynı işlevsel endpoint)
 
 ### Period Lock Kuralı
 - Aktif kilit dönemine denk gelen işlemler engellenir:
@@ -36,9 +42,10 @@
 ## Para Hesabı
 - Tutarlar `minor units` (kuruş) olarak `BigInt` tutulur.
 - `poolAmountMinor` hesaplaması:
-  - `PERCENTAGE`: `baseAmountMinor * rateBp / 10000`
+  - `PERCENTAGE`: policy `roundingRule` kullanılarak hesaplanır (`ROUND_HALF_UP` / `BANKERS`)
   - `FIXED`: `fixedCommissionMinor`
-- Dağıtımda kalan kuruş farkı deterministik olarak CONSULTANT (yoksa son satır) payına eklenir.
+- Allocation dağıtımı deterministic largest-remainder yöntemiyle yapılır.
+- Kalan fark (teorik sapma) varsa `SYSTEM` satırına yazılır.
 
 ## Overview Formülü
 - `totalEarned` = `EARN/CREDIT` toplamı
