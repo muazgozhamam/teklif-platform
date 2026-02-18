@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import LandingShell from "@/components/landing/LandingShell";
+import ContentClamp from "@/components/landing/ContentClamp";
 import SuggestionCard from "@/components/landing/SuggestionCard";
 import StickyHeader from "@/components/chat/StickyHeader";
 import ChatComposer from "@/components/chat/ChatComposer";
@@ -279,11 +280,13 @@ export default function PublicChatPage() {
 
       {isCenteredComposer ? (
         <section className="flex flex-1 flex-col items-center justify-center">
-          <h1 className="mb-6 text-center text-3xl font-semibold tracking-tight md:text-5xl">
-            Nasıl yardımcı olabilirim?
-          </h1>
+          <ContentClamp size="hero">
+            <h1 className="mb-6 text-center text-3xl font-semibold tracking-tight md:text-5xl">
+              Nasıl yardımcı olabilirim?
+            </h1>
+          </ContentClamp>
 
-          <div className="w-full">
+          <ContentClamp size="input">
             <ChatComposer
               value={input}
               disabled={false}
@@ -307,8 +310,10 @@ export default function PublicChatPage() {
                 Kalan mesaj hakkı: {guestRemaining}
               </p>
             ) : null}
+          </ContentClamp>
 
-            {showSuggestionCard ? (
+          {showSuggestionCard ? (
+            <ContentClamp size="cards">
               <SuggestionCard
                 onTryNow={() => {
                   setComposerFocused(true);
@@ -317,8 +322,8 @@ export default function PublicChatPage() {
                 }}
                 onClose={() => setShowSuggestionCard(false)}
               />
-            ) : null}
-          </div>
+            </ContentClamp>
+          ) : null}
         </section>
       ) : (
         <>
