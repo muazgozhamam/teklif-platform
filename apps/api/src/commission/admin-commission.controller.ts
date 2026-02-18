@@ -11,6 +11,7 @@ import { CreateDisputeDto } from './dto/create-dispute.dto';
 import { UpdateDisputeStatusDto } from './dto/update-dispute-status.dto';
 import { CreatePeriodLockDto } from './dto/create-period-lock.dto';
 import { ReleasePeriodLockDto } from './dto/release-period-lock.dto';
+import { UpsertCommissionPolicyDto } from './dto/upsert-policy.dto';
 
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles('ADMIN')
@@ -76,6 +77,16 @@ export class AdminCommissionController {
   @Get('period-locks')
   periodLocks() {
     return this.service.listPeriodLocks();
+  }
+
+  @Get('policies')
+  policies() {
+    return this.service.getActivePolicy();
+  }
+
+  @Post('policies')
+  createPolicy(@Req() req: any, @Body() body: UpsertCommissionPolicyDto) {
+    return this.service.createPolicyVersion(String(req.user?.sub || ''), body || {});
   }
 
   @Post('period-locks')

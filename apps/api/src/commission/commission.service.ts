@@ -28,6 +28,7 @@ import { CreateDisputeDto } from './dto/create-dispute.dto';
 import { UpdateDisputeStatusDto } from './dto/update-dispute-status.dto';
 import { CreatePeriodLockDto } from './dto/create-period-lock.dto';
 import { ReleasePeriodLockDto } from './dto/release-period-lock.dto';
+import { UpsertCommissionPolicyDto } from './dto/upsert-policy.dto';
 
 type DateRange = { from: Date; to: Date };
 
@@ -176,6 +177,31 @@ export class CommissionService {
         isActive: true,
       },
     });
+  }
+
+  private normalizeBasisPoints(value: unknown, fieldName: string) {
+    const num = Number(value);
+    if (!Number.isFinite(num) || !Number.isInteger(num)) {
+      throw new BadRequestException(`${fieldName} geçersiz`);
+    }
+    if (num < 0) throw new BadRequestException(`${fieldName} negatif olamaz`);
+    return num;
+  }
+
+  private validateSplitTotal(policy: {
+    hunterPercentBasisPoints: number;
+    consultantPercentBasisPoints: number;
+    brokerPercentBasisPoints: number;
+    systemPercentBasisPoints: number;
+  }) {
+    const total =
+      policy.hunterPercentBasisPoints +
+      policy.consultantPercentBasisPoints +
+      policy.brokerPercentBasisPoints +
+      policy.systemPercentBasisPoints;
+    if (total !== 10_000) {
+      throw new BadRequestException(`Pay dağılım toplamı %100 olmalı (şu an: ${(total / 100).toFixed(2)}%)`);
+    }
   }
 
   private async resolveDealForSnapshot(tx: Prisma.TransactionClient, dealId: string) {
@@ -944,6 +970,135 @@ export class CommissionService {
       if (this.isMissingTableError(error, 'CommissionPeriodLock')) return [];
       throw error;
     }
+  }
+
+  async getActivePolicy() {
+    const now = new Date();
+    const active = await this.prisma.commissionPolicyVersion.findFirst({
+      where: {
+        isActive: true,
+        effectiveFrom: { lte: now },
+        OR: [{ effectiveTo: null }, { effectiveTo: { gte: now } }],
+      },
+      orderBy: { effectiveFrom: 'desc' },
+    });
+    if (!active) return null;
+    return this.jsonSafe({
+      ...active,
+      splitTotalBasisPoints:
+        active.hunterPercentBasisPoints +
+        active.consultantPercentBasisPoints +
+        active.brokerPercentBasisPoints +
+        active.systemPercentBasisPoints,
+    });
+  }
+
+  async createPolicyVersion(actorUserId: string, dto: UpsertCommissionPolicyDto) {
+    const calcMethod = String(dto.calcMethod || 'PERCENTAGE').toUpperCase();
+    if (calcMethod !== 'PERCENTAGE' && calcMethod !== 'FIXED') {
+      throw new BadRequestException('calcMethod geçersiz');
+    }
+
+    const hunterPercentBasisPoints = this.normalizeBasisPoints(
+      dto.hunterPercentBasisPoints,
+      'hunterPercentBasisPoints',
+    );
+    const consultantPercentBasisPoints = this.normalizeBasisPoints(
+      dto.consultantPercentBasisPoints,
+      'consultantPercentBasisPoints',
+    );
+    const brokerPercentBasisPoints = this.normalizeBasisPoints(
+      dto.brokerPercentBasisPoints,
+      'brokerPercentBasisPoints',
+    );
+    const systemPercentBasisPoints = this.normalizeBasisPoints(
+      dto.systemPercentBasisPoints,
+      'systemPercentBasisPoints',
+    );
+
+    this.validateSplitTotal({
+      hunterPercentBasisPoints,
+      consultantPercentBasisPoints,
+      brokerPercentBasisPoints,
+      systemPercentBasisPoints,
+    });
+
+    const commissionRateBasisPoints =
+      dto.commissionRateBasisPoints !== undefined
+        ? this.normalizeBasisPoints(dto.commissionRateBasisPoints, 'commissionRateBasisPoints')
+        : 400;
+    const fixedCommissionMinor =
+      dto.fixedCommissionMinor !== undefined && dto.fixedCommissionMinor !== null && dto.fixedCommissionMinor !== ''
+        ? this.asBigInt(dto.fixedCommissionMinor, 'fixedCommissionMinor')
+        : null;
+
+    if (calcMethod === 'PERCENTAGE' && commissionRateBasisPoints <= 0) {
+      throw new BadRequestException('commissionRateBasisPoints pozitif olmalı');
+    }
+    if (calcMethod === 'FIXED' && (!fixedCommissionMinor || fixedCommissionMinor <= 0n)) {
+      throw new BadRequestException('fixedCommissionMinor pozitif olmalı');
+    }
+
+    const effectiveFrom = dto.effectiveFrom ? new Date(dto.effectiveFrom) : new Date();
+    if (Number.isNaN(effectiveFrom.getTime())) {
+      throw new BadRequestException('effectiveFrom geçersiz');
+    }
+
+    const currency = String(dto.currency || TRY_CURRENCY).toUpperCase();
+    const roundingRule = String(dto.roundingRule || 'ROUND_HALF_UP').toUpperCase();
+    if (roundingRule !== 'ROUND_HALF_UP' && roundingRule !== 'BANKERS') {
+      throw new BadRequestException('roundingRule geçersiz');
+    }
+
+    const created = await this.prisma.$transaction(async (tx) => {
+      await tx.commissionPolicyVersion.updateMany({
+        where: { isActive: true },
+        data: {
+          isActive: false,
+          effectiveTo: new Date(effectiveFrom.getTime() - 1),
+        },
+      });
+
+      const row = await tx.commissionPolicyVersion.create({
+        data: {
+          name: (dto.name || `Policy ${effectiveFrom.toISOString().slice(0, 10)}`).trim(),
+          calcMethod: calcMethod as 'PERCENTAGE' | 'FIXED',
+          commissionRateBasisPoints: calcMethod === 'PERCENTAGE' ? commissionRateBasisPoints : null,
+          fixedCommissionMinor: calcMethod === 'FIXED' ? fixedCommissionMinor : null,
+          currency,
+          hunterPercentBasisPoints,
+          consultantPercentBasisPoints,
+          brokerPercentBasisPoints,
+          systemPercentBasisPoints,
+          roundingRule: roundingRule as CommissionRoundingRule,
+          effectiveFrom,
+          effectiveTo: null,
+          isActive: true,
+        },
+      });
+
+      await this.writeAudit(tx, {
+        action: CommissionAuditAction.SNAPSHOT_CREATED,
+        entityType: CommissionAuditEntityType.SYSTEM,
+        entityId: row.id,
+        actorUserId,
+        payload: {
+          message: 'Commission policy version created',
+          policyId: row.id,
+          calcMethod,
+          commissionRateBasisPoints: row.commissionRateBasisPoints,
+          split: {
+            hunter: row.hunterPercentBasisPoints,
+            consultant: row.consultantPercentBasisPoints,
+            broker: row.brokerPercentBasisPoints,
+            system: row.systemPercentBasisPoints,
+          },
+        },
+      });
+      return row;
+    });
+
+    return this.jsonSafe(created);
   }
 
   async createPeriodLock(actorUserId: string, dto: CreatePeriodLockDto) {
