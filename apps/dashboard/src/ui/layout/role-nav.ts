@@ -73,6 +73,7 @@ const roleSections: Record<ShellRole, NavSection[]> = {
             { href: '/admin/commission/pending', label: 'Onay Kuyruğu', icon: 'clipboard-check' },
             { href: '/admin/commission/payouts', label: 'Ödemeler', icon: 'handshake' },
             { href: '/admin/commission/disputes', label: 'Uyuşmazlıklar', icon: 'shield-check' },
+            { href: '/admin/commission/period-locks', label: 'Dönem Kilidi', icon: 'settings' },
           ],
         },
       ],

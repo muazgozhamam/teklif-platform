@@ -14,6 +14,25 @@
 4. Payout kaydı ile ledger'a `PAYOUT/DEBIT` düşülür.
 5. Reverse işlemi ledger'a `REVERSAL/DEBIT` ekler ve snapshot `REVERSED` olur.
 
+## Faz 3 Ekleri
+- Period lock:
+  - `GET /admin/commission/period-locks`
+  - `POST /admin/commission/period-locks`
+  - `POST /admin/commission/period-locks/:lockId/release`
+- Dispute SLA escalation:
+  - `POST /admin/commission/disputes/escalate-overdue`
+
+### Period Lock Kuralı
+- Aktif kilit dönemine denk gelen işlemler engellenir:
+  - snapshot create
+  - snapshot approve
+  - payout create
+  - reverse
+
+### Audit Trail (CommissionAuditEvent)
+- Snapshot, payout, dispute ve period lock işlemlerinde audit event üretilir.
+- Amaç: denetlenebilirlik ve incident sonrası iz sürme.
+
 ## Para Hesabı
 - Tutarlar `minor units` (kuruş) olarak `BigInt` tutulur.
 - `poolAmountMinor` hesaplaması:

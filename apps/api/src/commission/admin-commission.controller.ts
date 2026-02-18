@@ -9,6 +9,8 @@ import { ReverseSnapshotDto } from './dto/reverse-snapshot.dto';
 import { CreatePayoutDto } from './dto/create-payout.dto';
 import { CreateDisputeDto } from './dto/create-dispute.dto';
 import { UpdateDisputeStatusDto } from './dto/update-dispute-status.dto';
+import { CreatePeriodLockDto } from './dto/create-period-lock.dto';
+import { ReleasePeriodLockDto } from './dto/release-period-lock.dto';
 
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles('ADMIN')
@@ -64,5 +66,25 @@ export class AdminCommissionController {
   @Post('disputes/:disputeId/status')
   updateDisputeStatus(@Req() req: any, @Param('disputeId') disputeId: string, @Body() body: UpdateDisputeStatusDto) {
     return this.service.updateDisputeStatus(String(req.user?.sub || ''), disputeId, body);
+  }
+
+  @Get('period-locks')
+  periodLocks() {
+    return this.service.listPeriodLocks();
+  }
+
+  @Post('period-locks')
+  createPeriodLock(@Req() req: any, @Body() body: CreatePeriodLockDto) {
+    return this.service.createPeriodLock(String(req.user?.sub || ''), body);
+  }
+
+  @Post('period-locks/:lockId/release')
+  releasePeriodLock(@Req() req: any, @Param('lockId') lockId: string, @Body() body: ReleasePeriodLockDto) {
+    return this.service.releasePeriodLock(String(req.user?.sub || ''), lockId, body || {});
+  }
+
+  @Post('disputes/escalate-overdue')
+  escalateOverdue(@Req() req: any) {
+    return this.service.escalateOverdueDisputes(String(req.user?.sub || 'system'));
   }
 }

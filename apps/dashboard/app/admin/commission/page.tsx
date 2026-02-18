@@ -99,6 +99,10 @@ export default function AdminCommissionOverviewPage() {
           <div className="text-sm font-medium">Uyuşmazlıklar</div>
           <div className="mt-1 text-xs text-[var(--muted)]">Aktif dispute kayıtları ve durum yönetimi.</div>
         </Link>
+        <Link href="/admin/commission/period-locks" className="ui-interactive rounded-xl border border-[var(--border)] bg-[var(--card)] p-4 hover:bg-[var(--interactive-hover-bg)]">
+          <div className="text-sm font-medium">Dönem Kilidi</div>
+          <div className="mt-1 text-xs text-[var(--muted)]">Period lock ve SLA escalation yönetimi.</div>
+        </Link>
       </div>
     </RoleShell>
   );

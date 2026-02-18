@@ -5,6 +5,8 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import {
+  CommissionAuditAction,
+  CommissionAuditEntityType,
   CommissionLedgerEntryType,
   CommissionLineStatus,
   CommissionRole,
@@ -23,6 +25,8 @@ import { CreatePayoutDto } from './dto/create-payout.dto';
 import { ReverseSnapshotDto } from './dto/reverse-snapshot.dto';
 import { CreateDisputeDto } from './dto/create-dispute.dto';
 import { UpdateDisputeStatusDto } from './dto/update-dispute-status.dto';
+import { CreatePeriodLockDto } from './dto/create-period-lock.dto';
+import { ReleasePeriodLockDto } from './dto/release-period-lock.dto';
 
 type DateRange = { from: Date; to: Date };
 
@@ -199,12 +203,55 @@ export class CommissionService {
     return count > 0;
   }
 
+  private async assertPeriodNotLocked(
+    tx: Prisma.TransactionClient,
+    at: Date,
+    actionName: string,
+  ): Promise<void> {
+    const lock = await tx.commissionPeriodLock.findFirst({
+      where: {
+        isActive: true,
+        periodFrom: { lte: at },
+        periodTo: { gte: at },
+      },
+      orderBy: { periodFrom: 'desc' },
+    });
+
+    if (lock) {
+      throw new BadRequestException(
+        `${actionName} engellendi: dönem kilidi aktif (${lock.periodFrom.toISOString()} - ${lock.periodTo.toISOString()})`,
+      );
+    }
+  }
+
+  private async writeAudit(
+    tx: Prisma.TransactionClient,
+    input: {
+      action: CommissionAuditAction;
+      entityType: CommissionAuditEntityType;
+      entityId?: string | null;
+      actorUserId?: string | null;
+      payload?: Prisma.InputJsonValue;
+    },
+  ) {
+    await tx.commissionAuditEvent.create({
+      data: {
+        action: input.action,
+        entityType: input.entityType,
+        entityId: input.entityId || null,
+        actorUserId: input.actorUserId || null,
+        payloadJson: input.payload ?? Prisma.JsonNull,
+      },
+    });
+  }
+
   async createSnapshot(actorUserId: string, payload: CreateSnapshotDto) {
     const dealId = String(payload.dealId || '').trim();
     if (!dealId) throw new BadRequestException('dealId zorunlu');
 
     return this.prisma.$transaction(async (tx) => {
       const { deal, baseAmountMinor, currency, wonAt } = await this.resolveDealForSnapshot(tx, dealId);
+      await this.assertPeriodNotLocked(tx, wonAt, 'Snapshot oluşturma');
       const policy = await this.resolveActivePolicy(tx, wonAt);
 
       const key = (payload.idempotencyKey || `${dealId}:${wonAt.toISOString()}`).trim();
@@ -310,6 +357,19 @@ export class CommissionService {
         ),
       );
 
+      await this.writeAudit(tx, {
+        action: CommissionAuditAction.SNAPSHOT_CREATED,
+        entityType: CommissionAuditEntityType.SNAPSHOT,
+        entityId: snapshot.id,
+        actorUserId,
+        payload: {
+          dealId,
+          version,
+          poolAmountMinor: snapshot.poolAmountMinor.toString(),
+          allocationCount: allocations.length,
+        },
+      });
+
       return this.jsonSafe({ snapshot, allocations });
     });
   }
@@ -350,6 +410,7 @@ export class CommissionService {
       if (snapshot.createdBy === actorUserId && !dto.allowMakerCheckerOverride) {
         throw new ForbiddenException('Maker-checker kuralı: oluşturan kullanıcı onaylayamaz');
       }
+      await this.assertPeriodNotLocked(tx, new Date(), 'Snapshot onayı');
 
       const blockedByDispute = await this.hasBlockingDispute(tx, snapshot.dealId, snapshot.id);
       if (blockedByDispute) {
@@ -371,6 +432,14 @@ export class CommissionService {
         data: { status: CommissionLineStatus.APPROVED },
       });
 
+      await this.writeAudit(tx, {
+        action: CommissionAuditAction.SNAPSHOT_APPROVED,
+        entityType: CommissionAuditEntityType.SNAPSHOT,
+        entityId: snapshot.id,
+        actorUserId,
+        payload: { note: dto.note || null, actorRole: role },
+      });
+
       return this.jsonSafe(updated);
     });
   }
@@ -381,6 +450,7 @@ export class CommissionService {
     }
 
     return this.prisma.$transaction(async (tx) => {
+      await this.assertPeriodNotLocked(tx, new Date(), 'Reverse');
       const snapshot = await tx.commissionSnapshot.findUnique({
         where: { id: snapshotId },
         include: { allocations: true },
@@ -478,6 +548,18 @@ export class CommissionService {
         },
       });
 
+      await this.writeAudit(tx, {
+        action: CommissionAuditAction.SNAPSHOT_REVERSED,
+        entityType: CommissionAuditEntityType.SNAPSHOT,
+        entityId: snapshot.id,
+        actorUserId,
+        payload: {
+          reason: dto.reason,
+          reversedTotal: reversedTotal.toString(),
+          isFullReverse,
+        },
+      });
+
       return this.jsonSafe(updated);
     });
   }
@@ -542,6 +624,21 @@ export class CommissionService {
       },
     });
 
+    await this.prisma.$transaction(async (tx) => {
+      await this.writeAudit(tx, {
+        action: CommissionAuditAction.DISPUTE_CREATED,
+        entityType: CommissionAuditEntityType.DISPUTE,
+        entityId: created.id,
+        actorUserId,
+        payload: {
+          dealId: created.dealId,
+          snapshotId: created.snapshotId,
+          type: created.type,
+          status: created.status,
+        },
+      });
+    });
+
     return this.jsonSafe(created);
   }
 
@@ -561,14 +658,24 @@ export class CommissionService {
     const isResolved =
       status === CommissionDisputeStatus.RESOLVED_APPROVED || status === CommissionDisputeStatus.RESOLVED_REJECTED;
 
-    const updated = await this.prisma.commissionDispute.update({
-      where: { id: disputeId },
-      data: {
-        status,
-        resolvedAt: isResolved ? new Date() : null,
-        resolvedBy: isResolved ? actorUserId : null,
-        resolutionNote: dto.note || current.resolutionNote || null,
-      },
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const row = await tx.commissionDispute.update({
+        where: { id: disputeId },
+        data: {
+          status,
+          resolvedAt: isResolved ? new Date() : null,
+          resolvedBy: isResolved ? actorUserId : null,
+          resolutionNote: dto.note || current.resolutionNote || null,
+        },
+      });
+      await this.writeAudit(tx, {
+        action: CommissionAuditAction.DISPUTE_STATUS_CHANGED,
+        entityType: CommissionAuditEntityType.DISPUTE,
+        entityId: row.id,
+        actorUserId,
+        payload: { previous: current.status, next: row.status, note: dto.note || null },
+      });
+      return row;
     });
 
     return this.jsonSafe(updated);
@@ -580,6 +687,7 @@ export class CommissionService {
     }
 
     return this.prisma.$transaction(async (tx) => {
+      await this.assertPeriodNotLocked(tx, new Date(dto.paidAt), 'Payout');
       const allocationIds = dto.allocations.map((a) => a.allocationId);
       const allocations = await tx.commissionAllocation.findMany({
         where: { id: { in: allocationIds } },
@@ -671,7 +779,124 @@ export class CommissionService {
         });
       }
 
+      await this.writeAudit(tx, {
+        action: CommissionAuditAction.PAYOUT_CREATED,
+        entityType: CommissionAuditEntityType.PAYOUT,
+        entityId: payout.id,
+        actorUserId,
+        payload: {
+          totalAmountMinor: payout.totalAmountMinor.toString(),
+          method: payout.method,
+          allocationCount: normalized.length,
+        },
+      });
+
       return this.jsonSafe(payout);
+    });
+  }
+
+  async listPeriodLocks() {
+    const rows = await this.prisma.commissionPeriodLock.findMany({
+      include: {
+        creator: { select: { id: true, name: true, email: true, role: true } },
+        unlocker: { select: { id: true, name: true, email: true, role: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+    return this.jsonSafe(rows);
+  }
+
+  async createPeriodLock(actorUserId: string, dto: CreatePeriodLockDto) {
+    const periodFrom = new Date(dto.periodFrom);
+    const periodTo = new Date(dto.periodTo);
+    if (Number.isNaN(periodFrom.getTime()) || Number.isNaN(periodTo.getTime())) {
+      throw new BadRequestException('Geçersiz periodFrom/periodTo');
+    }
+    if (periodFrom > periodTo) {
+      throw new BadRequestException('periodFrom, periodTo değerinden büyük olamaz');
+    }
+    if (!dto.reason || !dto.reason.trim()) {
+      throw new BadRequestException('reason zorunlu');
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      const created = await tx.commissionPeriodLock.create({
+        data: {
+          periodFrom,
+          periodTo,
+          reason: dto.reason.trim(),
+          createdBy: actorUserId,
+        },
+      });
+      await this.writeAudit(tx, {
+        action: CommissionAuditAction.PERIOD_LOCK_CREATED,
+        entityType: CommissionAuditEntityType.PERIOD_LOCK,
+        entityId: created.id,
+        actorUserId,
+        payload: { periodFrom: created.periodFrom.toISOString(), periodTo: created.periodTo.toISOString() },
+      });
+      return created;
+    });
+  }
+
+  async releasePeriodLock(actorUserId: string, lockId: string, dto: ReleasePeriodLockDto) {
+    return this.prisma.$transaction(async (tx) => {
+      const lock = await tx.commissionPeriodLock.findUnique({ where: { id: lockId } });
+      if (!lock) throw new NotFoundException('Period lock bulunamadı');
+      if (!lock.isActive) return lock;
+
+      const released = await tx.commissionPeriodLock.update({
+        where: { id: lockId },
+        data: {
+          isActive: false,
+          unlockedBy: actorUserId,
+          unlockedAt: new Date(),
+          reason: dto.reason?.trim() ? `${lock.reason} | release: ${dto.reason.trim()}` : lock.reason,
+        },
+      });
+      await this.writeAudit(tx, {
+        action: CommissionAuditAction.PERIOD_LOCK_RELEASED,
+        entityType: CommissionAuditEntityType.PERIOD_LOCK,
+        entityId: released.id,
+        actorUserId,
+        payload: { unlockedAt: released.unlockedAt?.toISOString() || null },
+      });
+      return released;
+    });
+  }
+
+  async escalateOverdueDisputes(actorUserId: string) {
+    const now = new Date();
+    const rows = await this.prisma.commissionDispute.findMany({
+      where: {
+        status: { in: [CommissionDisputeStatus.OPEN, CommissionDisputeStatus.UNDER_REVIEW] },
+        slaDueAt: { lt: now },
+      },
+      select: { id: true, status: true },
+    });
+
+    if (rows.length === 0) return { escalated: 0 };
+
+    return this.prisma.$transaction(async (tx) => {
+      let escalated = 0;
+      for (const row of rows) {
+        const updated = await tx.commissionDispute.update({
+          where: { id: row.id },
+          data: {
+            status: CommissionDisputeStatus.ESCALATED,
+            resolutionNote: 'SLA overdue auto-escalation',
+          },
+        });
+        escalated += 1;
+        await this.writeAudit(tx, {
+          action: CommissionAuditAction.DISPUTE_ESCALATED,
+          entityType: CommissionAuditEntityType.DISPUTE,
+          entityId: updated.id,
+          actorUserId,
+          payload: { previous: row.status, next: updated.status, reason: 'sla_overdue' },
+        });
+      }
+      return { escalated };
     });
   }
 

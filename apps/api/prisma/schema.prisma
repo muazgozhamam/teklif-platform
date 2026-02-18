@@ -39,6 +39,9 @@ model User {
   commissionDisputesOpened    CommissionDispute[] @relation("CommissionDisputeOpenedBy")
   commissionDisputesResolved  CommissionDispute[] @relation("CommissionDisputeResolvedBy")
   commissionDisputesAgainst   CommissionDispute[] @relation("CommissionDisputeAgainstUser")
+  commissionPeriodLocksCreated CommissionPeriodLock[] @relation("CommissionPeriodLockCreatedBy")
+  commissionPeriodLocksUnlocked CommissionPeriodLock[] @relation("CommissionPeriodLockUnlockedBy")
+  commissionAuditEvents        CommissionAuditEvent[]
 }
 
 enum Role {
@@ -302,6 +305,26 @@ enum CommissionRoundingRule {
   BANKERS
 }
 
+enum CommissionAuditAction {
+  SNAPSHOT_CREATED
+  SNAPSHOT_APPROVED
+  SNAPSHOT_REVERSED
+  PAYOUT_CREATED
+  DISPUTE_CREATED
+  DISPUTE_STATUS_CHANGED
+  PERIOD_LOCK_CREATED
+  PERIOD_LOCK_RELEASED
+  DISPUTE_ESCALATED
+}
+
+enum CommissionAuditEntityType {
+  SNAPSHOT
+  PAYOUT
+  DISPUTE
+  PERIOD_LOCK
+  SYSTEM
+}
+
 model CommissionPolicyVersion {
   id                            String                 @id @default(cuid())
   name                          String
@@ -452,4 +475,36 @@ model CommissionDispute {
 
   @@index([status, slaDueAt])
   @@index([dealId, createdAt])
+}
+
+model CommissionPeriodLock {
+  id          String   @id @default(cuid())
+  periodFrom  DateTime
+  periodTo    DateTime
+  reason      String
+  isActive    Boolean  @default(true)
+  createdBy   String
+  createdAt   DateTime @default(now())
+  unlockedBy  String?
+  unlockedAt  DateTime?
+
+  creator   User  @relation("CommissionPeriodLockCreatedBy", fields: [createdBy], references: [id], onDelete: Restrict)
+  unlocker  User? @relation("CommissionPeriodLockUnlockedBy", fields: [unlockedBy], references: [id], onDelete: SetNull)
+
+  @@index([isActive, periodFrom, periodTo])
+}
+
+model CommissionAuditEvent {
+  id         String                  @id @default(cuid())
+  action     CommissionAuditAction
+  entityType CommissionAuditEntityType
+  entityId   String?
+  actorUserId String?
+  payloadJson Json?
+  createdAt  DateTime                @default(now())
+
+  actor User? @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([action, createdAt])
+  @@index([entityType, entityId])
 }
