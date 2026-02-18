@@ -69,9 +69,13 @@ export default function AdminCommissionDealDetailPage({ params }: Props) {
 
   async function reverse(snapshotId: string) {
     setError(null);
+    const reasonInput = window.prompt('Reverse nedeni', 'Admin reverse');
+    if (!reasonInput) return;
+    const amountInput = window.prompt('Kısmi reverse için amountMinor (boş bırak = full reverse)', '');
     try {
       await api.post(`/admin/commission/snapshots/${snapshotId}/reverse`, {
-        reason: 'Admin reverse',
+        reason: reasonInput,
+        amountMinor: amountInput && amountInput.trim() ? amountInput.trim() : undefined,
       });
       await load();
     } catch (e: any) {
@@ -100,7 +104,7 @@ export default function AdminCommissionDealDetailPage({ params }: Props) {
                       <div className="text-xs text-[var(--muted)]">Havuz: {formatMinorTry(s.poolAmountMinor)}</div>
                     </div>
                     <Button variant="danger" className="h-8 px-3 text-xs" onClick={() => reverse(s.id)}>
-                      Reverse
+                      Partial/Full Reverse
                     </Button>
                   </div>
                   <div className="mt-2 overflow-auto">

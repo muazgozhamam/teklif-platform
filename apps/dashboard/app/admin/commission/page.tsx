@@ -97,7 +97,7 @@ export default function AdminCommissionOverviewPage() {
         </Link>
         <Link href="/admin/commission/disputes" className="ui-interactive rounded-xl border border-[var(--border)] bg-[var(--card)] p-4 hover:bg-[var(--interactive-hover-bg)]">
           <div className="text-sm font-medium">Uyuşmazlıklar</div>
-          <div className="mt-1 text-xs text-[var(--muted)]">Faz 2 için dispute yönetimi placeholder.</div>
+          <div className="mt-1 text-xs text-[var(--muted)]">Aktif dispute kayıtları ve durum yönetimi.</div>
         </Link>
       </div>
     </RoleShell>

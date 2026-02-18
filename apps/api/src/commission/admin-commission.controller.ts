@@ -7,6 +7,8 @@ import { CreateSnapshotDto } from './dto/create-snapshot.dto';
 import { ApproveSnapshotDto } from './dto/approve-snapshot.dto';
 import { ReverseSnapshotDto } from './dto/reverse-snapshot.dto';
 import { CreatePayoutDto } from './dto/create-payout.dto';
+import { CreateDisputeDto } from './dto/create-dispute.dto';
+import { UpdateDisputeStatusDto } from './dto/update-dispute-status.dto';
 
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles('ADMIN')
@@ -47,5 +49,20 @@ export class AdminCommissionController {
   @Get('deals/:dealId')
   dealDetail(@Param('dealId') dealId: string) {
     return this.service.getDealDetail(dealId);
+  }
+
+  @Get('disputes')
+  disputes(@Query('status') status?: string) {
+    return this.service.listDisputes(status);
+  }
+
+  @Post('disputes')
+  createDispute(@Req() req: any, @Body() body: CreateDisputeDto) {
+    return this.service.createDispute(String(req.user?.sub || ''), body);
+  }
+
+  @Post('disputes/:disputeId/status')
+  updateDisputeStatus(@Req() req: any, @Param('disputeId') disputeId: string, @Body() body: UpdateDisputeStatusDto) {
+    return this.service.updateDisputeStatus(String(req.user?.sub || ''), disputeId, body);
   }
 }
