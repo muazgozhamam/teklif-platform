@@ -10,6 +10,7 @@ import { requireRole } from '@/lib/auth';
 import { Badge } from '@/src/ui/components/Badge';
 import { Button } from '@/src/ui/components/Button';
 import { Card, CardDescription, CardTitle } from '@/src/ui/components/Card';
+import { Select } from '@/src/ui/components/Select';
 
 type AdminStats = {
   role: 'ADMIN';
@@ -84,18 +85,19 @@ export default function AdminHomePage() {
       subtitle="Lead akışı, ekip operasyonu ve kritik aksiyonlar tek ekranda."
       headerControls={
         <div className="flex min-w-0 items-center gap-2">
-          <select
+          <Select
             value={targetRole}
             onChange={(e) => setTargetRole(e.target.value as 'ADMIN' | 'BROKER' | 'CONSULTANT' | 'HUNTER')}
-            className="ui-interactive h-8 min-w-0 rounded-md border border-[var(--border)] bg-transparent px-2 text-xs text-[var(--text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] md:h-9 md:w-[138px] md:px-3 md:text-sm"
+            uiSize="sm"
+            className="min-w-0 rounded-md md:h-9 md:w-[138px] md:px-3 md:text-sm"
             aria-label="Rol seç"
           >
             <option value="ADMIN">Admin</option>
             <option value="BROKER">Broker</option>
             <option value="CONSULTANT">Danışman</option>
             <option value="HUNTER">İş Ortağı</option>
-          </select>
-          <Button type="button" className="h-8 rounded-md px-3 text-xs md:h-9 md:text-sm" onClick={() => router.push(roleRoute(targetRole))}>
+          </Select>
+          <Button type="button" size="sm" className="rounded-md md:h-9 md:text-sm" onClick={() => router.push(roleRoute(targetRole))}>
             Aç
           </Button>
         </div>

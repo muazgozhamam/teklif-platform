@@ -5,10 +5,10 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '../lib/cn';
 import type { NavSection, ShellRole } from './role-nav';
-import { NavIcon } from './nav-icons';
 import NavGroupAccordion from './NavGroupAccordion';
 import { roleLabelTr } from '@/lib/roles';
 import Logo from '@/components/brand/Logo';
+import SidebarItem from './SidebarItem';
 
 export default function Sidebar({
   role,
@@ -112,25 +112,15 @@ export default function Sidebar({
                     {group.items.map((item) => {
                       const active = pathname === item.href || (item.href !== `/${role.toLowerCase()}` && pathname.startsWith(item.href));
                       return (
-                        <Link
+                        <SidebarItem
                           key={item.href}
                           href={item.href}
-                          data-active={active ? 'true' : 'false'}
-                          onClick={onNavigate}
-                          className={cn(
-                            'ui-interactive group relative flex items-center gap-2 rounded-xl border px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]',
-                            active
-                              ? 'border-[var(--interactive-active-border)] bg-[var(--interactive-active-bg)] text-[var(--text)]'
-                              : 'border-transparent text-[var(--muted)] hover:border-[var(--interactive-hover-border)] hover:bg-[var(--interactive-hover-bg)] hover:text-[var(--text)]',
-                          )}
-                        >
-                          <span className={cn('absolute left-0 top-1/2 h-4 w-[2px] -translate-y-1/2 rounded-r', active ? 'bg-[var(--primary)]' : 'bg-transparent group-hover:bg-[var(--border-2)]')} />
-                          <NavIcon name={item.icon ?? 'spark'} />
-                          <span className="min-w-0 flex-1 truncate">{item.label}</span>
-                          {item.badge ? (
-                            <span className="rounded-full border border-[var(--border)] px-1.5 py-0.5 text-[10px] text-[var(--muted)]">{item.badge}</span>
-                          ) : null}
-                        </Link>
+                          label={item.label}
+                          icon={item.icon ?? 'spark'}
+                          active={active}
+                          badge={item.badge}
+                          onNavigate={onNavigate}
+                        />
                       );
                     })}
                   </div>

@@ -5,6 +5,11 @@ import React from 'react';
 import RoleShell from '@/app/_components/RoleShell';
 import { AlertMessage } from '@/app/_components/UiFeedback';
 import { requireRole } from '@/lib/auth';
+import { Button } from '@/src/ui/components/Button';
+import { Card } from '@/src/ui/components/Card';
+import { Input } from '@/src/ui/components/Input';
+import { Select } from '@/src/ui/components/Select';
+import { Table, Td, Th } from '@/src/ui/components/Table';
 
 type AuditItem = {
   id: string;
@@ -15,7 +20,6 @@ type AuditItem = {
   canonicalEntity: string;
   entityId: string;
   actor?: { email?: string | null; role?: string | null } | null;
-  metaJson?: Record<string, unknown> | null;
 };
 
 type AuditListResponse = {
@@ -82,7 +86,7 @@ export default function AdminAuditPage() {
 
   if (!allowed) {
     return (
-      <main style={{ padding: 24, maxWidth: 960, margin: '0 auto', opacity: 0.8 }}>
+      <main className="p-6 opacity-80">
         <div>Yükleniyor…</div>
       </main>
     );
@@ -104,115 +108,103 @@ export default function AdminAuditPage() {
         { href: '/admin/commission', label: 'Komisyon' },
       ]}
     >
-      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
-        <input
-          value={q}
-          onChange={(e) => {
-            setQ(e.target.value);
-            setSkip(0);
-          }}
-          placeholder="Ara: entityId, actor email, action..."
-          style={{ padding: 10, borderRadius: 10, border: '1px solid #ddd', minWidth: 260 }}
-        />
-        <input
-          value={action}
-          onChange={(e) => {
-            setAction(e.target.value);
-            setSkip(0);
-          }}
-          placeholder="Action filtresi"
-          style={{ padding: 10, borderRadius: 10, border: '1px solid #ddd' }}
-        />
-        <input
-          value={entityType}
-          onChange={(e) => {
-            setEntityType(e.target.value);
-            setSkip(0);
-          }}
-          placeholder="Entity filtresi"
-          style={{ padding: 10, borderRadius: 10, border: '1px solid #ddd' }}
-        />
-        <select
-          value={String(take)}
-          onChange={(e) => {
-            setTake(Number(e.target.value));
-            setSkip(0);
-          }}
-          style={{ padding: 10, borderRadius: 10, border: '1px solid #ddd', background: '#fff' }}
-        >
-          <option value="20">20</option>
-          <option value="50">50</option>
-          <option value="100">100</option>
-        </select>
-        <button onClick={load} style={{ padding: '10px 12px', borderRadius: 10, border: '1px solid #ddd', background: '#fff' }} disabled={loading}>
-          Yenile
-        </button>
-      </div>
+      <Card>
+        <div className="flex flex-wrap items-center gap-2">
+          <Input
+            value={q}
+            onChange={(e) => {
+              setQ(e.target.value);
+              setSkip(0);
+            }}
+            placeholder="Ara: entityId, actor email, action..."
+            className="min-w-[220px] flex-1"
+          />
+          <Input
+            value={action}
+            onChange={(e) => {
+              setAction(e.target.value);
+              setSkip(0);
+            }}
+            placeholder="Action filtresi"
+            className="w-full sm:w-44"
+          />
+          <Input
+            value={entityType}
+            onChange={(e) => {
+              setEntityType(e.target.value);
+              setSkip(0);
+            }}
+            placeholder="Entity filtresi"
+            className="w-full sm:w-44"
+          />
+          <Select
+            value={String(take)}
+            onChange={(e) => {
+              setTake(Number(e.target.value));
+              setSkip(0);
+            }}
+            className="w-full sm:w-28"
+          >
+            <option value="20">20</option>
+            <option value="50">50</option>
+            <option value="100">100</option>
+          </Select>
+          <Button onClick={load} variant="secondary" loading={loading}>
+            Yenile
+          </Button>
+        </div>
+
+        <div className="mt-3 text-xs text-[var(--muted)]">
+          Toplam: <b className="text-[var(--text)]">{total}</b> | Sayfa: <b className="text-[var(--text)]">{page}</b>/<b className="text-[var(--text)]">{totalPages}</b>
+        </div>
+      </Card>
 
       {error ? <AlertMessage type="error" message={error} /> : null}
 
-      <div style={{ marginTop: 12, fontSize: 13, color: '#666' }}>
-        Toplam: <b>{total}</b> | Sayfa: <b>{page}</b>/<b>{totalPages}</b>
-      </div>
-
-      <div style={{ marginTop: 12, border: '1px solid #eee', borderRadius: 14, overflow: 'hidden' }}>
-        <div style={{ padding: 12, borderBottom: '1px solid #eee', background: '#fafafa', fontWeight: 600 }}>
-          {loading ? 'Yükleniyor…' : `${rows.length} kayıt`}
-        </div>
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 920 }}>
+      <Card className="mt-4 overflow-hidden p-0">
+        <div className="border-b border-[var(--border)] px-4 py-3 text-sm font-medium text-[var(--text)]">{loading ? 'Yükleniyor…' : `${rows.length} kayıt`}</div>
+        <div className="overflow-x-auto">
+          <Table className="min-w-[920px]">
             <thead>
-              <tr style={{ textAlign: 'left' }}>
-                <th style={{ padding: 12, borderBottom: '1px solid #eee' }}>Tarih</th>
-                <th style={{ padding: 12, borderBottom: '1px solid #eee' }}>Action</th>
-                <th style={{ padding: 12, borderBottom: '1px solid #eee' }}>Canonical Action</th>
-                <th style={{ padding: 12, borderBottom: '1px solid #eee' }}>Entity</th>
-                <th style={{ padding: 12, borderBottom: '1px solid #eee' }}>Canonical Entity</th>
-                <th style={{ padding: 12, borderBottom: '1px solid #eee' }}>Entity ID</th>
-                <th style={{ padding: 12, borderBottom: '1px solid #eee' }}>Actor</th>
+              <tr>
+                <Th>Tarih</Th>
+                <Th>Action</Th>
+                <Th>Canonical Action</Th>
+                <Th>Entity</Th>
+                <Th>Canonical Entity</Th>
+                <Th>Entity ID</Th>
+                <Th>Actor</Th>
               </tr>
             </thead>
             <tbody>
               {rows.map((r) => (
-                <tr key={r.id}>
-                  <td style={{ padding: 12, borderBottom: '1px solid #f3f3f3', whiteSpace: 'nowrap' }}>{new Date(r.createdAt).toLocaleString()}</td>
-                  <td style={{ padding: 12, borderBottom: '1px solid #f3f3f3' }}>{r.action}</td>
-                  <td style={{ padding: 12, borderBottom: '1px solid #f3f3f3' }}>{r.canonicalAction}</td>
-                  <td style={{ padding: 12, borderBottom: '1px solid #f3f3f3' }}>{r.entity}</td>
-                  <td style={{ padding: 12, borderBottom: '1px solid #f3f3f3' }}>{r.canonicalEntity}</td>
-                  <td style={{ padding: 12, borderBottom: '1px solid #f3f3f3' }}>
-                    <code>{r.entityId}</code>
-                  </td>
-                  <td style={{ padding: 12, borderBottom: '1px solid #f3f3f3' }}>{r.actor?.email || r.actor?.role || '-'}</td>
+                <tr key={r.id} className="hover:bg-[var(--interactive-hover-bg)]">
+                  <Td className="whitespace-nowrap">{new Date(r.createdAt).toLocaleString()}</Td>
+                  <Td>{r.action}</Td>
+                  <Td>{r.canonicalAction}</Td>
+                  <Td>{r.entity}</Td>
+                  <Td>{r.canonicalEntity}</Td>
+                  <Td><code>{r.entityId}</code></Td>
+                  <Td>{r.actor?.email || r.actor?.role || '-'}</Td>
                 </tr>
               ))}
-              {!loading && rows.length === 0 && (
+              {!loading && rows.length === 0 ? (
                 <tr>
-                  <td colSpan={7} style={{ padding: 16, color: '#666' }}>
-                    Kayıt bulunamadı.
-                  </td>
+                  <Td colSpan={7} className="text-[var(--muted)]">Kayıt bulunamadı.</Td>
                 </tr>
-              )}
+              ) : null}
             </tbody>
-          </table>
+          </Table>
         </div>
-      </div>
+      </Card>
 
-      <div style={{ marginTop: 12, display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-        <button
-          onClick={() => setSkip((s) => Math.max(s - take, 0))}
-          disabled={loading || skip <= 0}
-          style={{ padding: '8px 12px', borderRadius: 10, border: '1px solid #ddd', background: '#fff' }}
-        >
+      <div className="mt-3 flex justify-end gap-2">
+        <Button onClick={() => setSkip((s) => Math.max(s - take, 0))} variant="secondary" disabled={loading || skip <= 0}>
           Önceki
-        </button>
-        <button
-          onClick={() => setSkip((s) => s + take)}
-          disabled={loading || skip + take >= total}
-          style={{ padding: '8px 12px', borderRadius: 10, border: '1px solid #ddd', background: '#fff' }}
-        >
+        </Button>
+        <Button onClick={() => setSkip((s) => s + take)} variant="secondary" disabled={loading || skip + take >= total}>
           Sonraki
-        </button>
+        </Button>
       </div>
     </RoleShell>
   );

@@ -7,6 +7,7 @@ import { Card, CardDescription, CardTitle } from '@/src/ui/components/Card';
 import { Input } from '@/src/ui/components/Input';
 import { Button } from '@/src/ui/components/Button';
 import { Alert } from '@/src/ui/components/Alert';
+import { Select } from '@/src/ui/components/Select';
 import { api } from '@/lib/api';
 
 const API_ROOT = '/api/admin/commission';
@@ -76,15 +77,14 @@ export default function AdminCommissionPayoutsPage() {
         <div className="mt-3 grid gap-3 md:grid-cols-3">
           <div>
             <label className="mb-1 block text-xs text-[var(--muted)]">Ödeme Yöntemi</label>
-            <select
+            <Select
               value={method}
               onChange={(e) => setMethod(e.target.value as 'BANK_TRANSFER' | 'CASH' | 'OTHER')}
-              className="ui-interactive h-10 w-full rounded-xl border border-[var(--border)] bg-[var(--card)] px-3 text-sm"
             >
               <option value="BANK_TRANSFER">Banka Transferi</option>
               <option value="CASH">Nakit</option>
               <option value="OTHER">Diğer</option>
-            </select>
+            </Select>
           </div>
           <div className="md:col-span-2">
             <label className="mb-1 block text-xs text-[var(--muted)]">Referans No (opsiyonel)</label>

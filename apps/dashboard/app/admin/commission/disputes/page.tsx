@@ -6,6 +6,8 @@ import RoleShell from '@/app/_components/RoleShell';
 import { Card, CardDescription, CardTitle } from '@/src/ui/components/Card';
 import { Alert } from '@/src/ui/components/Alert';
 import { Button } from '@/src/ui/components/Button';
+import { Input } from '@/src/ui/components/Input';
+import { Select } from '@/src/ui/components/Select';
 import { api } from '@/lib/api';
 
 const API_ROOT = '/api/admin/commission';
@@ -95,16 +97,16 @@ export default function AdminCommissionDisputesPage() {
         <CardTitle>Yeni Dispute</CardTitle>
         <CardDescription>Deal bazında uyuşmazlık açıp SLA takibini başlat.</CardDescription>
         <form className="mt-3 grid gap-3 md:grid-cols-2" onSubmit={createDispute}>
-          <input className="rounded-xl border border-[var(--border)] bg-[var(--card)] px-3 py-2 text-sm" value={dealId} onChange={(e) => setDealId(e.target.value)} placeholder="dealId (zorunlu)" required />
-          <input className="rounded-xl border border-[var(--border)] bg-[var(--card)] px-3 py-2 text-sm" value={snapshotId} onChange={(e) => setSnapshotId(e.target.value)} placeholder="snapshotId (opsiyonel)" />
-          <input className="rounded-xl border border-[var(--border)] bg-[var(--card)] px-3 py-2 text-sm" value={againstUserId} onChange={(e) => setAgainstUserId(e.target.value)} placeholder="againstUserId (opsiyonel)" />
-          <select className="rounded-xl border border-[var(--border)] bg-[var(--card)] px-3 py-2 text-sm" value={type} onChange={(e) => setType(e.target.value as any)}>
+          <Input value={dealId} onChange={(e) => setDealId(e.target.value)} placeholder="dealId (zorunlu)" required />
+          <Input value={snapshotId} onChange={(e) => setSnapshotId(e.target.value)} placeholder="snapshotId (opsiyonel)" />
+          <Input value={againstUserId} onChange={(e) => setAgainstUserId(e.target.value)} placeholder="againstUserId (opsiyonel)" />
+          <Select value={type} onChange={(e) => setType(e.target.value as any)}>
             <option value="OTHER">OTHER</option>
             <option value="ATTRIBUTION">ATTRIBUTION</option>
             <option value="AMOUNT">AMOUNT</option>
             <option value="ROLE">ROLE</option>
-          </select>
-          <input className="rounded-xl border border-[var(--border)] bg-[var(--card)] px-3 py-2 text-sm md:col-span-2" value={note} onChange={(e) => setNote(e.target.value)} placeholder="Not (opsiyonel)" />
+          </Select>
+          <Input className="md:col-span-2" value={note} onChange={(e) => setNote(e.target.value)} placeholder="Not (opsiyonel)" />
           <div className="md:col-span-2">
             <Button type="submit" className="h-9 px-4 text-sm">Dispute Aç</Button>
           </div>
@@ -146,7 +148,7 @@ export default function AdminCommissionDisputesPage() {
                         <Button className="h-8 px-3 text-xs" onClick={() => setStatus(row.id, 'UNDER_REVIEW')} disabled={busyId === row.id}>İncelemede</Button>
                         <Button variant="secondary" className="h-8 px-3 text-xs" onClick={() => setStatus(row.id, 'ESCALATED')} disabled={busyId === row.id}>Escalate</Button>
                         <Button variant="primary" className="h-8 px-3 text-xs" onClick={() => setStatus(row.id, 'RESOLVED_APPROVED')} disabled={busyId === row.id}>Kabul</Button>
-                        <Button variant="danger" className="h-8 px-3 text-xs" onClick={() => setStatus(row.id, 'RESOLVED_REJECTED')} disabled={busyId === row.id}>Red</Button>
+                        <Button variant="destructive" className="h-8 px-3 text-xs" onClick={() => setStatus(row.id, 'RESOLVED_REJECTED')} disabled={busyId === row.id}>Red</Button>
                       </div>
                     </td>
                   </tr>

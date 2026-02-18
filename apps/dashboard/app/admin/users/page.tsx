@@ -5,6 +5,12 @@ import React from 'react';
 import RoleShell from '@/app/_components/RoleShell';
 import { AlertMessage } from '@/app/_components/UiFeedback';
 import { requireRole } from '@/lib/auth';
+import { Badge } from '@/src/ui/components/Badge';
+import { Button } from '@/src/ui/components/Button';
+import { Card } from '@/src/ui/components/Card';
+import { Input } from '@/src/ui/components/Input';
+import { Select } from '@/src/ui/components/Select';
+import { Table, Td, Th } from '@/src/ui/components/Table';
 
 type Role = 'USER' | 'BROKER' | 'ADMIN' | 'CONSULTANT' | 'HUNTER';
 
@@ -70,7 +76,7 @@ export default function AdminUsersPage() {
 
   if (!allowed) {
     return (
-      <main style={{ padding: 24, maxWidth: 960, margin: '0 auto', opacity: 0.8 }}>
+      <main className="p-6 opacity-80">
         <div>Yükleniyor…</div>
       </main>
     );
@@ -81,7 +87,7 @@ export default function AdminUsersPage() {
     setError(null);
 
     const prev = rows;
-    setRows(prev.map(r => (r.id === userId ? { ...r, ...patch } : r)));
+    setRows(prev.map((r) => (r.id === userId ? { ...r, ...patch } : r)));
 
     try {
       await api(`/api/admin/users/${userId}`, {
@@ -109,92 +115,75 @@ export default function AdminUsersPage() {
         { href: '/admin/commission', label: 'Komisyon' },
       ]}
     >
-      <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-        <button
-          onClick={load}
-          style={{ padding: '10px 14px', borderRadius: 10, border: '1px solid #ddd', background: 'white' }}
-          disabled={loading}
-        >
-          Yenile
-        </button>
-      </div>
-
-      <div style={{ marginTop: 12 }}>
-        <input
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          placeholder="Email/isim ara..."
-          style={{ width: 320, maxWidth: '100%', padding: 10, borderRadius: 10, border: '1px solid #ddd' }}
-        />
-      </div>
+      <Card>
+        <div className="flex flex-wrap items-center gap-2">
+          <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Email/isim ara..." className="max-w-md" />
+          <Button onClick={load} variant="secondary" loading={loading}>
+            Yenile
+          </Button>
+        </div>
+      </Card>
 
       {error ? <AlertMessage type="error" message={error} /> : null}
 
-      <div style={{ marginTop: 16, border: '1px solid #eee', borderRadius: 14, overflow: 'hidden' }}>
-        <div style={{ padding: 12, borderBottom: '1px solid #eee', background: '#fafafa', fontWeight: 600 }}>
-          {loading ? 'Yükleniyor…' : `${rows.length} kullanıcı`}
-        </div>
-
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-          <thead>
-            <tr style={{ textAlign: 'left', background: 'white' }}>
-              <th style={{ padding: 12, borderBottom: '1px solid #eee' }}>E-posta</th>
-              <th style={{ padding: 12, borderBottom: '1px solid #eee' }}>İsim</th>
-              <th style={{ padding: 12, borderBottom: '1px solid #eee' }}>Rol</th>
-              <th style={{ padding: 12, borderBottom: '1px solid #eee' }}>Durum</th>
-              <th style={{ padding: 12, borderBottom: '1px solid #eee' }}>Oluşturulma</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map(u => (
-              <tr key={u.id}>
-                <td style={{ padding: 12, borderBottom: '1px solid #f1f1f1' }}>{u.email}</td>
-                <td style={{ padding: 12, borderBottom: '1px solid #f1f1f1' }}>{u.name || '-'}</td>
-                <td style={{ padding: 12, borderBottom: '1px solid #f1f1f1' }}>
-                  <select
-                    value={(u.role as Role) || 'USER'}
-                    onChange={(e) => patchUser(u.id, { role: e.target.value as Role })}
-                    disabled={savingId === u.id}
-                    style={{ padding: '8px 10px', borderRadius: 10, border: '1px solid #ddd', background: 'white' }}
-                  >
-                    <option value="USER">Kullanıcı (USER)</option>
-                    <option value="BROKER">Broker (BROKER)</option>
-                    <option value="CONSULTANT">Danışman (CONSULTANT)</option>
-                    <option value="HUNTER">Hunter (HUNTER)</option>
-                    <option value="ADMIN">Yönetici (ADMIN)</option>
-                  </select>
-                  {savingId === u.id && <span style={{ marginLeft: 10, opacity: 0.7 }}>Kaydediliyor…</span>}
-                </td>
-                <td style={{ padding: 12, borderBottom: '1px solid #f1f1f1' }}>
-                  <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-                    <input
-                      type="checkbox"
-                      checked={Boolean(u.isActive)}
-                      onChange={(e) => patchUser(u.id, { isActive: e.target.checked })}
-                      disabled={savingId === u.id}
-                    />
-                    <span>{u.isActive ? 'Aktif' : 'Pasif'}</span>
-                  </label>
-                </td>
-                <td style={{ padding: 12, borderBottom: '1px solid #f1f1f1' }}>
-                  {u.createdAt ? new Date(u.createdAt).toLocaleString() : '-'}
-                </td>
-              </tr>
-            ))}
-            {!loading && rows.length === 0 && (
+      <Card className="mt-4 overflow-hidden p-0">
+        <div className="border-b border-[var(--border)] px-4 py-3 text-sm font-medium text-[var(--text)]">{loading ? 'Yükleniyor…' : `${rows.length} kullanıcı`}</div>
+        <div className="overflow-x-auto">
+          <Table className="min-w-[860px]">
+            <thead>
               <tr>
-                <td colSpan={5} style={{ padding: 16, opacity: 0.7 }}>
-                  Kayıt yok.
-                </td>
+                <Th>E-posta</Th>
+                <Th>İsim</Th>
+                <Th>Rol</Th>
+                <Th>Durum</Th>
+                <Th>Oluşturulma</Th>
               </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      <p style={{ marginTop: 12, opacity: 0.7 }}>
-        Eğer 401 görürsen, login sonrası cookie/token adı proxy tarafından yakalanmıyor demektir; onu da bir sonraki script ile otomatik fixleyeceğim.
-      </p>
+            </thead>
+            <tbody>
+              {rows.map((u) => (
+                <tr key={u.id} className="hover:bg-[var(--interactive-hover-bg)]">
+                  <Td>{u.email}</Td>
+                  <Td>{u.name || '-'}</Td>
+                  <Td>
+                    <div className="flex items-center gap-2">
+                      <Select
+                        value={(u.role as Role) || 'USER'}
+                        onChange={(e) => patchUser(u.id, { role: e.target.value as Role })}
+                        disabled={savingId === u.id}
+                        uiSize="sm"
+                        className="max-w-[220px]"
+                      >
+                        <option value="USER">Kullanıcı (USER)</option>
+                        <option value="BROKER">Broker (BROKER)</option>
+                        <option value="CONSULTANT">Danışman (CONSULTANT)</option>
+                        <option value="HUNTER">Hunter (HUNTER)</option>
+                        <option value="ADMIN">Yönetici (ADMIN)</option>
+                      </Select>
+                      {savingId === u.id ? <span className="text-xs text-[var(--muted)]">Kaydediliyor…</span> : null}
+                    </div>
+                  </Td>
+                  <Td>
+                    <button
+                      type="button"
+                      onClick={() => patchUser(u.id, { isActive: !u.isActive })}
+                      disabled={savingId === u.id}
+                      className="ui-interactive rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
+                    >
+                      <Badge variant={u.isActive ? 'success' : 'neutral'}>{u.isActive ? 'Aktif' : 'Pasif'}</Badge>
+                    </button>
+                  </Td>
+                  <Td>{u.createdAt ? new Date(u.createdAt).toLocaleString() : '-'}</Td>
+                </tr>
+              ))}
+              {!loading && rows.length === 0 ? (
+                <tr>
+                  <Td colSpan={5} className="text-[var(--muted)]">Kayıt yok.</Td>
+                </tr>
+              ) : null}
+            </tbody>
+          </Table>
+        </div>
+      </Card>
     </RoleShell>
   );
 }

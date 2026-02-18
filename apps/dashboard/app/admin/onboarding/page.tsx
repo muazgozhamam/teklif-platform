@@ -5,6 +5,11 @@ import React from 'react';
 import RoleShell from '@/app/_components/RoleShell';
 import { AlertMessage } from '@/app/_components/UiFeedback';
 import { requireRole } from '@/lib/auth';
+import { Badge } from '@/src/ui/components/Badge';
+import { Button } from '@/src/ui/components/Button';
+import { Card } from '@/src/ui/components/Card';
+import { Select } from '@/src/ui/components/Select';
+import { Table, Td, Th } from '@/src/ui/components/Table';
 
 type OnboardingItem = {
   user: {
@@ -88,7 +93,7 @@ export default function AdminOnboardingPage() {
 
   if (!allowed) {
     return (
-      <main style={{ padding: 24, maxWidth: 960, margin: '0 auto', opacity: 0.8 }}>
+      <main className="p-6 opacity-80">
         <div>Yükleniyor…</div>
       </main>
     );
@@ -99,11 +104,11 @@ export default function AdminOnboardingPage() {
   const canPrev = skip > 0;
   const canNext = skip + take < total;
 
-  function colorForPct(v: number) {
-    if (v >= 100) return '#1e7b34';
-    if (v >= 66) return '#2f6feb';
-    if (v >= 33) return '#9a6700';
-    return '#cf222e';
+  function variantForPct(v: number): 'danger' | 'warning' | 'primary' | 'success' {
+    if (v >= 100) return 'success';
+    if (v >= 66) return 'primary';
+    if (v >= 33) return 'warning';
+    return 'danger';
   }
 
   return (
@@ -119,140 +124,97 @@ export default function AdminOnboardingPage() {
         { href: '/admin/commission', label: 'Komisyon' },
       ]}
     >
-      <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-        <button
-          onClick={load}
-          style={{ padding: '10px 14px', borderRadius: 10, border: '1px solid #ddd', background: 'white' }}
-          disabled={loading}
-        >
-          Yenile
-        </button>
-      </div>
-
-      <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-        <select
-          value={role}
-          onChange={(e) => {
-            setRole(e.target.value);
-            setSkip(0);
-          }}
-          style={{ padding: '10px 12px', borderRadius: 10, border: '1px solid #ddd', background: 'white' }}
-        >
-          <option value="ALL">Tümü</option>
-          <option value="HUNTER">Hunter</option>
-          <option value="BROKER">Broker</option>
-          <option value="CONSULTANT">Danışman</option>
-        </select>
-        <select
-          value={String(take)}
-          onChange={(e) => {
-            setTake(Number(e.target.value));
-            setSkip(0);
-          }}
-          style={{ padding: '10px 12px', borderRadius: 10, border: '1px solid #ddd', background: 'white' }}
-        >
-          <option value="10">10</option>
-          <option value="20">20</option>
-          <option value="50">50</option>
-        </select>
-        <div style={{ opacity: 0.7, fontSize: 13 }}>
-          Toplam: <b>{total}</b> | Sayfa: <b>{pageIndex}</b>/<b>{totalPages}</b>
+      <Card>
+        <div className="flex flex-wrap items-center gap-2">
+          <Select
+            value={role}
+            onChange={(e) => {
+              setRole(e.target.value);
+              setSkip(0);
+            }}
+            className="w-full sm:w-44"
+          >
+            <option value="ALL">Tümü</option>
+            <option value="HUNTER">Hunter</option>
+            <option value="BROKER">Broker</option>
+            <option value="CONSULTANT">Danışman</option>
+          </Select>
+          <Select
+            value={String(take)}
+            onChange={(e) => {
+              setTake(Number(e.target.value));
+              setSkip(0);
+            }}
+            className="w-full sm:w-28"
+          >
+            <option value="10">10</option>
+            <option value="20">20</option>
+            <option value="50">50</option>
+          </Select>
+          <Button onClick={load} variant="secondary" loading={loading}>
+            Yenile
+          </Button>
+          <div className="text-xs text-[var(--muted)]">
+            Toplam: <b className="text-[var(--text)]">{total}</b> | Sayfa: <b className="text-[var(--text)]">{pageIndex}</b>/<b className="text-[var(--text)]">{totalPages}</b>
+          </div>
         </div>
-      </div>
+      </Card>
 
       {error ? <AlertMessage type="error" message={error} /> : null}
 
-      <div style={{ marginTop: 16, border: '1px solid #eee', borderRadius: 14, overflow: 'hidden' }}>
-        <div style={{ padding: 12, borderBottom: '1px solid #eee', background: '#fafafa', fontWeight: 600 }}>
-          {loading ? 'Yükleniyor…' : `${rows.length} uyum kaydı`}
-        </div>
-
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-          <thead>
-            <tr style={{ textAlign: 'left', background: 'white' }}>
-              <th style={{ padding: 12, borderBottom: '1px solid #eee' }}>E-posta</th>
-              <th style={{ padding: 12, borderBottom: '1px solid #eee' }}>Rol</th>
-              <th style={{ padding: 12, borderBottom: '1px solid #eee' }}>Durum</th>
-              <th style={{ padding: 12, borderBottom: '1px solid #eee' }}>Tamamlama</th>
-              <th style={{ padding: 12, borderBottom: '1px solid #eee' }}>Kontrol Listesi</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((r) => (
-              <tr key={r.user.id}>
-                <td style={{ padding: 12, borderBottom: '1px solid #f1f1f1' }}>{r.user.email}</td>
-                <td style={{ padding: 12, borderBottom: '1px solid #f1f1f1' }}>{r.user.role}</td>
-                <td style={{ padding: 12, borderBottom: '1px solid #f1f1f1' }}>{r.user.isActive ? 'Aktif' : 'Pasif'}</td>
-                <td style={{ padding: 12, borderBottom: '1px solid #f1f1f1' }}>
-                  <span
-                    style={{
-                      display: 'inline-block',
-                      minWidth: 66,
-                      padding: '6px 10px',
-                      borderRadius: 999,
-                      border: '1px solid #ddd',
-                      color: colorForPct(r.completionPct),
-                    }}
-                  >
-                    %{r.completionPct}
-                  </span>
-                </td>
-                <td style={{ padding: 12, borderBottom: '1px solid #f1f1f1' }}>
-                  {r.checklist.length === 0 ? (
-                    <span style={{ opacity: 0.65 }}>Yok</span>
-                  ) : (
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                      {r.checklist.map((c) => (
-                        <span
-                          key={`${r.user.id}-${c.key}`}
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: 6,
-                            padding: '6px 10px',
-                            borderRadius: 999,
-                            border: '1px solid #e5e5e5',
-                            background: c.done ? '#ecfdf3' : '#fff7ed',
-                            color: c.done ? '#166534' : '#9a3412',
-                            fontSize: 12,
-                          }}
-                          title={c.label}
-                        >
-                          {c.done ? '✓' : '•'} {c.key}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </td>
-              </tr>
-            ))}
-            {!loading && rows.length === 0 && (
+      <Card className="mt-4 overflow-hidden p-0">
+        <div className="border-b border-[var(--border)] px-4 py-3 text-sm font-medium text-[var(--text)]">{loading ? 'Yükleniyor…' : `${rows.length} uyum kaydı`}</div>
+        <div className="overflow-x-auto">
+          <Table className="min-w-[920px]">
+            <thead>
               <tr>
-                <td colSpan={5} style={{ padding: 16, opacity: 0.7 }}>
-                  Kayıt yok.
-                </td>
+                <Th>E-posta</Th>
+                <Th>Rol</Th>
+                <Th>Durum</Th>
+                <Th>Tamamlama</Th>
+                <Th>Kontrol Listesi</Th>
               </tr>
-            )}
-          </tbody>
-        </table>
-
-        <div style={{ padding: 12, display: 'flex', gap: 8, justifyContent: 'flex-end', borderTop: '1px solid #eee' }}>
-          <button
-            onClick={() => setSkip((v) => Math.max(v - take, 0))}
-            disabled={loading || !canPrev}
-            style={{ padding: '8px 12px', borderRadius: 10, border: '1px solid #ddd', background: 'white' }}
-          >
-            Önceki
-          </button>
-          <button
-            onClick={() => setSkip((v) => v + take)}
-            disabled={loading || !canNext}
-            style={{ padding: '8px 12px', borderRadius: 10, border: '1px solid #ddd', background: 'white' }}
-          >
-            Sonraki
-          </button>
+            </thead>
+            <tbody>
+              {rows.map((r) => (
+                <tr key={r.user.id} className="hover:bg-[var(--interactive-hover-bg)]">
+                  <Td>{r.user.email}</Td>
+                  <Td>{r.user.role}</Td>
+                  <Td><Badge variant={r.user.isActive ? 'success' : 'neutral'}>{r.user.isActive ? 'Aktif' : 'Pasif'}</Badge></Td>
+                  <Td><Badge variant={variantForPct(r.completionPct)}> %{r.completionPct}</Badge></Td>
+                  <Td>
+                    {r.checklist.length === 0 ? (
+                      <span className="text-xs text-[var(--muted)]">Yok</span>
+                    ) : (
+                      <div className="flex flex-wrap gap-2">
+                        {r.checklist.map((c) => (
+                          <Badge key={`${r.user.id}-${c.key}`} variant={c.done ? 'success' : 'warning'} className="text-[11px]">
+                            {c.done ? '✓' : '•'} {c.key}
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
+                  </Td>
+                </tr>
+              ))}
+              {!loading && rows.length === 0 ? (
+                <tr>
+                  <Td colSpan={5} className="text-[var(--muted)]">Kayıt yok.</Td>
+                </tr>
+              ) : null}
+            </tbody>
+          </Table>
         </div>
-      </div>
+
+        <div className="flex justify-end gap-2 border-t border-[var(--border)] px-4 py-3">
+          <Button onClick={() => setSkip((v) => Math.max(v - take, 0))} variant="secondary" disabled={loading || !canPrev}>
+            Önceki
+          </Button>
+          <Button onClick={() => setSkip((v) => v + take)} variant="secondary" disabled={loading || !canNext}>
+            Sonraki
+          </Button>
+        </div>
+      </Card>
     </RoleShell>
   );
 }

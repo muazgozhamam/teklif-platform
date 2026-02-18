@@ -5,6 +5,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/src/ui/components/Button';
 import { Input } from '@/src/ui/components/Input';
 import { Card } from '@/src/ui/components/Card';
+import { Select } from '@/src/ui/components/Select';
 import { getDefaultRange, getRangeFromSearch, type DatePreset, isoDate } from './performance-utils';
 
 export default function PerformanceFilterBar() {
@@ -59,16 +60,15 @@ export default function PerformanceFilterBar() {
       <div className="grid gap-3 md:grid-cols-[190px_1fr_1fr_1fr_auto] md:items-end">
         <div className="grid gap-1">
           <label className="text-xs text-[var(--muted)]">Aralık</label>
-          <select
+          <Select
             value={preset}
             onChange={(e) => applyPreset(e.target.value as DatePreset)}
-            className="ui-interactive h-10 rounded-xl border border-[var(--border)] bg-[var(--card)] px-3 text-sm text-[var(--text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
           >
             <option value="7d">Son 7 gün</option>
             <option value="30d">Son 30 gün</option>
             <option value="month">Bu ay</option>
             <option value="custom">Özel</option>
-          </select>
+          </Select>
         </div>
         <div className="grid gap-1">
           <label className="text-xs text-[var(--muted)]">Başlangıç</label>

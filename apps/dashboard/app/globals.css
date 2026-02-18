@@ -44,17 +44,6 @@ select:focus {
   transition-timing-function: ease;
 }
 
-.ui-interactive:hover {
-  background: var(--interactive-hover-bg);
-  border-color: var(--interactive-hover-border);
-}
-
-.ui-interactive:active,
-.ui-interactive[data-active='true'] {
-  background: var(--interactive-active-bg);
-  border-color: var(--interactive-active-border);
-}
-
 .ui-interactive:focus-visible {
   outline: none;
   box-shadow: 0 0 0 2px var(--focus-ring);
