@@ -42,7 +42,7 @@ export default function LandingHeader() {
             aria-label="SatDedi ana sayfa"
             className="shrink-0"
           >
-            <Logo size="md" />
+            <Logo size="md" className="text-2xl md:text-[1.75rem]" />
           </Link>
 
           <nav className="hidden items-center gap-2 md:flex" aria-label="Landing üst aksiyonlar">
