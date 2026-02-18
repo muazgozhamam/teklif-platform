@@ -7,6 +7,9 @@ import RoleShell from '@/app/_components/RoleShell';
 import { AlertMessage } from '@/app/_components/UiFeedback';
 import { api } from '@/lib/api';
 import { requireRole } from '@/lib/auth';
+import { Badge } from '@/src/ui/components/Badge';
+import { Button } from '@/src/ui/components/Button';
+import { Card, CardDescription, CardTitle } from '@/src/ui/components/Card';
 
 type AdminStats = {
   role: 'ADMIN';
@@ -59,7 +62,7 @@ export default function AdminHomePage() {
 
   if (!allowed) {
     return (
-      <main style={{ padding: 24, maxWidth: 960, margin: '0 auto', opacity: 0.8 }}>
+      <main className="mx-auto max-w-5xl p-6 opacity-80">
         <div>Yükleniyor…</div>
       </main>
     );
@@ -78,21 +81,23 @@ export default function AdminHomePage() {
         { href: '/admin/commission', label: 'Komisyon' },
       ]}
     >
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(180px,1fr))', gap: 10, marginBottom: 12 }}>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <KpiCard label="Toplam Kullanıcı" value={stats?.usersTotal ?? 0} loading={statsLoading} />
         <KpiCard label="Toplam Lead" value={stats?.leadsTotal ?? 0} loading={statsLoading} />
         <KpiCard label="Toplam Deal" value={stats?.dealsTotal ?? 0} loading={statsLoading} />
         <KpiCard label="Toplam İlan" value={stats?.listingsTotal ?? 0} loading={statsLoading} />
       </div>
+
       {statsErr ? <AlertMessage type="error" message={statsErr} /> : null}
-      <section style={{ border: '1px solid #e2dbd1', borderRadius: 16, padding: 16, background: '#fff', marginBottom: 12 }}>
-        <div style={{ fontWeight: 700, color: '#1f1b16', marginBottom: 6 }}>Rol Ekranına Geçiş</div>
-        <div style={{ color: '#6f665c', fontSize: 13, marginBottom: 10 }}>Rol seç ve ilgili paneli aç.</div>
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+
+      <Card className="mt-4">
+        <CardTitle>Rol Ekranına Geçiş</CardTitle>
+        <CardDescription>Rol seç ve ilgili paneli aç.</CardDescription>
+        <div className="mt-3 flex flex-wrap items-center gap-2">
           <select
             value={targetRole}
             onChange={(e) => setTargetRole(e.target.value as 'ADMIN' | 'BROKER' | 'CONSULTANT' | 'HUNTER')}
-            style={{ border: '1px solid #d8cdbc', borderRadius: 10, padding: '10px 12px', minWidth: 200, background: '#fff' }}
+            className="h-10 min-w-52 rounded-xl border border-[var(--border)] bg-[var(--card)] px-3 text-sm text-[var(--text)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--primary)]"
             aria-label="Rol seç"
           >
             <option value="ADMIN">Admin</option>
@@ -100,81 +105,60 @@ export default function AdminHomePage() {
             <option value="CONSULTANT">Danışman</option>
             <option value="HUNTER">İş Ortağı</option>
           </select>
-          <button
-            type="button"
-            onClick={() => router.push(roleRoute(targetRole))}
-            style={{ border: '1px solid #d8cdbc', borderRadius: 10, padding: '10px 14px', background: '#f8f3ec', color: '#5c3b12', fontWeight: 700, cursor: 'pointer' }}
-          >
-            Ekranı Aç
-          </button>
+          <Button type="button" onClick={() => router.push(roleRoute(targetRole))}>Ekranı Aç</Button>
         </div>
-      </section>
+      </Card>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(320px,1fr))', gap: 12 }}>
-        <section style={{ border: '1px solid #e2dbd1', borderRadius: 16, padding: 16, background: '#fff' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+      <div className="mt-4 grid grid-cols-1 gap-4 xl:grid-cols-2">
+        <Card>
+          <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <h2 style={{ margin: 0, fontSize: 18, color: '#1f1b16' }}>Operasyon Kuyruğu</h2>
-              <p style={{ margin: '6px 0 0', fontSize: 13, color: '#6f665c' }}>Günlük kritik iş listesi ve hızlı yönlendirmeler.</p>
+              <CardTitle>Operasyon Kuyruğu</CardTitle>
+              <CardDescription>Günlük kritik iş listesi ve hızlı yönlendirmeler.</CardDescription>
             </div>
-            <span style={{ fontSize: 12, borderRadius: 999, border: '1px solid #e5ded1', background: '#f8f3ec', color: '#7a6f62', padding: '3px 9px' }}>
-              Öncelik: Orta
-            </span>
+            <Badge variant="warning">Öncelik: Orta</Badge>
           </div>
-
-          <div style={{ marginTop: 14, display: 'grid', gap: 10 }}>
-            <QueueRow title="Onay bekleyen iş ortağı başvuruları" note="Hunter ekranına erişim için rol atamalarını doğrula." ctaHref="/admin/onboarding" ctaLabel="Uyum Süreci" />
+          <div className="mt-4 grid gap-2.5">
+            <QueueRow title="Onay bekleyen iş ortağı başvuruları" note="İş ortağı ekranına erişim için rol atamalarını doğrula." ctaHref="/admin/onboarding" ctaLabel="Uyum Süreci" />
             <QueueRow title="Rol değişikliği talepleri" note="Kullanıcı rol güncellemeleri ve parola yenilemeleri." ctaHref="/admin/users" ctaLabel="Kullanıcılar" />
             <QueueRow title="Denetim kayıtlarında son 24 saat" note="Kritik aksiyonlar ve başarısız işlemler." ctaHref="/admin/audit" ctaLabel="Denetim" />
           </div>
-        </section>
+        </Card>
 
-        <section style={{ border: '1px solid #e2dbd1', borderRadius: 16, padding: 16, background: '#fff' }}>
-          <h2 style={{ margin: 0, fontSize: 18, color: '#1f1b16' }}>Hızlı Aksiyonlar</h2>
-          <p style={{ margin: '6px 0 12px', fontSize: 13, color: '#6f665c' }}>En sık yapılan yönetim işlemleri.</p>
-          <div style={{ display: 'grid', gap: 8 }}>
+        <Card>
+          <CardTitle>Hızlı Aksiyonlar</CardTitle>
+          <CardDescription>En sık yapılan yönetim işlemleri.</CardDescription>
+          <div className="mt-4 grid gap-2">
             <QuickAction href="/admin/users" label="Yeni kullanıcı oluştur / rol değiştir" />
             <QuickAction href="/admin/onboarding" label="Başvuru durumlarını güncelle" />
             <QuickAction href="/admin/commission" label="Komisyon dağılımını düzenle" />
             <QuickAction href="/admin/audit" label="İşlem loglarını incele" />
           </div>
-        </section>
+        </Card>
       </div>
 
-      <div style={{ marginTop: 12, display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))', gap: 12 }}>
-        <StatusCard
-          title="Dönüşüm Sağlığı"
-          value={computeConversion(stats?.dealsTotal ?? 0, stats?.leadsTotal ?? 0)}
-          hint="Deal / Lead"
-        />
-        <StatusCard
-          title="Portföy Yoğunluğu"
-          value={computeDensity(stats?.listingsTotal ?? 0, stats?.usersTotal ?? 0)}
-          hint="İlan / Kullanıcı"
-        />
-        <StatusCard
-          title="Operasyon Durumu"
-          value="Stabil"
-          hint="API ve panel erişimi aktif"
-        />
+      <div className="mt-4 grid grid-cols-1 gap-3 lg:grid-cols-3">
+        <StatusCard title="Dönüşüm Sağlığı" value={computeConversion(stats?.dealsTotal ?? 0, stats?.leadsTotal ?? 0)} hint="Deal / Lead" />
+        <StatusCard title="Portföy Yoğunluğu" value={computeDensity(stats?.listingsTotal ?? 0, stats?.usersTotal ?? 0)} hint="İlan / Kullanıcı" />
+        <StatusCard title="Operasyon Durumu" value="Stabil" hint="API ve panel erişimi aktif" />
       </div>
 
-      <div style={{ marginTop: 12, display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))', gap: 12 }}>
-        <Link href="/admin/users" style={linkCardStyle}>
-          <div style={{ fontWeight: 700 }}>Kullanıcı Yönetimi</div>
-          <div style={linkNoteStyle}>Rol, aktif/pasif ve kullanıcı düzenlemeleri.</div>
+      <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <Link href="/admin/users" className={linkCardClass}>
+          <div className="font-semibold">Kullanıcı Yönetimi</div>
+          <div className="mt-1 text-xs text-[var(--muted)]">Rol, aktif/pasif ve kullanıcı düzenlemeleri.</div>
         </Link>
-        <Link href="/admin/onboarding" style={linkCardStyle}>
-          <div style={{ fontWeight: 700 }}>Uyum Süreci</div>
-          <div style={linkNoteStyle}>Rol bazlı onboarding ilerlemesini görüntüle.</div>
+        <Link href="/admin/onboarding" className={linkCardClass}>
+          <div className="font-semibold">Uyum Süreci</div>
+          <div className="mt-1 text-xs text-[var(--muted)]">Rol bazlı onboarding ilerlemesini görüntüle.</div>
         </Link>
-        <Link href="/admin/audit" style={linkCardStyle}>
-          <div style={{ fontWeight: 700 }}>Denetim Kayıtları</div>
-          <div style={linkNoteStyle}>Aksiyonları ham ve kanonik alanlarla incele.</div>
+        <Link href="/admin/audit" className={linkCardClass}>
+          <div className="font-semibold">Denetim Kayıtları</div>
+          <div className="mt-1 text-xs text-[var(--muted)]">Aksiyonları ham ve kanonik alanlarla incele.</div>
         </Link>
-        <Link href="/admin/commission" style={linkCardStyle}>
-          <div style={{ fontWeight: 700 }}>Komisyon Ayarları</div>
-          <div style={linkNoteStyle}>Temel komisyon oranı ve dağılım yüzdeleri.</div>
+        <Link href="/admin/commission" className={linkCardClass}>
+          <div className="font-semibold">Komisyon Ayarları</div>
+          <div className="mt-1 text-xs text-[var(--muted)]">Temel komisyon oranı ve dağılım yüzdeleri.</div>
         </Link>
       </div>
     </RoleShell>
@@ -183,30 +167,20 @@ export default function AdminHomePage() {
 
 function KpiCard({ label, value, loading }: { label: string; value: number; loading: boolean }) {
   return (
-    <div style={{ border: '1px solid #eee', borderRadius: 12, padding: 12, background: '#fff' }}>
-      <div style={{ fontSize: 12, color: '#666' }}>{label}</div>
-      <div style={{ fontSize: 'clamp(22px, 5vw, 26px)', fontWeight: 800, minHeight: 36 }}>{loading ? '…' : value}</div>
-    </div>
+    <Card className="p-4">
+      <div className="text-xs text-[var(--muted)]">{label}</div>
+      <div className="mt-1 text-[clamp(22px,5vw,28px)] font-semibold leading-none text-[var(--text)]">{loading ? '…' : value}</div>
+    </Card>
   );
 }
 
-function QueueRow({
-  title,
-  note,
-  ctaHref,
-  ctaLabel,
-}: {
-  title: string;
-  note: string;
-  ctaHref: string;
-  ctaLabel: string;
-}) {
+function QueueRow({ title, note, ctaHref, ctaLabel }: { title: string; note: string; ctaHref: string; ctaLabel: string }) {
   return (
-    <div style={{ border: '1px solid #ece7df', borderRadius: 12, padding: 12, background: '#fffdf9' }}>
-      <div style={{ fontWeight: 700, color: '#1f1b16', fontSize: 14 }}>{title}</div>
-      <div style={{ marginTop: 5, color: '#6f665c', fontSize: 12 }}>{note}</div>
-      <div style={{ marginTop: 8 }}>
-        <Link href={ctaHref} style={{ fontSize: 12, color: '#5c3b12', textDecoration: 'underline', textUnderlineOffset: 2 }}>
+    <div className="rounded-xl border border-[var(--border)] bg-[var(--card-2)] p-3">
+      <div className="text-sm font-medium text-[var(--text)]">{title}</div>
+      <div className="mt-1 text-xs text-[var(--muted)]">{note}</div>
+      <div className="mt-2">
+        <Link href={ctaHref} className="text-xs text-[var(--primary)] hover:underline">
           {ctaLabel}
         </Link>
       </div>
@@ -216,19 +190,7 @@ function QueueRow({
 
 function QuickAction({ href, label }: { href: string; label: string }) {
   return (
-    <Link
-      href={href}
-      style={{
-        textDecoration: 'none',
-        border: '1px solid #e2dbd1',
-        borderRadius: 12,
-        padding: '10px 12px',
-        color: '#2f2a24',
-        background: '#fff',
-        fontSize: 13,
-        fontWeight: 600,
-      }}
-    >
+    <Link href={href} className="rounded-xl border border-[var(--border)] bg-[var(--card-2)] px-3 py-2 text-sm text-[var(--text)] transition-colors hover:border-[var(--border-2)]">
       {label}
     </Link>
   );
@@ -236,11 +198,11 @@ function QuickAction({ href, label }: { href: string; label: string }) {
 
 function StatusCard({ title, value, hint }: { title: string; value: string; hint: string }) {
   return (
-    <div style={{ border: '1px solid #e2dbd1', borderRadius: 14, padding: 14, background: '#fff' }}>
-      <div style={{ fontSize: 12, color: '#6f665c' }}>{title}</div>
-      <div style={{ marginTop: 6, fontSize: 20, fontWeight: 800, color: '#1f1b16' }}>{value}</div>
-      <div style={{ marginTop: 4, fontSize: 12, color: '#8a8072' }}>{hint}</div>
-    </div>
+    <Card className="p-4">
+      <div className="text-xs text-[var(--muted)]">{title}</div>
+      <div className="mt-1 text-xl font-semibold text-[var(--text)]">{value}</div>
+      <div className="mt-1 text-xs text-[var(--muted-2)]">{hint}</div>
+    </Card>
   );
 }
 
@@ -261,17 +223,4 @@ function roleRoute(role: 'ADMIN' | 'BROKER' | 'CONSULTANT' | 'HUNTER') {
   return '/admin';
 }
 
-const linkCardStyle: React.CSSProperties = {
-  textDecoration: 'none',
-  color: '#1f1b16',
-  border: '1px solid #e2dbd1',
-  borderRadius: 14,
-  padding: 16,
-  background: '#fff',
-};
-
-const linkNoteStyle: React.CSSProperties = {
-  marginTop: 6,
-  opacity: 0.75,
-  fontSize: 13,
-};
+const linkCardClass = 'rounded-2xl border border-[var(--border)] bg-[var(--card)] p-4 text-[var(--text)] transition-colors hover:border-[var(--border-2)]';

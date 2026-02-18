@@ -5,6 +5,8 @@ import Link from 'next/link';
 import RoleShell from '@/app/_components/RoleShell';
 import { requireRole } from '@/lib/auth';
 import { api } from '@/lib/api';
+import { Badge } from '@/src/ui/components/Badge';
+import { Card, CardDescription, CardTitle } from '@/src/ui/components/Card';
 
 type HunterLead = {
   id: string;
@@ -25,10 +27,7 @@ export default function HunterDashboardPage() {
       const res = await api.get<HunterLead[]>('/hunter/leads');
       setRows(Array.isArray(res.data) ? res.data : []);
     } catch (e: unknown) {
-      const msg =
-        e && typeof e === 'object' && 'message' in e
-          ? String((e as { message?: string }).message || '')
-          : '';
+      const msg = e && typeof e === 'object' && 'message' in e ? String((e as { message?: string }).message || '') : '';
       setError(msg || 'İstatistik alınamadı');
     } finally {
       setLoading(false);
@@ -48,7 +47,7 @@ export default function HunterDashboardPage() {
 
   if (!allowed) {
     return (
-      <main style={{ padding: 24, maxWidth: 960, margin: '0 auto', opacity: 0.8 }}>
+      <main className="mx-auto max-w-5xl p-6 opacity-80">
         <div>Yükleniyor…</div>
       </main>
     );
@@ -65,57 +64,56 @@ export default function HunterDashboardPage() {
         { href: '/hunter/leads/new', label: 'Yeni Lead' },
       ]}
     >
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(170px,1fr))', gap: 10, marginBottom: 12 }}>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <KpiCard label="Toplam Lead" value={total} loading={loading} />
         <KpiCard label="Açık Lead" value={open} loading={loading} />
         <KpiCard label="İşlemde" value={inProgress} loading={loading} />
         <KpiCard label="Tamamlanan" value={completed} loading={loading} />
       </div>
-      {error ? <div style={{ marginBottom: 12, color: 'crimson' }}>{error}</div> : null}
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(320px,1fr))', gap: 12 }}>
-        <section style={{ border: '1px solid #e2dbd1', borderRadius: 16, padding: 16, background: '#fff' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+      {error ? <div className="mt-3 rounded-xl border border-[color-mix(in_srgb,var(--danger)_40%,transparent)] bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] px-3 py-2 text-sm text-[var(--danger)]">{error}</div> : null}
+
+      <div className="mt-4 grid grid-cols-1 gap-4 xl:grid-cols-2">
+        <Card>
+          <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <h2 style={{ margin: 0, fontSize: 18, color: '#1f1b16' }}>Operasyon Kuyruğu</h2>
-              <p style={{ margin: '6px 0 0', fontSize: 13, color: '#6f665c' }}>Yeni lead gönder, durumları izle, broker dönüşünü hızlandır.</p>
+              <CardTitle>Operasyon Kuyruğu</CardTitle>
+              <CardDescription>Yeni lead gönder, durumları izle, broker dönüşünü hızlandır.</CardDescription>
             </div>
-            <span style={{ fontSize: 12, borderRadius: 999, border: '1px solid #e5ded1', background: '#f8f3ec', color: '#7a6f62', padding: '3px 9px' }}>
-              Hedef: Düzenli giriş
-            </span>
+            <Badge variant="warning">Hedef: Düzenli giriş</Badge>
           </div>
 
-          <div style={{ marginTop: 14, display: 'grid', gap: 10 }}>
+          <div className="mt-4 grid gap-2.5">
             <QueueRow title="Yeni lead oluştur" note="Detaylı ve temiz lead notu bırak." ctaHref="/hunter/leads/new" ctaLabel="Yeni Lead" />
             <QueueRow title="Gönderilen lead durumlarını kontrol et" note="Açık / işlemde / tamamlandı takibi." ctaHref="/hunter/leads" ctaLabel="Leadlerim" />
             <QueueRow title="Düşük dönüşümde input kalitesini artır" note="Konum ve ihtiyaç bilgisini net gir." ctaHref="/hunter/leads/new" ctaLabel="Lead Kalitesi" />
           </div>
-        </section>
+        </Card>
 
-        <section style={{ border: '1px solid #e2dbd1', borderRadius: 16, padding: 16, background: '#fff' }}>
-          <h2 style={{ margin: 0, fontSize: 18, color: '#1f1b16' }}>Hızlı Aksiyonlar</h2>
-          <p style={{ margin: '6px 0 12px', fontSize: 13, color: '#6f665c' }}>Günlük çalışma kısayolları.</p>
-          <div style={{ display: 'grid', gap: 8 }}>
+        <Card>
+          <CardTitle>Hızlı Aksiyonlar</CardTitle>
+          <CardDescription>Günlük çalışma kısayolları.</CardDescription>
+          <div className="mt-4 grid gap-2">
             <QuickAction href="/hunter/leads/new" label="Hemen lead gönder" />
             <QuickAction href="/hunter/leads" label="Leadlerimi aç" />
           </div>
-        </section>
+        </Card>
       </div>
 
-      <div style={{ marginTop: 12, display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))', gap: 12 }}>
+      <div className="mt-4 grid grid-cols-1 gap-3 lg:grid-cols-3">
         <StatusCard title="Tamamlanma Oranı" value={computeRate(completed, total)} hint="Tamamlanan / Toplam Lead" />
         <StatusCard title="Aktif Takip" value={computeRate(open + inProgress, total)} hint="Açık+İşlemde / Toplam" />
         <StatusCard title="Operasyon Durumu" value="Aktif" hint="Lead gönderim hattı açık" />
       </div>
 
-      <div style={{ marginTop: 12, display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))', gap: 12 }}>
-        <Link href="/hunter/leads/new" style={linkCardStyle}>
-          <div style={{ fontWeight: 700 }}>Lead Gönder</div>
-          <div style={linkNoteStyle}>Yeni müşteri talebi oluştur.</div>
+      <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <Link href="/hunter/leads/new" className={linkCardClass}>
+          <div className="font-semibold">Lead Gönder</div>
+          <div className="mt-1 text-xs text-[var(--muted)]">Yeni müşteri talebi oluştur.</div>
         </Link>
-        <Link href="/hunter/leads" style={linkCardStyle}>
-          <div style={{ fontWeight: 700 }}>Leadlerimi Gör</div>
-          <div style={linkNoteStyle}>Gönderilen kayıtların durumunu izle.</div>
+        <Link href="/hunter/leads" className={linkCardClass}>
+          <div className="font-semibold">Leadlerimi Gör</div>
+          <div className="mt-1 text-xs text-[var(--muted)]">Gönderilen kayıtların durumunu izle.</div>
         </Link>
       </div>
     </RoleShell>
@@ -124,30 +122,20 @@ export default function HunterDashboardPage() {
 
 function KpiCard({ label, value, loading }: { label: string; value: number; loading: boolean }) {
   return (
-    <div style={{ border: '1px solid #eee', borderRadius: 12, padding: 12, background: '#fff' }}>
-      <div style={{ fontSize: 12, color: '#666' }}>{label}</div>
-      <div style={{ fontSize: 'clamp(21px, 5vw, 24px)', fontWeight: 800, minHeight: 34 }}>{loading ? '…' : value}</div>
-    </div>
+    <Card className="p-4">
+      <div className="text-xs text-[var(--muted)]">{label}</div>
+      <div className="mt-1 text-[clamp(22px,5vw,28px)] font-semibold leading-none text-[var(--text)]">{loading ? '…' : value}</div>
+    </Card>
   );
 }
 
-function QueueRow({
-  title,
-  note,
-  ctaHref,
-  ctaLabel,
-}: {
-  title: string;
-  note: string;
-  ctaHref: string;
-  ctaLabel: string;
-}) {
+function QueueRow({ title, note, ctaHref, ctaLabel }: { title: string; note: string; ctaHref: string; ctaLabel: string }) {
   return (
-    <div style={{ border: '1px solid #ece7df', borderRadius: 12, padding: 12, background: '#fffdf9' }}>
-      <div style={{ fontWeight: 700, color: '#1f1b16', fontSize: 14 }}>{title}</div>
-      <div style={{ marginTop: 5, color: '#6f665c', fontSize: 12 }}>{note}</div>
-      <div style={{ marginTop: 8 }}>
-        <Link href={ctaHref} style={{ fontSize: 12, color: '#5c3b12', textDecoration: 'underline', textUnderlineOffset: 2 }}>
+    <div className="rounded-xl border border-[var(--border)] bg-[var(--card-2)] p-3">
+      <div className="text-sm font-medium text-[var(--text)]">{title}</div>
+      <div className="mt-1 text-xs text-[var(--muted)]">{note}</div>
+      <div className="mt-2">
+        <Link href={ctaHref} className="text-xs text-[var(--primary)] hover:underline">
           {ctaLabel}
         </Link>
       </div>
@@ -157,19 +145,7 @@ function QueueRow({
 
 function QuickAction({ href, label }: { href: string; label: string }) {
   return (
-    <Link
-      href={href}
-      style={{
-        textDecoration: 'none',
-        border: '1px solid #e2dbd1',
-        borderRadius: 12,
-        padding: '10px 12px',
-        color: '#2f2a24',
-        background: '#fff',
-        fontSize: 13,
-        fontWeight: 600,
-      }}
-    >
+    <Link href={href} className="rounded-xl border border-[var(--border)] bg-[var(--card-2)] px-3 py-2 text-sm text-[var(--text)] transition-colors hover:border-[var(--border-2)]">
       {label}
     </Link>
   );
@@ -177,11 +153,11 @@ function QuickAction({ href, label }: { href: string; label: string }) {
 
 function StatusCard({ title, value, hint }: { title: string; value: string; hint: string }) {
   return (
-    <div style={{ border: '1px solid #e2dbd1', borderRadius: 14, padding: 14, background: '#fff' }}>
-      <div style={{ fontSize: 12, color: '#6f665c' }}>{title}</div>
-      <div style={{ marginTop: 6, fontSize: 20, fontWeight: 800, color: '#1f1b16' }}>{value}</div>
-      <div style={{ marginTop: 4, fontSize: 12, color: '#8a8072' }}>{hint}</div>
-    </div>
+    <Card className="p-4">
+      <div className="text-xs text-[var(--muted)]">{title}</div>
+      <div className="mt-1 text-xl font-semibold text-[var(--text)]">{value}</div>
+      <div className="mt-1 text-xs text-[var(--muted-2)]">{hint}</div>
+    </Card>
   );
 }
 
@@ -190,17 +166,4 @@ function computeRate(part: number, total: number) {
   return `%${Math.round((part / total) * 100)}`;
 }
 
-const linkCardStyle: React.CSSProperties = {
-  textDecoration: 'none',
-  color: '#1f1b16',
-  border: '1px solid #e2dbd1',
-  borderRadius: 14,
-  padding: 16,
-  background: '#fff',
-};
-
-const linkNoteStyle: React.CSSProperties = {
-  marginTop: 6,
-  opacity: 0.75,
-  fontSize: 13,
-};
+const linkCardClass = 'rounded-2xl border border-[var(--border)] bg-[var(--card)] p-4 text-[var(--text)] transition-colors hover:border-[var(--border-2)]';

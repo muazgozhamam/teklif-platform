@@ -1,10 +1,9 @@
 @import "tailwindcss";
 @reference "tailwindcss";
-@import "./theme.css";
+@import "../src/ui/theme/tokens.css";
 
-/* Small, neutral defaults */
 :root {
-  color-scheme: light;
+  color-scheme: dark light;
 }
 
 .font-montserrat {
@@ -16,8 +15,8 @@ html, body {
 }
 
 body {
-  background: var(--color-bg);
-  color: var(--color-text-primary);
+  background: var(--bg);
+  color: var(--text);
   font-size: var(--font-body-size);
   line-height: var(--font-body-line);
   @apply antialiased;

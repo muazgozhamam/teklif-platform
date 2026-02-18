@@ -4,6 +4,8 @@ import React from 'react';
 import Link from 'next/link';
 import RoleShell from '@/app/_components/RoleShell';
 import { api } from '@/lib/api';
+import { Badge } from '@/src/ui/components/Badge';
+import { Card, CardDescription, CardTitle } from '@/src/ui/components/Card';
 
 type BrokerStats = {
   role: 'BROKER';
@@ -54,65 +56,63 @@ export default function BrokerRootPage() {
         { href: '/broker', label: 'Panel' },
         { href: '/broker/leads/pending', label: 'Bekleyen Leadler' },
         { href: '/broker/deals/new', label: 'Yeni Deal' },
-        { href: '/broker/hunter-applications', label: 'Hunter Başvuruları' },
+        { href: '/broker/hunter-applications', label: 'İş Ortağı Başvuruları' },
       ]}
     >
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(180px,1fr))', gap: 10, marginBottom: 12 }}>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <KpiCard label="Bekleyen Lead" value={stats?.leadsPending ?? 0} loading={statsLoading} />
         <KpiCard label="Onaylı Lead" value={stats?.leadsApproved ?? 0} loading={statsLoading} />
         <KpiCard label="Oluşan Deal" value={stats?.dealsCreated ?? 0} loading={statsLoading} />
         <KpiCard label="Onay Oranı" value={computeApproval(stats?.leadsApproved ?? 0, stats?.leadsPending ?? 0)} loading={statsLoading} />
       </div>
-      {statsErr ? <div style={{ marginBottom: 12, color: 'crimson' }}>{statsErr}</div> : null}
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(320px,1fr))', gap: 12 }}>
-        <section style={{ border: '1px solid #e2dbd1', borderRadius: 16, padding: 16, background: '#fff' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+      {statsErr ? <div className="mt-3 rounded-xl border border-[color-mix(in_srgb,var(--danger)_40%,transparent)] bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] px-3 py-2 text-sm text-[var(--danger)]">{statsErr}</div> : null}
+
+      <div className="mt-4 grid grid-cols-1 gap-4 xl:grid-cols-2">
+        <Card>
+          <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <h2 style={{ margin: 0, fontSize: 18, color: '#1f1b16' }}>Operasyon Kuyruğu</h2>
-              <p style={{ margin: '6px 0 0', fontSize: 13, color: '#6f665c' }}>Anlık onay, deal ve başvuru iş akışı.</p>
+              <CardTitle>Operasyon Kuyruğu</CardTitle>
+              <CardDescription>Anlık onay, deal ve başvuru iş akışı.</CardDescription>
             </div>
-            <span style={{ fontSize: 12, borderRadius: 999, border: '1px solid #e5ded1', background: '#f8f3ec', color: '#7a6f62', padding: '3px 9px' }}>
-              Hedef: Hızlı dönüş
-            </span>
+            <Badge variant="warning">Hedef: Hızlı dönüş</Badge>
           </div>
-
-          <div style={{ marginTop: 14, display: 'grid', gap: 10 }}>
+          <div className="mt-4 grid gap-2.5">
             <QueueRow title="Bekleyen lead’leri onayla / reddet" note="Pipeline akışını güncel tut." ctaHref="/broker/leads/pending" ctaLabel="Lead Kuyruğu" />
             <QueueRow title="Deal oluştur ve danışmana devret" note="Lead’den deal’e geçiş süresini kısalt." ctaHref="/broker/deals/new" ctaLabel="Yeni Deal" />
-            <QueueRow title="Hunter başvurularını değerlendir" note="Ağa yeni iş ortağı ekleme kalitesini artır." ctaHref="/broker/hunter-applications" ctaLabel="Başvurular" />
+            <QueueRow title="İş ortağı başvurularını değerlendir" note="Ağa yeni iş ortağı ekleme kalitesini artır." ctaHref="/broker/hunter-applications" ctaLabel="Başvurular" />
           </div>
-        </section>
+        </Card>
 
-        <section style={{ border: '1px solid #e2dbd1', borderRadius: 16, padding: 16, background: '#fff' }}>
-          <h2 style={{ margin: 0, fontSize: 18, color: '#1f1b16' }}>Hızlı Aksiyonlar</h2>
-          <p style={{ margin: '6px 0 12px', fontSize: 13, color: '#6f665c' }}>Broker günlük akış kısayolları.</p>
-          <div style={{ display: 'grid', gap: 8 }}>
+        <Card>
+          <CardTitle>Hızlı Aksiyonlar</CardTitle>
+          <CardDescription>Broker günlük akış kısayolları.</CardDescription>
+          <div className="mt-4 grid gap-2">
             <QuickAction href="/broker/leads/pending" label="Bekleyen lead listesini aç" />
             <QuickAction href="/broker/deals/new" label="Yeni deal oluştur" />
-            <QuickAction href="/broker/hunter-applications" label="Hunter başvurularını incele" />
+            <QuickAction href="/broker/hunter-applications" label="İş ortağı başvurularını incele" />
           </div>
-        </section>
+        </Card>
       </div>
 
-      <div style={{ marginTop: 12, display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))', gap: 12 }}>
+      <div className="mt-4 grid grid-cols-1 gap-3 lg:grid-cols-3">
         <StatusCard title="Dönüşüm Sağlığı" value={computePipeline(stats?.dealsCreated ?? 0, stats?.leadsApproved ?? 0)} hint="Deal / Onaylı Lead" />
         <StatusCard title="İnceleme Hızı" value={statsLoading ? '…' : (stats?.leadsPending ?? 0) > 20 ? 'Dikkat' : 'İyi'} hint="Bekleyen lead yoğunluğu" />
-        <StatusCard title="Ağ Operasyonu" value="Aktif" hint="Hunter başvuru değerlendirme açık" />
+        <StatusCard title="Ağ Operasyonu" value="Aktif" hint="İş ortağı başvuru değerlendirme açık" />
       </div>
 
-      <div style={{ marginTop: 12, display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))', gap: 12 }}>
-        <Link href="/broker/leads/pending" style={linkCardStyle}>
-          <div style={{ fontWeight: 700 }}>Lead Kuyruğu</div>
-          <div style={linkNoteStyle}>Onay bekleyen lead’leri aç.</div>
+      <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        <Link href="/broker/leads/pending" className={linkCardClass}>
+          <div className="font-semibold">Lead Kuyruğu</div>
+          <div className="mt-1 text-xs text-[var(--muted)]">Onay bekleyen lead’leri aç.</div>
         </Link>
-        <Link href="/broker/deals/new" style={linkCardStyle}>
-          <div style={{ fontWeight: 700 }}>Deal Oluştur</div>
-          <div style={linkNoteStyle}>Manuel deal oluşturma akışı.</div>
+        <Link href="/broker/deals/new" className={linkCardClass}>
+          <div className="font-semibold">Deal Oluştur</div>
+          <div className="mt-1 text-xs text-[var(--muted)]">Manuel deal oluşturma akışı.</div>
         </Link>
-        <Link href="/broker/hunter-applications" style={linkCardStyle}>
-          <div style={{ fontWeight: 700 }}>Hunter Başvuruları</div>
-          <div style={linkNoteStyle}>Ağ başvurularını gözden geçir.</div>
+        <Link href="/broker/hunter-applications" className={linkCardClass}>
+          <div className="font-semibold">İş Ortağı Başvuruları</div>
+          <div className="mt-1 text-xs text-[var(--muted)]">Ağ başvurularını gözden geçir.</div>
         </Link>
       </div>
     </RoleShell>
@@ -121,30 +121,20 @@ export default function BrokerRootPage() {
 
 function KpiCard({ label, value, loading }: { label: string; value: number | string; loading: boolean }) {
   return (
-    <div style={{ border: '1px solid #eee', borderRadius: 12, padding: 12, background: '#fff' }}>
-      <div style={{ fontSize: 12, color: '#666' }}>{label}</div>
-      <div style={{ fontSize: 'clamp(22px, 5vw, 26px)', fontWeight: 800, minHeight: 36 }}>{loading ? '…' : value}</div>
-    </div>
+    <Card className="p-4">
+      <div className="text-xs text-[var(--muted)]">{label}</div>
+      <div className="mt-1 text-[clamp(22px,5vw,28px)] font-semibold leading-none text-[var(--text)]">{loading ? '…' : value}</div>
+    </Card>
   );
 }
 
-function QueueRow({
-  title,
-  note,
-  ctaHref,
-  ctaLabel,
-}: {
-  title: string;
-  note: string;
-  ctaHref: string;
-  ctaLabel: string;
-}) {
+function QueueRow({ title, note, ctaHref, ctaLabel }: { title: string; note: string; ctaHref: string; ctaLabel: string }) {
   return (
-    <div style={{ border: '1px solid #ece7df', borderRadius: 12, padding: 12, background: '#fffdf9' }}>
-      <div style={{ fontWeight: 700, color: '#1f1b16', fontSize: 14 }}>{title}</div>
-      <div style={{ marginTop: 5, color: '#6f665c', fontSize: 12 }}>{note}</div>
-      <div style={{ marginTop: 8 }}>
-        <Link href={ctaHref} style={{ fontSize: 12, color: '#5c3b12', textDecoration: 'underline', textUnderlineOffset: 2 }}>
+    <div className="rounded-xl border border-[var(--border)] bg-[var(--card-2)] p-3">
+      <div className="text-sm font-medium text-[var(--text)]">{title}</div>
+      <div className="mt-1 text-xs text-[var(--muted)]">{note}</div>
+      <div className="mt-2">
+        <Link href={ctaHref} className="text-xs text-[var(--primary)] hover:underline">
           {ctaLabel}
         </Link>
       </div>
@@ -154,19 +144,7 @@ function QueueRow({
 
 function QuickAction({ href, label }: { href: string; label: string }) {
   return (
-    <Link
-      href={href}
-      style={{
-        textDecoration: 'none',
-        border: '1px solid #e2dbd1',
-        borderRadius: 12,
-        padding: '10px 12px',
-        color: '#2f2a24',
-        background: '#fff',
-        fontSize: 13,
-        fontWeight: 600,
-      }}
-    >
+    <Link href={href} className="rounded-xl border border-[var(--border)] bg-[var(--card-2)] px-3 py-2 text-sm text-[var(--text)] transition-colors hover:border-[var(--border-2)]">
       {label}
     </Link>
   );
@@ -174,11 +152,11 @@ function QuickAction({ href, label }: { href: string; label: string }) {
 
 function StatusCard({ title, value, hint }: { title: string; value: string; hint: string }) {
   return (
-    <div style={{ border: '1px solid #e2dbd1', borderRadius: 14, padding: 14, background: '#fff' }}>
-      <div style={{ fontSize: 12, color: '#6f665c' }}>{title}</div>
-      <div style={{ marginTop: 6, fontSize: 20, fontWeight: 800, color: '#1f1b16' }}>{value}</div>
-      <div style={{ marginTop: 4, fontSize: 12, color: '#8a8072' }}>{hint}</div>
-    </div>
+    <Card className="p-4">
+      <div className="text-xs text-[var(--muted)]">{title}</div>
+      <div className="mt-1 text-xl font-semibold text-[var(--text)]">{value}</div>
+      <div className="mt-1 text-xs text-[var(--muted-2)]">{hint}</div>
+    </Card>
   );
 }
 
@@ -188,22 +166,9 @@ function computeApproval(approved: number, pending: number) {
   return `%${Math.round((approved / total) * 100)}`;
 }
 
-function computePipeline(deals: number, approved: number) {
-  if (!approved) return '%0';
-  return `%${Math.round((deals / approved) * 100)}`;
+function computePipeline(deals: number, approvedLeads: number) {
+  if (!approvedLeads) return '%0';
+  return `%${Math.round((deals / approvedLeads) * 100)}`;
 }
 
-const linkCardStyle: React.CSSProperties = {
-  textDecoration: 'none',
-  color: '#1f1b16',
-  border: '1px solid #e2dbd1',
-  borderRadius: 14,
-  padding: 16,
-  background: '#fff',
-};
-
-const linkNoteStyle: React.CSSProperties = {
-  marginTop: 6,
-  opacity: 0.75,
-  fontSize: 13,
-};
+const linkCardClass = 'rounded-2xl border border-[var(--border)] bg-[var(--card)] p-4 text-[var(--text)] transition-colors hover:border-[var(--border-2)]';

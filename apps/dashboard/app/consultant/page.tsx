@@ -4,6 +4,8 @@ import React from 'react';
 import Link from 'next/link';
 import RoleShell from '@/app/_components/RoleShell';
 import { api } from '@/lib/api';
+import { Badge } from '@/src/ui/components/Badge';
+import { Card, CardDescription, CardTitle } from '@/src/ui/components/Card';
 
 type ConsultantStats = {
   role: 'CONSULTANT';
@@ -58,58 +60,57 @@ export default function ConsultantHome() {
         { href: '/consultant/listings', label: 'İlanlar' },
       ]}
     >
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(170px,1fr))', gap: 10, marginBottom: 12 }}>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <KpiCard label="Açık Deal" value={stats?.dealsMineOpen ?? 0} loading={statsLoading} />
         <KpiCard label="İlana Hazır" value={stats?.dealsReadyForListing ?? 0} loading={statsLoading} />
         <KpiCard label="Taslak İlan" value={stats?.listingsDraft ?? 0} loading={statsLoading} />
         <KpiCard label="Yayındaki İlan" value={stats?.listingsPublished ?? 0} loading={statsLoading} />
       </div>
-      {statsErr ? <div style={{ marginBottom: 12, color: 'crimson' }}>{statsErr}</div> : null}
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(320px,1fr))', gap: 12 }}>
-        <section style={{ border: '1px solid #e2dbd1', borderRadius: 16, padding: 16, background: '#fff' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+      {statsErr ? <div className="mt-3 rounded-xl border border-[color-mix(in_srgb,var(--danger)_40%,transparent)] bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] px-3 py-2 text-sm text-[var(--danger)]">{statsErr}</div> : null}
+
+      <div className="mt-4 grid grid-cols-1 gap-4 xl:grid-cols-2">
+        <Card>
+          <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <h2 style={{ margin: 0, fontSize: 18, color: '#1f1b16' }}>Operasyon Kuyruğu</h2>
-              <p style={{ margin: '6px 0 0', fontSize: 13, color: '#6f665c' }}>Gelen deal’leri ilana dönüştür ve yayın döngüsünü hızlandır.</p>
+              <CardTitle>Operasyon Kuyruğu</CardTitle>
+              <CardDescription>Gelen deal’leri ilana dönüştür ve yayın döngüsünü hızlandır.</CardDescription>
             </div>
-            <span style={{ fontSize: 12, borderRadius: 999, border: '1px solid #e5ded1', background: '#f8f3ec', color: '#7a6f62', padding: '3px 9px' }}>
-              Hedef: Hızlı yayın
-            </span>
+            <Badge variant="warning">Hedef: Hızlı yayın</Badge>
           </div>
 
-          <div style={{ marginTop: 14, display: 'grid', gap: 10 }}>
+          <div className="mt-4 grid gap-2.5">
             <QueueRow title="Gelen kutusundaki atamaları temizle" note="Önce deal sahiplen, sonra listing üret." ctaHref="/consultant/inbox" ctaLabel="Gelen Kutusu" />
             <QueueRow title="İlana hazır deal’leri yayınla" note="Taslakları tamamlayıp yayına al." ctaHref="/consultant/listings" ctaLabel="İlanlar" />
             <QueueRow title="Eksik içerik ve fiyat girişini tamamla" note="İlan kalite puanını yükselt." ctaHref="/consultant/listings" ctaLabel="Taslaklar" />
           </div>
-        </section>
+        </Card>
 
-        <section style={{ border: '1px solid #e2dbd1', borderRadius: 16, padding: 16, background: '#fff' }}>
-          <h2 style={{ margin: 0, fontSize: 18, color: '#1f1b16' }}>Hızlı Aksiyonlar</h2>
-          <p style={{ margin: '6px 0 12px', fontSize: 13, color: '#6f665c' }}>Danışman günlük çalışma kısayolları.</p>
-          <div style={{ display: 'grid', gap: 8 }}>
+        <Card>
+          <CardTitle>Hızlı Aksiyonlar</CardTitle>
+          <CardDescription>Danışman günlük çalışma kısayolları.</CardDescription>
+          <div className="mt-4 grid gap-2">
             <QuickAction href="/consultant/inbox" label="Gelen kutusunu aç" />
             <QuickAction href="/consultant/listings" label="İlanları yönet" />
             <QuickAction href="/consultant/listings?status=DRAFT" label="Taslakları düzenle" />
           </div>
-        </section>
+        </Card>
       </div>
 
-      <div style={{ marginTop: 12, display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))', gap: 12 }}>
+      <div className="mt-4 grid grid-cols-1 gap-3 lg:grid-cols-3">
         <StatusCard title="Listing Hazırlık Oranı" value={computeReadiness(stats?.dealsReadyForListing ?? 0, stats?.dealsMineOpen ?? 0)} hint="Hazır Deal / Açık Deal" />
         <StatusCard title="Yayın Performansı" value={computePublish(stats?.listingsPublished ?? 0, stats?.listingsDraft ?? 0)} hint="Yayında / Taslak" />
         <StatusCard title="Operasyon Durumu" value="Aktif" hint="Inbox ve listing akışı açık" />
       </div>
 
-      <div style={{ marginTop: 12, display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))', gap: 12 }}>
-        <Link href="/consultant/inbox" style={linkCardStyle}>
-          <div style={{ fontWeight: 700 }}>Gelen Kutusu</div>
-          <div style={linkNoteStyle}>Atanan deal akışını yönet.</div>
+      <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <Link href="/consultant/inbox" className={linkCardClass}>
+          <div className="font-semibold">Gelen Kutusu</div>
+          <div className="mt-1 text-xs text-[var(--muted)]">Atanan deal akışını yönet.</div>
         </Link>
-        <Link href="/consultant/listings" style={linkCardStyle}>
-          <div style={{ fontWeight: 700 }}>İlanlarım</div>
-          <div style={linkNoteStyle}>Taslak ve yayındaki ilanları düzenle.</div>
+        <Link href="/consultant/listings" className={linkCardClass}>
+          <div className="font-semibold">İlanlarım</div>
+          <div className="mt-1 text-xs text-[var(--muted)]">Taslak ve yayındaki ilanları düzenle.</div>
         </Link>
       </div>
     </RoleShell>
@@ -118,30 +119,20 @@ export default function ConsultantHome() {
 
 function KpiCard({ label, value, loading }: { label: string; value: number; loading: boolean }) {
   return (
-    <div style={{ border: '1px solid #eee', borderRadius: 12, padding: 12, background: '#fff' }}>
-      <div style={{ fontSize: 12, color: '#666' }}>{label}</div>
-      <div style={{ fontSize: 'clamp(21px, 5vw, 24px)', fontWeight: 800, minHeight: 34 }}>{loading ? '…' : value}</div>
-    </div>
+    <Card className="p-4">
+      <div className="text-xs text-[var(--muted)]">{label}</div>
+      <div className="mt-1 text-[clamp(22px,5vw,28px)] font-semibold leading-none text-[var(--text)]">{loading ? '…' : value}</div>
+    </Card>
   );
 }
 
-function QueueRow({
-  title,
-  note,
-  ctaHref,
-  ctaLabel,
-}: {
-  title: string;
-  note: string;
-  ctaHref: string;
-  ctaLabel: string;
-}) {
+function QueueRow({ title, note, ctaHref, ctaLabel }: { title: string; note: string; ctaHref: string; ctaLabel: string }) {
   return (
-    <div style={{ border: '1px solid #ece7df', borderRadius: 12, padding: 12, background: '#fffdf9' }}>
-      <div style={{ fontWeight: 700, color: '#1f1b16', fontSize: 14 }}>{title}</div>
-      <div style={{ marginTop: 5, color: '#6f665c', fontSize: 12 }}>{note}</div>
-      <div style={{ marginTop: 8 }}>
-        <Link href={ctaHref} style={{ fontSize: 12, color: '#5c3b12', textDecoration: 'underline', textUnderlineOffset: 2 }}>
+    <div className="rounded-xl border border-[var(--border)] bg-[var(--card-2)] p-3">
+      <div className="text-sm font-medium text-[var(--text)]">{title}</div>
+      <div className="mt-1 text-xs text-[var(--muted)]">{note}</div>
+      <div className="mt-2">
+        <Link href={ctaHref} className="text-xs text-[var(--primary)] hover:underline">
           {ctaLabel}
         </Link>
       </div>
@@ -151,19 +142,7 @@ function QueueRow({
 
 function QuickAction({ href, label }: { href: string; label: string }) {
   return (
-    <Link
-      href={href}
-      style={{
-        textDecoration: 'none',
-        border: '1px solid #e2dbd1',
-        borderRadius: 12,
-        padding: '10px 12px',
-        color: '#2f2a24',
-        background: '#fff',
-        fontSize: 13,
-        fontWeight: 600,
-      }}
-    >
+    <Link href={href} className="rounded-xl border border-[var(--border)] bg-[var(--card-2)] px-3 py-2 text-sm text-[var(--text)] transition-colors hover:border-[var(--border-2)]">
       {label}
     </Link>
   );
@@ -171,11 +150,11 @@ function QuickAction({ href, label }: { href: string; label: string }) {
 
 function StatusCard({ title, value, hint }: { title: string; value: string; hint: string }) {
   return (
-    <div style={{ border: '1px solid #e2dbd1', borderRadius: 14, padding: 14, background: '#fff' }}>
-      <div style={{ fontSize: 12, color: '#6f665c' }}>{title}</div>
-      <div style={{ marginTop: 6, fontSize: 20, fontWeight: 800, color: '#1f1b16' }}>{value}</div>
-      <div style={{ marginTop: 4, fontSize: 12, color: '#8a8072' }}>{hint}</div>
-    </div>
+    <Card className="p-4">
+      <div className="text-xs text-[var(--muted)]">{title}</div>
+      <div className="mt-1 text-xl font-semibold text-[var(--text)]">{value}</div>
+      <div className="mt-1 text-xs text-[var(--muted-2)]">{hint}</div>
+    </Card>
   );
 }
 
@@ -190,17 +169,4 @@ function computePublish(published: number, draft: number) {
   return `%${Math.round((published / total) * 100)}`;
 }
 
-const linkCardStyle: React.CSSProperties = {
-  textDecoration: 'none',
-  color: '#1f1b16',
-  border: '1px solid #e2dbd1',
-  borderRadius: 14,
-  padding: 16,
-  background: '#fff',
-};
-
-const linkNoteStyle: React.CSSProperties = {
-  marginTop: 6,
-  opacity: 0.75,
-  fontSize: 13,
-};
+const linkCardClass = 'rounded-2xl border border-[var(--border)] bg-[var(--card)] p-4 text-[var(--text)] transition-colors hover:border-[var(--border-2)]';

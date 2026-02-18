@@ -26,6 +26,6 @@ export function roleLabelTr(role?: string | null): string {
   if (r === 'ADMIN') return 'Yönetici';
   if (r === 'BROKER') return 'Broker';
   if (r === 'CONSULTANT') return 'Danışman';
-  if (r === 'HUNTER') return 'Hunter';
+  if (r === 'HUNTER') return 'İş Ortağı';
   return 'Kullanıcı';
 }

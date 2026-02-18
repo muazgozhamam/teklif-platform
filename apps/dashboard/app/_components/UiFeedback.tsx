@@ -1,31 +1,18 @@
 'use client';
 
 import React from 'react';
+import { Alert } from '@/src/ui/components/Alert';
 
-export function AlertMessage({
-  type,
-  message,
-}: {
-  type: 'error' | 'success' | 'info';
-  message: string;
-}) {
-  const styleByType: Record<string, React.CSSProperties> = {
-    error: { border: '1px solid #fecaca', background: '#fef2f2', color: '#991b1b' },
-    success: { border: '1px solid #bbf7d0', background: '#f0fdf4', color: '#166534' },
-    info: { border: '1px solid #bfdbfe', background: '#eff6ff', color: '#1e3a8a' },
-  };
+type NoticeType = 'error' | 'success' | 'info';
 
-  return (
-    <div style={{ marginTop: 12, padding: 12, borderRadius: 12, fontSize: 13, fontWeight: 700, ...styleByType[type] }}>
-      {message}
-    </div>
-  );
+export function AlertMessage({ type, message }: { type: NoticeType; message: string }) {
+  return <Alert type={type} message={message} className="mt-3" />;
 }
 
 export function useToast() {
-  const [toast, setToast] = React.useState<{ type: 'error' | 'success' | 'info'; message: string } | null>(null);
+  const [toast, setToast] = React.useState<{ type: NoticeType; message: string } | null>(null);
 
-  const show = React.useCallback((type: 'error' | 'success' | 'info', message: string, ms = 2600) => {
+  const show = React.useCallback((type: NoticeType, message: string, ms = 2600) => {
     setToast({ type, message });
     window.setTimeout(() => setToast(null), ms);
   }, []);
@@ -33,11 +20,11 @@ export function useToast() {
   return { toast, show };
 }
 
-export function ToastView({ toast }: { toast: { type: 'error' | 'success' | 'info'; message: string } | null }) {
+export function ToastView({ toast }: { toast: { type: NoticeType; message: string } | null }) {
   if (!toast) return null;
   return (
-    <div style={{ position: 'fixed', right: 14, bottom: 14, zIndex: 50, minWidth: 240, maxWidth: 420 }}>
-      <AlertMessage type={toast.type} message={toast.message} />
+    <div className="fixed bottom-4 right-4 z-50 min-w-56 max-w-[420px]">
+      <Alert type={toast.type} message={toast.message} />
     </div>
   );
 }
