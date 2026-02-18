@@ -8,8 +8,12 @@ import StickyHeader from '@/components/chat/StickyHeader';
 import ChatComposer from '@/components/chat/ChatComposer';
 import MessageList from '@/components/chat/MessageList';
 import ScrollToBottomButton from '@/components/chat/ScrollToBottomButton';
+import OwnerApplyModal from '@/components/auth/OwnerApplyModal';
+import ConsultantApplyModal from '@/components/auth/ConsultantApplyModal';
+import PartnerApplyModal from '@/components/auth/PartnerApplyModal';
 import { useRotatingSuggestions } from '@/hooks/useRotatingSuggestions';
 import { useChatScroll } from '@/hooks/useChatScroll';
+import type { JoinOption } from '@/components/landing/StyleCarousel';
 
 type Role = 'assistant' | 'user' | 'system';
 type FormIntent = 'CONSULTANT_APPLY' | 'HUNTER_APPLY' | 'BUYER_HOME' | 'OWNER_SELL' | 'OWNER_RENT' | 'INVESTOR' | 'GENERIC';
@@ -42,6 +46,10 @@ export default function PublicChatPage() {
   const [lastError, setLastError] = useState<string | null>(null);
   const [showSuggestionCard, setShowSuggestionCard] = useState(true);
   const [formSubmittingId, setFormSubmittingId] = useState<string | null>(null);
+  const [ownerModalMode, setOwnerModalMode] = useState<'RESIDENTIAL' | 'COMMERCIAL'>('RESIDENTIAL');
+  const [ownerModalOpen, setOwnerModalOpen] = useState(false);
+  const [consultantModalOpen, setConsultantModalOpen] = useState(false);
+  const [partnerModalOpen, setPartnerModalOpen] = useState(false);
   const activeRequestRef = useRef<AbortController | null>(null);
 
   const suggestionSentences = useMemo(
@@ -100,6 +108,24 @@ export default function PublicChatPage() {
     activeRequestRef.current?.abort();
     activeRequestRef.current = null;
     setIsStreaming(false);
+  }
+
+  function onSelectJoinOption(option: JoinOption) {
+    if (option === 'RESIDENTIAL') {
+      setOwnerModalMode('RESIDENTIAL');
+      setOwnerModalOpen(true);
+      return;
+    }
+    if (option === 'COMMERCIAL') {
+      setOwnerModalMode('COMMERCIAL');
+      setOwnerModalOpen(true);
+      return;
+    }
+    if (option === 'CONSULTANT') {
+      setConsultantModalOpen(true);
+      return;
+    }
+    setPartnerModalOpen(true);
   }
 
   async function onSubmitForm(messageId: string, intent: FormIntent, data: Record<string, string>) {
@@ -299,6 +325,7 @@ export default function PublicChatPage() {
                   el?.focus();
                 }}
                 onClose={() => setShowSuggestionCard(false)}
+                onSelectJoinOption={onSelectJoinOption}
               />
             ) : null}
           </CenterColumn>
@@ -344,6 +371,10 @@ export default function PublicChatPage() {
         phase:{phase}; hasStarted:{String(hasStarted)}; isAtBottom:{String(isAtBottom)}; isStreaming:{String(isStreaming)};
         showScrollDown:{String(showScrollDown)}; suggestionActive:{String(suggestionActive)}
       </span>
+
+      <OwnerApplyModal open={ownerModalOpen} mode={ownerModalMode} onClose={() => setOwnerModalOpen(false)} />
+      <ConsultantApplyModal open={consultantModalOpen} onClose={() => setConsultantModalOpen(false)} />
+      <PartnerApplyModal open={partnerModalOpen} onClose={() => setPartnerModalOpen(false)} />
     </LandingShell>
   );
 }

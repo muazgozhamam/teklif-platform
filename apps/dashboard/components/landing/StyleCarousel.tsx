@@ -1,36 +1,42 @@
-import Link from "next/link";
 import React from "react";
 
-const STYLES = [
+export type JoinOption = "RESIDENTIAL" | "COMMERCIAL" | "CONSULTANT" | "PARTNER";
+
+type StyleCarouselProps = {
+  onSelect: (option: JoinOption) => void;
+};
+
+const OPTIONS: Array<{ title: string; subtitle: string; key: JoinOption }> = [
   {
     title: "Konut Sahibi",
     subtitle: "Evimi satmak/kiralamak istiyorum",
-    href: "/onboarding/residential",
+    key: "RESIDENTIAL",
   },
   {
     title: "Ticari Mülk",
     subtitle: "Ünitemi değerlendirmek istiyorum",
-    href: "/onboarding/commercial",
+    key: "COMMERCIAL",
   },
   {
     title: "Danışman",
     subtitle: "Portföy al, teklif üret",
-    href: "/login?next=/dashboard",
+    key: "CONSULTANT",
   },
   {
     title: "İş Ortağı",
     subtitle: "Talep bul, süreci başlat",
-    href: "/apply/partner",
+    key: "PARTNER",
   },
 ];
 
-export default function StyleCarousel() {
+export default function StyleCarousel({ onSelect }: StyleCarouselProps) {
   return (
     <div className="grid grid-cols-2 gap-2">
-      {STYLES.map((item) => (
-        <Link
+      {OPTIONS.map((item) => (
+        <button
           key={item.title}
-          href={item.href}
+          type="button"
+          onClick={() => onSelect(item.key)}
           aria-label={`${item.title} olarak devam et`}
           className="rounded-2xl border p-2 text-left text-xs transition-transform hover:scale-[1.02] focus:outline-none focus:ring-0 focus-visible:ring-0"
           style={{
@@ -38,7 +44,6 @@ export default function StyleCarousel() {
             background: "var(--color-surface)",
             color: "var(--color-text-secondary)",
             boxShadow: "var(--shadow-sm)",
-            textDecoration: "none",
             WebkitTapHighlightColor: "transparent",
           }}
         >
@@ -46,7 +51,7 @@ export default function StyleCarousel() {
             {item.title}
           </div>
           <div className="mt-1">{item.subtitle}</div>
-        </Link>
+        </button>
       ))}
     </div>
   );

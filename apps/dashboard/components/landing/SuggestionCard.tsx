@@ -1,12 +1,13 @@
 import React from "react";
-import StyleCarousel from "./StyleCarousel";
+import StyleCarousel, { type JoinOption } from "./StyleCarousel";
 
 type SuggestionCardProps = {
   onTryNow: () => void;
   onClose: () => void;
+  onSelectJoinOption: (option: JoinOption) => void;
 };
 
-export default function SuggestionCard({ onTryNow, onClose }: SuggestionCardProps) {
+export default function SuggestionCard({ onTryNow, onClose, onSelectJoinOption }: SuggestionCardProps) {
   return (
     <section
       className="grid gap-4 rounded-3xl border p-4 md:grid-cols-[1fr_1.2fr]"
@@ -45,7 +46,7 @@ export default function SuggestionCard({ onTryNow, onClose }: SuggestionCardProp
             X
           </button>
         </div>
-        <StyleCarousel />
+        <StyleCarousel onSelect={onSelectJoinOption} />
       </div>
     </section>
   );
