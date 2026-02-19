@@ -321,11 +321,11 @@ export class ListingsService {
          FROM district d
          JOIN city c ON c.id = d.city_id
          WHERE lower(
-           replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(c.name,
-             'İ','i'),'I','i'),'ı','i'),'Ş','s'),'ş','s'),'Ğ','g'),'ğ','g'),'Ü','u'),'ü','u'),'Ö','o')
+           replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(c.name,
+             'İ','i'),'I','i'),'ı','i'),'Ş','s'),'ş','s'),'Ğ','g'),'ğ','g'),'Ü','u'),'ü','u'),'Ö','o'),'Ç','c'),'ç','c')
          ) = lower(
-           replace(replace(replace(replace(replace(replace(replace(replace(replace(replace($1,
-             'İ','i'),'I','i'),'ı','i'),'Ş','s'),'ş','s'),'Ğ','g'),'ğ','g'),'Ü','u'),'ü','u'),'Ö','o')
+           replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace($1,
+             'İ','i'),'I','i'),'ı','i'),'Ş','s'),'ş','s'),'Ğ','g'),'ğ','g'),'Ü','u'),'ü','u'),'Ö','o'),'Ç','c'),'ç','c')
          )
          ORDER BY d.name ASC`,
         city,
@@ -345,18 +345,27 @@ export class ListingsService {
          JOIN district d ON d.id = n.district_id
          JOIN city c ON c.id = d.city_id
          WHERE lower(
-           replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(c.name,
-             'İ','i'),'I','i'),'ı','i'),'Ş','s'),'ş','s'),'Ğ','g'),'ğ','g'),'Ü','u'),'ü','u'),'Ö','o')
+           replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(c.name,
+             'İ','i'),'I','i'),'ı','i'),'Ş','s'),'ş','s'),'Ğ','g'),'ğ','g'),'Ü','u'),'ü','u'),'Ö','o'),'Ç','c'),'ç','c')
          ) = lower(
-           replace(replace(replace(replace(replace(replace(replace(replace(replace(replace($1,
-             'İ','i'),'I','i'),'ı','i'),'Ş','s'),'ş','s'),'Ğ','g'),'ğ','g'),'Ü','u'),'ü','u'),'Ö','o')
+           replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace($1,
+             'İ','i'),'I','i'),'ı','i'),'Ş','s'),'ş','s'),'Ğ','g'),'ğ','g'),'Ü','u'),'ü','u'),'Ö','o'),'Ç','c'),'ç','c')
          )
-         AND lower(
-           replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(d.name,
-             'İ','i'),'I','i'),'ı','i'),'Ş','s'),'ş','s'),'Ğ','g'),'ğ','g'),'Ü','u'),'ü','u'),'Ö','o')
-         ) = lower(
-           replace(replace(replace(replace(replace(replace(replace(replace(replace(replace($2,
-             'İ','i'),'I','i'),'ı','i'),'Ş','s'),'ş','s'),'Ğ','g'),'ğ','g'),'Ü','u'),'ü','u'),'Ö','o')
+         AND (
+           lower(
+             replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(d.name,
+               'İ','i'),'I','i'),'ı','i'),'Ş','s'),'ş','s'),'Ğ','g'),'ğ','g'),'Ü','u'),'ü','u'),'Ö','o'),'Ç','c'),'ç','c')
+           ) = lower(
+             replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace($2,
+               'İ','i'),'I','i'),'ı','i'),'Ş','s'),'ş','s'),'Ğ','g'),'ğ','g'),'Ü','u'),'ü','u'),'Ö','o'),'Ç','c'),'ç','c')
+           )
+           OR lower(
+             replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(n.area_name,
+               'İ','i'),'I','i'),'ı','i'),'Ş','s'),'ş','s'),'Ğ','g'),'ğ','g'),'Ü','u'),'ü','u'),'Ö','o'),'Ç','c'),'ç','c')
+           ) = lower(
+             replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace($2,
+               'İ','i'),'I','i'),'ı','i'),'Ş','s'),'ş','s'),'Ğ','g'),'ğ','g'),'Ü','u'),'ü','u'),'Ö','o'),'Ç','c'),'ç','c')
+           )
          )
          ORDER BY n.name ASC`,
         city,
