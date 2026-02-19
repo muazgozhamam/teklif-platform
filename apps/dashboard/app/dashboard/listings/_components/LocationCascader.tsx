@@ -65,13 +65,34 @@ async function fetchOptions(path: string) {
 }
 
 async function fetchTurkiyeApi(path: string) {
-  const res = await fetch(`${PUBLIC_TR_API}${path}`, { cache: 'no-store' });
-  if (!res.ok) throw new Error('Turkiye API hatası');
-  const json = (await res.json()) as { data?: Array<{ name?: string }> } | Array<{ name?: string }>;
-  const rows = Array.isArray(json) ? json : Array.isArray(json?.data) ? json.data : [];
+  const allRows: Array<{ name?: string }> = [];
+  let page = 1;
+  let hasMore = true;
+
+  while (hasMore && page <= 40) {
+    const separator = path.includes('?') ? '&' : '?';
+    const pagedPath = `${PUBLIC_TR_API}${path}${separator}page=${page}`;
+    const res = await fetch(pagedPath, { cache: 'no-store' });
+    if (!res.ok) throw new Error('Turkiye API hatası');
+
+    const json = (await res.json()) as
+      | { data?: Array<{ name?: string }>; meta?: { pagination?: { currentPage?: number; totalPages?: number; lastPage?: number; hasNextPage?: boolean } } }
+      | Array<{ name?: string }>;
+    const rows = Array.isArray(json) ? json : Array.isArray(json?.data) ? json.data : [];
+    if (!rows.length) break;
+    allRows.push(...rows);
+
+    const pagination = !Array.isArray(json) ? json?.meta?.pagination : undefined;
+    const currentPage = Number(pagination?.currentPage ?? page);
+    const totalPages = Number(pagination?.totalPages ?? pagination?.lastPage ?? 0);
+    const hasNext = Boolean(pagination?.hasNextPage);
+    hasMore = totalPages > 0 ? currentPage < totalPages : hasNext || rows.length > 0;
+    page += 1;
+  }
+
   return Array.from(
     new Set(
-      rows
+      allRows
         .map((r) => String(r?.name || '').trim())
         .filter(Boolean),
     ),

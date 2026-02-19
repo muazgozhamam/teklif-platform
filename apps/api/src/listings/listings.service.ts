@@ -273,14 +273,48 @@ export class ListingsService {
     ).sort((a, b) => a.localeCompare(b, 'tr'));
   }
 
+  private resolveTurkiyePageMeta(json: unknown, page: number, dataLen: number) {
+    if (!json || typeof json !== 'object') return { hasMore: false };
+    const obj = json as Record<string, unknown>;
+    const meta = obj.meta;
+    if (!meta || typeof meta !== 'object') return { hasMore: false };
+    const pagination = (meta as Record<string, unknown>).pagination;
+    if (!pagination || typeof pagination !== 'object') return { hasMore: false };
+
+    const p = pagination as Record<string, unknown>;
+    const currentPage = Number(p.currentPage ?? p.page ?? page);
+    const totalPages = Number(p.totalPages ?? p.lastPage ?? p.pageCount ?? 0);
+    const hasNext = Boolean(p.hasNextPage);
+    if (Number.isFinite(totalPages) && totalPages > 0) return { hasMore: currentPage < totalPages };
+    if (hasNext) return { hasMore: true };
+    return { hasMore: dataLen > 0 };
+  }
+
   private async fetchTurkiyeApi(path: string): Promise<unknown[] | null> {
     try {
-      const res = await fetch(`${TURKIYE_API_BASE}${path}`, {
-        headers: { Accept: 'application/json' },
-      });
-      if (!res.ok) return null;
-      const json = (await res.json()) as { data?: unknown[] } | unknown[];
-      return Array.isArray(json) ? json : Array.isArray(json?.data) ? json.data : null;
+      const out: unknown[] = [];
+      let page = 1;
+      let hasMore = true;
+
+      while (hasMore && page <= 40) {
+        const separator = path.includes('?') ? '&' : '?';
+        const pagedPath = `${path}${separator}page=${page}`;
+        const res = await fetch(`${TURKIYE_API_BASE}${pagedPath}`, {
+          headers: { Accept: 'application/json' },
+        });
+        if (!res.ok) return out.length > 0 ? out : null;
+
+        const json = (await res.json()) as { data?: unknown[] } | unknown[];
+        const pageData = Array.isArray(json) ? json : Array.isArray(json?.data) ? json.data : [];
+        if (!Array.isArray(pageData) || pageData.length === 0) break;
+        out.push(...pageData);
+
+        const meta = this.resolveTurkiyePageMeta(json, page, pageData.length);
+        hasMore = meta.hasMore;
+        page += 1;
+      }
+
+      return out.length > 0 ? out : null;
     } catch {
       return null;
     }
