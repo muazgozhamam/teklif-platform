@@ -40,6 +40,7 @@ const rateBucket = new Map<string, { count: number; resetAt: number }>();
 const citiesCache = { fetchedAt: 0, value: [] as string[] };
 const districtsCache = new Map<string, string[]>();
 const neighborhoodsCache = new Map<string, string[]>();
+const LOCATION_DEBUG_VERSION = '2026-02-19-local-address-v2';
 
 @Injectable()
 export class ListingsService {
@@ -562,7 +563,7 @@ export class ListingsService {
     return listing;
   }
 
-  async getLocationsDebug() {
+  async getLocationsDebug(city?: string, district?: string) {
     const dbUrl = String(process.env.DATABASE_URL || '');
     let dbHost = 'unknown';
     try {
@@ -596,12 +597,34 @@ export class ListingsService {
       }
     }
 
+    let localSample: { city?: string; district?: string; neighborhoodsCount?: number; neighborhoodsPreview?: string[] } | null = null;
+    if (city && district) {
+      try {
+        const sample = await this.fetchLocalNeighborhoods(city, district);
+        localSample = {
+          city,
+          district,
+          neighborhoodsCount: sample?.length || 0,
+          neighborhoodsPreview: (sample || []).slice(0, 10),
+        };
+      } catch {
+        localSample = {
+          city,
+          district,
+          neighborhoodsCount: 0,
+          neighborhoodsPreview: [],
+        };
+      }
+    }
+
     return {
+      locationDebugVersion: LOCATION_DEBUG_VERSION,
       dbHost,
       dbFingerprint: fingerprint,
       counts,
       errors,
       localAddressEnabled: (counts.city || 0) > 0,
+      localSample,
     };
   }
 

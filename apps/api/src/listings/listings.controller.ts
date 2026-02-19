@@ -64,8 +64,8 @@ export class PublicListingsController {
   }
 
   @Get('locations/debug')
-  locationsDebug() {
-    return this.listings.getLocationsDebug();
+  locationsDebug(@Query('city') city?: string, @Query('district') district?: string) {
+    return this.listings.getLocationsDebug(city, district);
   }
 
   @Get()
