@@ -23,8 +23,22 @@ const MAX_TAKE = 100;
 const TRY_CURRENCY = 'TRY';
 const RATE_WINDOW_MS = 60_000;
 const RATE_LIMIT_PER_WINDOW = 120;
+const TURKIYE_API_BASE = 'https://turkiyeapi.dev/api/v1';
+const FALLBACK_CITIES = [
+  'Adana', 'Adıyaman', 'Afyonkarahisar', 'Ağrı', 'Amasya', 'Ankara', 'Antalya', 'Artvin', 'Aydın', 'Balıkesir',
+  'Bilecik', 'Bingöl', 'Bitlis', 'Bolu', 'Burdur', 'Bursa', 'Çanakkale', 'Çankırı', 'Çorum', 'Denizli',
+  'Diyarbakır', 'Edirne', 'Elazığ', 'Erzincan', 'Erzurum', 'Eskişehir', 'Gaziantep', 'Giresun', 'Gümüşhane', 'Hakkari',
+  'Hatay', 'Isparta', 'Mersin', 'İstanbul', 'İzmir', 'Kars', 'Kastamonu', 'Kayseri', 'Kırklareli', 'Kırşehir',
+  'Kocaeli', 'Konya', 'Kütahya', 'Malatya', 'Manisa', 'Kahramanmaraş', 'Mardin', 'Muğla', 'Muş', 'Nevşehir',
+  'Niğde', 'Ordu', 'Rize', 'Sakarya', 'Samsun', 'Siirt', 'Sinop', 'Sivas', 'Tekirdağ', 'Tokat',
+  'Trabzon', 'Tunceli', 'Şanlıurfa', 'Uşak', 'Van', 'Yozgat', 'Zonguldak', 'Aksaray', 'Bayburt', 'Karaman',
+  'Kırıkkale', 'Batman', 'Şırnak', 'Bartın', 'Ardahan', 'Iğdır', 'Yalova', 'Karabük', 'Kilis', 'Osmaniye', 'Düzce',
+];
 
 const rateBucket = new Map<string, { count: number; resetAt: number }>();
+const citiesCache = { fetchedAt: 0, value: [] as string[] };
+const districtsCache = new Map<string, string[]>();
+const neighborhoodsCache = new Map<string, string[]>();
 
 @Injectable()
 export class ListingsService {
@@ -234,6 +248,118 @@ export class ListingsService {
       category: { pathKey: leaf.pathKey, name: leaf.name },
       attributes: attrs,
     };
+  }
+
+  private normalizeLocationValue(value: string) {
+    return String(value || '')
+      .trim()
+      .toLocaleLowerCase('tr-TR')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '');
+  }
+
+  private parseNames(data: unknown): string[] {
+    if (!Array.isArray(data)) return [];
+    return Array.from(
+      new Set(
+        data
+          .map((row) => {
+            if (!row || typeof row !== 'object') return '';
+            const name = (row as Record<string, unknown>).name;
+            return typeof name === 'string' ? name.trim() : '';
+          })
+          .filter(Boolean),
+      ),
+    ).sort((a, b) => a.localeCompare(b, 'tr'));
+  }
+
+  private async fetchTurkiyeApi(path: string): Promise<unknown[] | null> {
+    try {
+      const res = await fetch(`${TURKIYE_API_BASE}${path}`, {
+        headers: { Accept: 'application/json' },
+      });
+      if (!res.ok) return null;
+      const json = (await res.json()) as { data?: unknown[] } | unknown[];
+      return Array.isArray(json) ? json : Array.isArray(json?.data) ? json.data : null;
+    } catch {
+      return null;
+    }
+  }
+
+  async getPublicCities() {
+    const now = Date.now();
+    if (citiesCache.value.length > 0 && now - citiesCache.fetchedAt < 6 * 60 * 60 * 1000) {
+      return { cities: citiesCache.value };
+    }
+
+    const data = await this.fetchTurkiyeApi('/provinces');
+    const names = this.parseNames(data);
+    const value = names.length > 0 ? names : FALLBACK_CITIES.slice().sort((a, b) => a.localeCompare(b, 'tr'));
+
+    citiesCache.value = value;
+    citiesCache.fetchedAt = now;
+    return { cities: value };
+  }
+
+  async getPublicDistricts(city: string) {
+    const cityName = String(city || '').trim();
+    if (!cityName) throw new BadRequestException('city zorunlu');
+
+    const cacheKey = this.normalizeLocationValue(cityName);
+    const cached = districtsCache.get(cacheKey);
+    if (cached) return { districts: cached };
+
+    const dataByProvince = await this.fetchTurkiyeApi(`/districts?province=${encodeURIComponent(cityName)}`);
+    const byProvince = this.parseNames(dataByProvince);
+    if (byProvince.length > 0) {
+      districtsCache.set(cacheKey, byProvince);
+      return { districts: byProvince };
+    }
+
+    const provinces = await this.fetchTurkiyeApi(`/provinces?name=${encodeURIComponent(cityName)}`);
+    const provinceId = Array.isArray(provinces) && provinces[0] && typeof provinces[0] === 'object'
+      ? (provinces[0] as Record<string, unknown>).id
+      : null;
+
+    if (provinceId !== null && provinceId !== undefined) {
+      const dataById = await this.fetchTurkiyeApi(`/districts?provinceId=${encodeURIComponent(String(provinceId))}`);
+      const byId = this.parseNames(dataById);
+      if (byId.length > 0) {
+        districtsCache.set(cacheKey, byId);
+        return { districts: byId };
+      }
+    }
+
+    return { districts: [] as string[] };
+  }
+
+  async getPublicNeighborhoods(city: string, district: string) {
+    const cityName = String(city || '').trim();
+    const districtName = String(district || '').trim();
+    if (!cityName) throw new BadRequestException('city zorunlu');
+    if (!districtName) throw new BadRequestException('district zorunlu');
+
+    const cacheKey = `${this.normalizeLocationValue(cityName)}::${this.normalizeLocationValue(districtName)}`;
+    const cached = neighborhoodsCache.get(cacheKey);
+    if (cached) return { neighborhoods: cached };
+
+    const first = await this.fetchTurkiyeApi(
+      `/neighborhoods?province=${encodeURIComponent(cityName)}&district=${encodeURIComponent(districtName)}`,
+    );
+    const byCityDistrict = this.parseNames(first);
+    if (byCityDistrict.length > 0) {
+      neighborhoodsCache.set(cacheKey, byCityDistrict);
+      return { neighborhoods: byCityDistrict };
+    }
+
+    const second = await this.fetchTurkiyeApi(`/neighborhoods?district=${encodeURIComponent(districtName)}`);
+    const byDistrict = this.parseNames(second);
+    if (byDistrict.length > 0) {
+      neighborhoodsCache.set(cacheKey, byDistrict);
+      return { neighborhoods: byDistrict };
+    }
+
+    return { neighborhoods: [] as string[] };
   }
 
   private async ensurePublishRequirements(listingId: string) {

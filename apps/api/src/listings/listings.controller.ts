@@ -48,6 +48,21 @@ export class PublicListingsController {
     return this.listings.getPublicCategoryAttributes(pathKey);
   }
 
+  @Get('locations/cities')
+  locationsCities() {
+    return this.listings.getPublicCities();
+  }
+
+  @Get('locations/districts')
+  locationsDistricts(@Query('city') city: string) {
+    return this.listings.getPublicDistricts(city);
+  }
+
+  @Get('locations/neighborhoods')
+  locationsNeighborhoods(@Query('city') city: string, @Query('district') district: string) {
+    return this.listings.getPublicNeighborhoods(city, district);
+  }
+
   @Get()
   list(@Req() req: Request, @Query() query: ListListingsQuery) {
     return this.listings.listPublic(query, resolveIp(req));
