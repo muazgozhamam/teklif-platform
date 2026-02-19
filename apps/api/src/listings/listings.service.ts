@@ -39,7 +39,6 @@ const rateBucket = new Map<string, { count: number; resetAt: number }>();
 const citiesCache = { fetchedAt: 0, value: [] as string[] };
 const districtsCache = new Map<string, string[]>();
 const neighborhoodsCache = new Map<string, string[]>();
-const localAddressMode = { checked: false, enabled: false };
 
 @Injectable()
 export class ListingsService {
@@ -291,19 +290,15 @@ export class ListingsService {
   }
 
   private async hasLocalAddressData() {
-    if (localAddressMode.checked) return localAddressMode.enabled;
     try {
       const rows = await this.prisma.$queryRawUnsafe<Array<{ count: number | bigint }>>(
         `SELECT COUNT(*)::bigint AS count FROM city`,
       );
       const count = Number(rows?.[0]?.count || 0);
-      localAddressMode.enabled = count > 0;
+      return count > 0;
     } catch {
-      localAddressMode.enabled = false;
-    } finally {
-      localAddressMode.checked = true;
+      return false;
     }
-    return localAddressMode.enabled;
   }
 
   private async fetchLocalCities(): Promise<string[] | null> {
