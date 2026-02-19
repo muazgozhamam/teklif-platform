@@ -29,6 +29,27 @@ const FALLBACK_NEIGHBORHOODS: Record<string, string[]> = {
   'konya::karatay': ['Akabe', 'Aziziye', 'Çimenlik', 'Fevziçakmak', 'Hacıveyiszade', 'İşgalaman', 'Tatlıcak'],
 };
 
+type GooglePrediction = {
+  terms?: Array<{ value?: string }>;
+};
+
+type LocalGoogle = {
+  maps?: {
+    places?: {
+      AutocompleteService: new () => {
+        getPlacePredictions: (
+          request: {
+            input: string;
+            componentRestrictions?: { country: string };
+            types?: string[];
+          },
+          callback: (predictions: GooglePrediction[] | null, status: string) => void,
+        ) => void;
+      };
+    };
+  };
+};
+
 function norm(value: string) {
   return String(value || '')
     .trim()
@@ -55,6 +76,68 @@ async function fetchTurkiyeApi(path: string) {
         .filter(Boolean),
     ),
   ).sort((a, b) => a.localeCompare(b, 'tr'));
+}
+
+let mapsLoaderPromise: Promise<LocalGoogle> | null = null;
+
+function getWindowGoogle(): LocalGoogle | undefined {
+  return (window as unknown as { google?: LocalGoogle }).google;
+}
+
+async function loadGoogleMapsPlaces(): Promise<LocalGoogle> {
+  if (typeof window === 'undefined') throw new Error('Tarayıcı ortamı gerekli');
+  const existing = getWindowGoogle();
+  if (existing?.maps?.places) return existing;
+  if (mapsLoaderPromise) return mapsLoaderPromise;
+
+  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+  if (!apiKey) throw new Error('NEXT_PUBLIC_GOOGLE_MAPS_API_KEY tanımlı değil');
+
+  mapsLoaderPromise = new Promise<LocalGoogle>((resolve, reject) => {
+    const script = document.createElement('script');
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(apiKey)}&libraries=places`;
+    script.async = true;
+    script.defer = true;
+    script.onload = () => {
+      const loaded = getWindowGoogle();
+      if (loaded?.maps?.places) resolve(loaded);
+      else reject(new Error('Google Places yüklenemedi'));
+    };
+    script.onerror = () => reject(new Error('Google Places script yüklenemedi'));
+    document.head.appendChild(script);
+  });
+  return mapsLoaderPromise;
+}
+
+async function fetchNeighborhoodsFromGoogle(city: string, district: string): Promise<string[]> {
+  try {
+    const g = await loadGoogleMapsPlaces();
+    const Ctor = g.maps?.places?.AutocompleteService;
+    if (!Ctor) return [];
+    const svc = new Ctor();
+    const rows = await new Promise<string[]>((resolve) => {
+      svc.getPlacePredictions(
+        {
+          input: `${district}, ${city} mahalle`,
+          componentRestrictions: { country: 'tr' },
+          types: ['geocode'],
+        },
+        (predictions) => {
+          const names = Array.from(
+            new Set(
+              (predictions || [])
+                .map((p) => String(p.terms?.[0]?.value || '').replace(/\s+Mahallesi$/i, '').trim())
+                .filter(Boolean),
+            ),
+          ).sort((a, b) => a.localeCompare(b, 'tr'));
+          resolve(names);
+        },
+      );
+    });
+    return rows;
+  } catch {
+    return [];
+  }
 }
 
 export function LocationCascader({ value, onChange }: Props) {
@@ -147,6 +230,9 @@ export function LocationCascader({ value, onChange }: Props) {
         }
         if (next.length === 0) {
           next = FALLBACK_NEIGHBORHOODS[`${norm(value.city)}::${norm(value.district)}`] || [];
+        }
+        if (next.length === 0) {
+          next = await fetchNeighborhoodsFromGoogle(value.city, value.district);
         }
         setNeighborhoods(next);
       })
