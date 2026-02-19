@@ -7,6 +7,7 @@ import { requireAuth } from '@/lib/auth';
 import { Button } from '@/src/ui/components/Button';
 import { Input } from '@/src/ui/components/Input';
 import { Card } from '@/src/ui/components/Card';
+import { CategoryCascader } from '../_components/CategoryCascader';
 
 type FormState = {
   categoryLeafPathKey: string;
@@ -40,36 +41,10 @@ export default function NewListingWizardPage() {
   const [step, setStep] = React.useState(1);
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
-  const [categoryLeaves, setCategoryLeaves] = React.useState<Array<{ pathKey: string; name: string }>>([]);
   const [form, setForm] = React.useState<FormState>(INITIAL);
 
   React.useEffect(() => {
     setAllowed(requireAuth());
-  }, []);
-
-  React.useEffect(() => {
-    let alive = true;
-    fetch('/api/public/listings/categories/leaves', { cache: 'no-store' })
-      .then(async (res) => {
-        if (!res.ok) throw new Error('Kategori listesi alınamadı');
-        return res.json();
-      })
-      .then((rows: Array<{ pathKey: string; name: string }>) => {
-        if (!alive) return;
-        const next = Array.isArray(rows) ? rows : [];
-        setCategoryLeaves(next);
-        setForm((prev) => ({
-          ...prev,
-          categoryLeafPathKey: prev.categoryLeafPathKey || next[0]?.pathKey || '',
-        }));
-      })
-      .catch(() => {
-        if (!alive) return;
-        setCategoryLeaves([]);
-      });
-    return () => {
-      alive = false;
-    };
   }, []);
 
   function setField<K extends keyof FormState>(key: K, value: FormState[K]) {
@@ -131,17 +106,10 @@ export default function NewListingWizardPage() {
 
         {step === 1 ? (
           <Card className="grid gap-3">
-            <select
-              className="h-10 rounded-xl border border-[var(--border)] bg-[var(--card)] px-3 text-sm"
+            <CategoryCascader
               value={form.categoryLeafPathKey}
-              onChange={(e) => setField('categoryLeafPathKey', e.target.value)}
-            >
-              {categoryLeaves.map((leaf) => (
-                <option key={leaf.pathKey} value={leaf.pathKey}>
-                  {leaf.name} ({leaf.pathKey})
-                </option>
-              ))}
-            </select>
+              onChange={(nextLeafPath) => setField('categoryLeafPathKey', nextLeafPath)}
+            />
             <Input placeholder="Başlık *" value={form.title} onChange={(e) => setField('title', e.target.value)} />
             <textarea
               className="min-h-[120px] rounded-xl border border-[var(--border)] bg-[var(--card)] px-3 py-2 text-sm outline-none"
