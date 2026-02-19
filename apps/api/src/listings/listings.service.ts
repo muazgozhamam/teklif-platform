@@ -273,6 +273,64 @@ export class ListingsService {
     ).sort((a, b) => a.localeCompare(b, 'tr'));
   }
 
+  private normalizeRows(rows: Array<{ name?: string | null }>) {
+    return Array.from(
+      new Set(
+        rows
+          .map((r) => String(r?.name || '').trim())
+          .filter(Boolean),
+      ),
+    ).sort((a, b) => a.localeCompare(b, 'tr'));
+  }
+
+  private async fetchLocalCities(): Promise<string[] | null> {
+    try {
+      const rows = await this.prisma.$queryRawUnsafe<Array<{ name: string }>>(
+        `SELECT name FROM city ORDER BY row_number ASC, name ASC`,
+      );
+      const names = this.normalizeRows(rows);
+      return names.length > 0 ? names : null;
+    } catch {
+      return null;
+    }
+  }
+
+  private async fetchLocalDistricts(city: string): Promise<string[] | null> {
+    try {
+      const rows = await this.prisma.$queryRawUnsafe<Array<{ name: string }>>(
+        `SELECT d.name
+         FROM district d
+         JOIN city c ON c.id = d.city_id
+         WHERE c.name = $1
+         ORDER BY d.name ASC`,
+        city,
+      );
+      const names = this.normalizeRows(rows);
+      return names.length > 0 ? names : null;
+    } catch {
+      return null;
+    }
+  }
+
+  private async fetchLocalNeighborhoods(city: string, district: string): Promise<string[] | null> {
+    try {
+      const rows = await this.prisma.$queryRawUnsafe<Array<{ name: string }>>(
+        `SELECT n.name
+         FROM neighbourhood n
+         JOIN district d ON d.id = n.district_id
+         JOIN city c ON c.id = d.city_id
+         WHERE c.name = $1 AND d.name = $2
+         ORDER BY n.name ASC`,
+        city,
+        district,
+      );
+      const names = this.normalizeRows(rows);
+      return names.length > 0 ? names : null;
+    } catch {
+      return null;
+    }
+  }
+
   private resolveTurkiyePageMeta(json: unknown, page: number, dataLen: number) {
     if (!json || typeof json !== 'object') return { hasMore: false };
     const obj = json as Record<string, unknown>;
@@ -330,8 +388,9 @@ export class ListingsService {
       return { cities: citiesCache.value };
     }
 
-    const data = await this.fetchTurkiyeApi('/provinces');
-    const names = this.parseNames(data);
+    const local = await this.fetchLocalCities();
+    const data = local ? null : await this.fetchTurkiyeApi('/provinces');
+    const names = local || this.parseNames(data);
     const value = names.length > 0 ? names : FALLBACK_CITIES.slice().sort((a, b) => a.localeCompare(b, 'tr'));
 
     citiesCache.value = value;
@@ -346,6 +405,12 @@ export class ListingsService {
     const cacheKey = this.normalizeLocationValue(cityName);
     const cached = districtsCache.get(cacheKey);
     if (cached) return { districts: cached };
+
+    const local = await this.fetchLocalDistricts(cityName);
+    if (local && local.length > 0) {
+      districtsCache.set(cacheKey, local);
+      return { districts: local };
+    }
 
     const dataByProvince = await this.fetchTurkiyeApi(`/districts?province=${encodeURIComponent(cityName)}`);
     const byProvince = this.parseNames(dataByProvince);
@@ -380,6 +445,12 @@ export class ListingsService {
     const cacheKey = `${this.normalizeLocationValue(cityName)}::${this.normalizeLocationValue(districtName)}`;
     const cached = neighborhoodsCache.get(cacheKey);
     if (cached) return { neighborhoods: cached };
+
+    const local = await this.fetchLocalNeighborhoods(cityName, districtName);
+    if (local && local.length > 0) {
+      neighborhoodsCache.set(cacheKey, local);
+      return { neighborhoods: local };
+    }
 
     const first = await this.fetchTurkiyeApi(
       `/neighborhoods?province=${encodeURIComponent(cityName)}&district=${encodeURIComponent(districtName)}`,
