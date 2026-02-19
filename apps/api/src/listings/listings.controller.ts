@@ -33,6 +33,16 @@ function resolveIp(req: Request) {
 export class PublicListingsController {
   constructor(private readonly listings: ListingsService) {}
 
+  @Get('categories')
+  categories() {
+    return this.listings.getPublicCategoriesTree();
+  }
+
+  @Get('categories/leaves')
+  leaves() {
+    return this.listings.getPublicCategoryLeaves();
+  }
+
   @Get()
   list(@Req() req: Request, @Query() query: ListListingsQuery) {
     return this.listings.listPublic(query, resolveIp(req));

@@ -1,4 +1,6 @@
 import { NestFactory } from '@nestjs/core';
+import * as fs from 'fs';
+import * as path from 'path';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/prisma/prisma.service';
 
@@ -39,8 +41,85 @@ const DAIRE_ATTRS = [
   { key: 'heating', label: 'Isıtma', type: 'SELECT', required: true, order: 6, optionsJson: ['Kombi (Doğalgaz)', 'Merkezi', 'Soba', 'Yerden Isıtma'] },
 ] as const;
 
+function parseCsvNodes(raw: string): NodeInput[] {
+  const rows = raw
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => line && !line.startsWith('#'));
+
+  const parsed: NodeInput[] = [];
+  for (const row of rows) {
+    const parts = row.split(',').map((p) => p.trim());
+    if (parts.length < 7) continue;
+    const pathKey = parts[0];
+    const isActiveRaw = parts[parts.length - 1];
+    const orderRaw = parts[parts.length - 2];
+    const depthRaw = parts[parts.length - 3];
+    const parentPathKeyRaw = parts[parts.length - 4];
+    const slug = parts[parts.length - 5];
+    const name = parts
+      .slice(1, parts.length - 5)
+      .join(',')
+      .trim()
+      .replace(/^"(.*)"$/, '$1')
+      .trim();
+    const isActive = String(isActiveRaw).toLowerCase() === 'true';
+    if (!isActive || !pathKey || !name || !slug) continue;
+    const depth = Number(depthRaw);
+    const order = Number(orderRaw);
+    if (!Number.isFinite(depth) || !Number.isFinite(order)) continue;
+    parsed.push({
+      pathKey,
+      name,
+      slug,
+      parentPathKey: parentPathKeyRaw || undefined,
+      depth,
+      order,
+    });
+  }
+  return parsed;
+}
+
+function loadCsvNodes(): NodeInput[] {
+  const csvPath =
+    process.env.LISTINGS_CATEGORY_CSV_PATH ||
+    path.resolve(process.cwd(), 'scripts/data/listings-categories.csv');
+  if (!fs.existsSync(csvPath)) return [];
+  const raw = fs.readFileSync(csvPath, 'utf8');
+  const parsed = parseCsvNodes(raw);
+
+  // Business rule: Devren Kiralık leaf seti, Devren Satılık ile birebir aynı olmalı.
+  const hasDevrenKiralikRoot = parsed.some((n) => n.pathKey === 'emlak/is-yeri/devren-kiralik');
+  if (!hasDevrenKiralikRoot) return parsed;
+
+  const satilikLeaves = parsed.filter(
+    (n) => n.parentPathKey === 'emlak/is-yeri/devren-satilik' && n.depth === 3,
+  );
+
+  const toAppend: NodeInput[] = [];
+  const existing = new Set(parsed.map((n) => n.pathKey));
+  for (const leaf of satilikLeaves) {
+    const suffix = leaf.pathKey.replace('emlak/is-yeri/devren-satilik/', '');
+    const clonedPathKey = `emlak/is-yeri/devren-kiralik/${suffix}`;
+    if (existing.has(clonedPathKey)) continue;
+    toAppend.push({
+      pathKey: clonedPathKey,
+      name: leaf.name,
+      slug: leaf.slug,
+      parentPathKey: 'emlak/is-yeri/devren-kiralik',
+      depth: leaf.depth,
+      order: leaf.order,
+    });
+    existing.add(clonedPathKey);
+  }
+
+  return [...parsed, ...toAppend];
+}
+
 async function upsertNodes(prisma: any) {
-  for (const node of NODES) {
+  const fromCsv = loadCsvNodes();
+  const nodeList = fromCsv.length > 0 ? fromCsv : NODES;
+  for (const node of nodeList) {
     let parentId: string | undefined;
     if (node.parentPathKey) {
       const parent = await prisma.categoryNode.findUnique({ where: { pathKey: node.parentPathKey } });
@@ -110,4 +189,3 @@ run().catch((err) => {
   console.error(err);
   process.exit(1);
 });
-

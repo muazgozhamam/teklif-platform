@@ -9,7 +9,7 @@ import { Input } from '@/src/ui/components/Input';
 import { Card } from '@/src/ui/components/Card';
 
 type FormState = {
-  categoryPathKey: string;
+  categoryLeafPathKey: string;
   title: string;
   description: string;
   priceAmount: string;
@@ -22,7 +22,7 @@ type FormState = {
 };
 
 const INITIAL: FormState = {
-  categoryPathKey: 'emlak/konut/satilik/daire',
+  categoryLeafPathKey: '',
   title: '',
   description: '',
   priceAmount: '',
@@ -40,17 +40,43 @@ export default function NewListingWizardPage() {
   const [step, setStep] = React.useState(1);
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const [categoryLeaves, setCategoryLeaves] = React.useState<Array<{ pathKey: string; name: string }>>([]);
   const [form, setForm] = React.useState<FormState>(INITIAL);
 
   React.useEffect(() => {
     setAllowed(requireAuth());
   }, []);
 
+  React.useEffect(() => {
+    let alive = true;
+    fetch('/api/public/listings/categories/leaves', { cache: 'no-store' })
+      .then(async (res) => {
+        if (!res.ok) throw new Error('Kategori listesi alınamadı');
+        return res.json();
+      })
+      .then((rows: Array<{ pathKey: string; name: string }>) => {
+        if (!alive) return;
+        const next = Array.isArray(rows) ? rows : [];
+        setCategoryLeaves(next);
+        setForm((prev) => ({
+          ...prev,
+          categoryLeafPathKey: prev.categoryLeafPathKey || next[0]?.pathKey || '',
+        }));
+      })
+      .catch(() => {
+        if (!alive) return;
+        setCategoryLeaves([]);
+      });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
   function setField<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
   }
 
-  const stepOneValid = form.title.trim() && form.description.trim() && form.priceAmount.trim();
+  const stepOneValid = form.categoryLeafPathKey.trim() && form.title.trim() && form.description.trim() && form.priceAmount.trim();
   const stepTwoValid = form.city.trim() && form.district.trim() && form.neighborhood.trim();
   const stepThreeValid = form.lat.trim() && form.lng.trim();
 
@@ -63,7 +89,7 @@ export default function NewListingWizardPage() {
     setError(null);
     try {
       const created = await api.post<{ id: string }>('/listings', {
-        categoryPathKey: form.categoryPathKey,
+        categoryLeafPathKey: form.categoryLeafPathKey,
         title: form.title,
         description: form.description,
         priceAmount: form.priceAmount,
@@ -105,7 +131,17 @@ export default function NewListingWizardPage() {
 
         {step === 1 ? (
           <Card className="grid gap-3">
-            <Input placeholder="Kategori pathKey" value={form.categoryPathKey} onChange={(e) => setField('categoryPathKey', e.target.value)} />
+            <select
+              className="h-10 rounded-xl border border-[var(--border)] bg-[var(--card)] px-3 text-sm"
+              value={form.categoryLeafPathKey}
+              onChange={(e) => setField('categoryLeafPathKey', e.target.value)}
+            >
+              {categoryLeaves.map((leaf) => (
+                <option key={leaf.pathKey} value={leaf.pathKey}>
+                  {leaf.name} ({leaf.pathKey})
+                </option>
+              ))}
+            </select>
             <Input placeholder="Başlık *" value={form.title} onChange={(e) => setField('title', e.target.value)} />
             <textarea
               className="min-h-[120px] rounded-xl border border-[var(--border)] bg-[var(--card)] px-3 py-2 text-sm outline-none"
@@ -162,4 +198,3 @@ export default function NewListingWizardPage() {
     </main>
   );
 }
-

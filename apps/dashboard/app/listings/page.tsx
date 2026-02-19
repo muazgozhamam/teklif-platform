@@ -79,6 +79,8 @@ export default function PublicListingsPage() {
   const view = searchParams.get('view') === 'map' ? 'map' : 'list';
   const listingId = searchParams.get('listingId') || '';
   const q = searchParams.get('q') || '';
+  const categoryLeafPathKey = searchParams.get('categoryLeafPathKey') || '';
+  const listingType = searchParams.get('listingType') || '';
   const city = searchParams.get('city') || '';
   const district = searchParams.get('district') || '';
   const priceMin = searchParams.get('priceMin') || '';
@@ -86,18 +88,44 @@ export default function PublicListingsPage() {
   const bboxFromUrl = searchParams.get('bbox') || '';
 
   const [formQ, setFormQ] = React.useState(q);
+  const [formCategoryLeafPathKey, setFormCategoryLeafPathKey] = React.useState(categoryLeafPathKey);
+  const [formListingType, setFormListingType] = React.useState(listingType);
   const [formCity, setFormCity] = React.useState(city);
   const [formDistrict, setFormDistrict] = React.useState(district);
   const [formPriceMin, setFormPriceMin] = React.useState(priceMin);
   const [formPriceMax, setFormPriceMax] = React.useState(priceMax);
 
+  const [categoryLeaves, setCategoryLeaves] = React.useState<Array<{ pathKey: string; name: string }>>([]);
+
   React.useEffect(() => {
     setFormQ(q);
+    setFormCategoryLeafPathKey(categoryLeafPathKey);
+    setFormListingType(listingType);
     setFormCity(city);
     setFormDistrict(district);
     setFormPriceMin(priceMin);
     setFormPriceMax(priceMax);
-  }, [q, city, district, priceMin, priceMax]);
+  }, [q, categoryLeafPathKey, listingType, city, district, priceMin, priceMax]);
+
+  React.useEffect(() => {
+    let alive = true;
+    fetch('/api/public/listings/categories/leaves', { cache: 'no-store' })
+      .then(async (res) => {
+        if (!res.ok) throw new Error('Kategori listesi alınamadı');
+        return res.json();
+      })
+      .then((rows: Array<{ pathKey: string; name: string }>) => {
+        if (!alive) return;
+        setCategoryLeaves(Array.isArray(rows) ? rows : []);
+      })
+      .catch(() => {
+        if (!alive) return;
+        setCategoryLeaves([]);
+      });
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   const setQuery = React.useCallback(
     (patch: Record<string, string | null>) => {
@@ -117,6 +145,8 @@ export default function PublicListingsPage() {
     try {
       const params = new URLSearchParams();
       if (q) params.set('q', q);
+      if (categoryLeafPathKey) params.set('categoryLeafPathKey', categoryLeafPathKey);
+      if (listingType) params.set('listingType', listingType);
       if (city) params.set('city', city);
       if (district) params.set('district', district);
       if (priceMin) params.set('priceMin', priceMin);
@@ -136,7 +166,7 @@ export default function PublicListingsPage() {
     } finally {
       setLoading(false);
     }
-  }, [q, city, district, priceMin, priceMax, bboxFromUrl]);
+  }, [q, categoryLeafPathKey, listingType, city, district, priceMin, priceMax, bboxFromUrl]);
 
   React.useEffect(() => {
     void load();
@@ -187,6 +217,8 @@ export default function PublicListingsPage() {
   function applyFilters() {
     setQuery({
       q: formQ || null,
+      categoryLeafPathKey: formCategoryLeafPathKey || null,
+      listingType: formListingType || null,
       city: formCity || null,
       district: formDistrict || null,
       priceMin: formPriceMin || null,
@@ -197,12 +229,16 @@ export default function PublicListingsPage() {
 
   function clearFilters() {
     setFormQ('');
+    setFormCategoryLeafPathKey('');
+    setFormListingType('');
     setFormCity('');
     setFormDistrict('');
     setFormPriceMin('');
     setFormPriceMax('');
     setQuery({
       q: null,
+      categoryLeafPathKey: null,
+      listingType: null,
       city: null,
       district: null,
       priceMin: null,
@@ -240,6 +276,29 @@ export default function PublicListingsPage() {
 
         <Card className="mb-4 grid gap-3 md:grid-cols-6">
           <Input className="md:col-span-2" placeholder="Başlık / açıklama ara" value={formQ} onChange={(e) => setFormQ(e.target.value)} />
+          <select
+            className="h-10 rounded-xl border border-[var(--border)] bg-[var(--card)] px-3 text-sm"
+            value={formCategoryLeafPathKey}
+            onChange={(e) => setFormCategoryLeafPathKey(e.target.value)}
+          >
+            <option value="">Kategori (hepsi)</option>
+            {categoryLeaves.map((leaf) => (
+              <option key={leaf.pathKey} value={leaf.pathKey}>
+                {leaf.name}
+              </option>
+            ))}
+          </select>
+          <select
+            className="h-10 rounded-xl border border-[var(--border)] bg-[var(--card)] px-3 text-sm"
+            value={formListingType}
+            onChange={(e) => setFormListingType(e.target.value)}
+          >
+            <option value="">İlan Tipi (hepsi)</option>
+            <option value="SATILIK">Satılık</option>
+            <option value="KIRALIK">Kiralık</option>
+            <option value="DEVREN_SATILIK">Devren Satılık</option>
+            <option value="DEVREN_KIRALIK">Devren Kiralık</option>
+          </select>
           <Input placeholder="İl" value={formCity} onChange={(e) => setFormCity(e.target.value)} />
           <Input placeholder="İlçe" value={formDistrict} onChange={(e) => setFormDistrict(e.target.value)} />
           <Input placeholder="Min fiyat" value={formPriceMin} onChange={(e) => setFormPriceMin(e.target.value)} />
@@ -340,4 +399,3 @@ export default function PublicListingsPage() {
     </main>
   );
 }
-

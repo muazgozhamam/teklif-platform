@@ -3,6 +3,8 @@ export type ListingScope = 'own' | 'all';
 export type ListListingsQuery = {
   q?: string;
   categoryPathKey?: string;
+  categoryLeafPathKey?: string;
+  listingType?: string;
   city?: string;
   district?: string;
   neighborhood?: string;
@@ -17,6 +19,7 @@ export type ListListingsQuery = {
 
 export type CreateListingDto = {
   categoryLeafId?: string;
+  categoryLeafPathKey?: string;
   categoryPathKey?: string;
   title?: string;
   description?: string;
@@ -55,4 +58,3 @@ export type UpdateSahibindenDto = {
 export type PublishListingDto = {
   force?: boolean;
 };
-

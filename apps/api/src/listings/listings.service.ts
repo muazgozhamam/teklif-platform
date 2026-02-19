@@ -134,6 +134,83 @@ export class ListingsService {
     return row;
   }
 
+  private async resolveLeafCategoryFromDto(dto: Pick<CreateListingDto, 'categoryLeafId' | 'categoryLeafPathKey' | 'categoryPathKey'>) {
+    const leafPathKey = dto.categoryLeafPathKey || dto.categoryPathKey || null;
+
+    let leaf:
+      | {
+          id: string;
+          pathKey: string;
+          _count?: { children?: number };
+        }
+      | null = null;
+
+    if (dto.categoryLeafId) {
+      leaf = await (this.prisma as any).categoryNode.findUnique({
+        where: { id: dto.categoryLeafId },
+        select: { id: true, pathKey: true, _count: { select: { children: true } } },
+      });
+    } else if (leafPathKey) {
+      leaf = await (this.prisma as any).categoryNode.findUnique({
+        where: { pathKey: leafPathKey },
+        select: { id: true, pathKey: true, _count: { select: { children: true } } },
+      });
+    }
+
+    if (!leaf) return null;
+    const childCount = Number(leaf._count?.children || 0);
+    if (childCount > 0) {
+      throw new BadRequestException('Kategori leaf olmalı; parent kategori seçilemez');
+    }
+    return leaf;
+  }
+
+  async getPublicCategoriesTree() {
+    const rows = await (this.prisma as any).categoryNode.findMany({
+      where: { isActive: true },
+      orderBy: [{ depth: 'asc' }, { order: 'asc' }, { name: 'asc' }],
+      include: { _count: { select: { children: true } } },
+    });
+
+    const byId = new Map<string, any>();
+    for (const row of rows) {
+      byId.set(row.id, {
+        id: row.id,
+        pathKey: row.pathKey,
+        name: row.name,
+        slug: row.slug,
+        depth: row.depth,
+        order: row.order,
+        isActive: row.isActive,
+        isLeaf: Number(row._count?.children || 0) === 0,
+        children: [],
+      });
+    }
+
+    const roots: any[] = [];
+    for (const row of rows) {
+      const node = byId.get(row.id);
+      if (row.parentId && byId.has(row.parentId)) {
+        byId.get(row.parentId).children.push(node);
+      } else {
+        roots.push(node);
+      }
+    }
+    return roots;
+  }
+
+  async getPublicCategoryLeaves() {
+    const rows = await (this.prisma as any).categoryNode.findMany({
+      where: {
+        isActive: true,
+        children: { none: {} },
+      },
+      orderBy: [{ depth: 'asc' }, { order: 'asc' }, { name: 'asc' }],
+      select: { id: true, pathKey: true, name: true, slug: true, depth: true, order: true },
+    });
+    return rows.map((row: any) => ({ ...row, isLeaf: true }));
+  }
+
   private async ensurePublishRequirements(listingId: string) {
     const listing = await this.prisma.listing.findUnique({
       where: { id: listingId },
@@ -181,7 +258,12 @@ export class ListingsService {
 
     const where: Prisma.ListingWhereInput = {
       status: ListingStatus.PUBLISHED,
-      ...(query.categoryPathKey ? { categoryPathKey: String(query.categoryPathKey) } : {}),
+      ...(query.categoryLeafPathKey
+        ? { categoryPathKey: String(query.categoryLeafPathKey) }
+        : query.categoryPathKey
+          ? { categoryPathKey: String(query.categoryPathKey) }
+          : {}),
+      ...(query.listingType ? { type: String(query.listingType) } : {}),
       ...(query.city ? { city: String(query.city) } : {}),
       ...(query.district ? { district: String(query.district) } : {}),
       ...(query.neighborhood ? { neighborhood: String(query.neighborhood) } : {}),
@@ -243,13 +325,14 @@ export class ListingsService {
   }
 
   async createForUser(user: AuthUser, dto: CreateListingDto) {
+    const leaf = await this.resolveLeafCategoryFromDto(dto);
     const priceAmount = this.parseDecimal(dto.priceAmount, 'priceAmount');
     const row = await this.prisma.listing.create({
       data: {
         createdById: user.sub,
         consultantId: dto.consultantId || user.sub,
-        categoryLeafId: dto.categoryLeafId || null,
-        categoryPathKey: dto.categoryPathKey || null,
+        categoryLeafId: leaf?.id || null,
+        categoryPathKey: leaf?.pathKey || null,
         title: String(dto.title || '').trim() || 'Yeni İlan Taslağı',
         description: String(dto.description || '').trim() || null,
         priceAmount,
@@ -277,7 +360,12 @@ export class ListingsService {
 
     const where: Prisma.ListingWhereInput = {
       ...(query.status ? { status: query.status } : {}),
-      ...(query.categoryPathKey ? { categoryPathKey: String(query.categoryPathKey) } : {}),
+      ...(query.categoryLeafPathKey
+        ? { categoryPathKey: String(query.categoryLeafPathKey) }
+        : query.categoryPathKey
+          ? { categoryPathKey: String(query.categoryPathKey) }
+          : {}),
+      ...(query.listingType ? { type: String(query.listingType) } : {}),
       ...(query.city ? { city: String(query.city) } : {}),
       ...(query.district ? { district: String(query.district) } : {}),
       ...(query.neighborhood ? { neighborhood: String(query.neighborhood) } : {}),
@@ -327,11 +415,14 @@ export class ListingsService {
     const current = await this.prisma.listing.findUnique({ where: { id } });
     if (!current) throw new NotFoundException('Listing not found');
     this.assertCanMutate(user, current);
+    const hasCategoryPatch =
+      dto.categoryLeafId !== undefined || dto.categoryLeafPathKey !== undefined || dto.categoryPathKey !== undefined;
+    const leaf = hasCategoryPatch ? await this.resolveLeafCategoryFromDto(dto) : null;
 
     const priceAmount = dto.priceAmount !== undefined ? this.parseDecimal(dto.priceAmount, 'priceAmount') : undefined;
     const data: Prisma.ListingUncheckedUpdateInput = {
-      categoryLeafId: dto.categoryLeafId !== undefined ? dto.categoryLeafId || null : undefined,
-      categoryPathKey: dto.categoryPathKey !== undefined ? dto.categoryPathKey || null : undefined,
+      categoryLeafId: hasCategoryPatch ? leaf?.id || null : undefined,
+      categoryPathKey: hasCategoryPatch ? leaf?.pathKey || null : undefined,
       title: dto.title !== undefined ? String(dto.title).trim() || 'Yeni İlan Taslağı' : undefined,
       description: dto.description !== undefined ? String(dto.description).trim() || null : undefined,
       priceAmount,

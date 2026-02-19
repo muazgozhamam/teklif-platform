@@ -43,10 +43,31 @@ export default function EditListingPage() {
   const [error, setError] = React.useState<string | null>(null);
   const [message, setMessage] = React.useState<string | null>(null);
   const [row, setRow] = React.useState<Listing | null>(null);
+  const [categoryLeaves, setCategoryLeaves] = React.useState<Array<{ pathKey: string; name: string }>>([]);
   const [exportPayload, setExportPayload] = React.useState<ExportPayload | null>(null);
 
   React.useEffect(() => {
     setAllowed(requireAuth());
+  }, []);
+
+  React.useEffect(() => {
+    let alive = true;
+    fetch('/api/public/listings/categories/leaves', { cache: 'no-store' })
+      .then(async (res) => {
+        if (!res.ok) throw new Error('Kategori listesi alınamadı');
+        return res.json();
+      })
+      .then((rows: Array<{ pathKey: string; name: string }>) => {
+        if (!alive) return;
+        setCategoryLeaves(Array.isArray(rows) ? rows : []);
+      })
+      .catch(() => {
+        if (!alive) return;
+        setCategoryLeaves([]);
+      });
+    return () => {
+      alive = false;
+    };
   }, []);
 
   const load = React.useCallback(async () => {
@@ -81,7 +102,7 @@ export default function EditListingPage() {
       await api.patch(`/listings/${id}`, {
         title: row.title || '',
         description: row.description || '',
-        categoryPathKey: row.categoryPathKey || null,
+        categoryLeafPathKey: row.categoryPathKey || null,
         priceAmount: row.priceAmount || null,
         city: row.city || null,
         district: row.district || null,
@@ -176,7 +197,17 @@ export default function EditListingPage() {
             />
             <div className="grid gap-3 md:grid-cols-2">
               <Input value={String(row.priceAmount || '')} onChange={(e) => setField('priceAmount', e.target.value)} placeholder="Fiyat" />
-              <Input value={row.categoryPathKey || ''} onChange={(e) => setField('categoryPathKey', e.target.value)} placeholder="Kategori pathKey" />
+              <select
+                className="h-10 rounded-xl border border-[var(--border)] bg-[var(--card)] px-3 text-sm"
+                value={row.categoryPathKey || ''}
+                onChange={(e) => setField('categoryPathKey', e.target.value)}
+              >
+                {categoryLeaves.map((leaf) => (
+                  <option key={leaf.pathKey} value={leaf.pathKey}>
+                    {leaf.name} ({leaf.pathKey})
+                  </option>
+                ))}
+              </select>
               <Input value={row.city || ''} onChange={(e) => setField('city', e.target.value)} placeholder="İl" />
               <Input value={row.district || ''} onChange={(e) => setField('district', e.target.value)} placeholder="İlçe" />
               <Input value={row.neighborhood || ''} onChange={(e) => setField('neighborhood', e.target.value)} placeholder="Mahalle" />
@@ -225,4 +256,3 @@ export default function EditListingPage() {
     </main>
   );
 }
-

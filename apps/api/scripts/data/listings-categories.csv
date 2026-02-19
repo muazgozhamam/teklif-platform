@@ -1,0 +1,219 @@
+emlak,Emlak,emlak,,0,0,true
+
+emlak/konut,Konut,konut,emlak,1,0,true
+emlak/konut/satilik,Satılık,satilik,emlak/konut,2,0,true
+emlak/konut/kiralik,Kiralık,kiralik,emlak/konut,2,1,true
+emlak/konut/devren-satilik-konut,Devren Satılık Konut,devren-satilik-konut,emlak/konut,2,2,true
+
+# Konut > Satılık leaf
+emlak/konut/satilik/daire,Daire,daire,emlak/konut/satilik,3,0,true
+emlak/konut/satilik/rezidans,Rezidans,rezidans,emlak/konut/satilik,3,1,true
+emlak/konut/satilik/mustakil-ev,Müstakil Ev,mustakil-ev,emlak/konut/satilik,3,2,true
+emlak/konut/satilik/villa,Villa,villa,emlak/konut/satilik,3,3,true
+emlak/konut/satilik/ciftlik-evi,Çiftlik Evi,ciftlik-evi,emlak/konut/satilik,3,4,true
+emlak/konut/satilik/kosk-ve-konak,Köşk & Konak,kosk-ve-konak,emlak/konut/satilik,3,5,true
+emlak/konut/satilik/yali,Yalı,yali,emlak/konut/satilik,3,6,true
+emlak/konut/satilik/yali-dairesi,Yalı Dairesi,yali-dairesi,emlak/konut/satilik,3,7,true
+emlak/konut/satilik/yazlik,Yazlık,yazlik,emlak/konut/satilik,3,8,true
+emlak/konut/satilik/kooperatif,Kooperatif,kooperatif,emlak/konut/satilik,3,9,true
+
+# Konut > Kiralık leaf
+emlak/konut/kiralik/daire,Daire,daire,emlak/konut/kiralik,3,0,true
+emlak/konut/kiralik/rezidans,Rezidans,rezidans,emlak/konut/kiralik,3,1,true
+emlak/konut/kiralik/mustakil-ev,Müstakil Ev,mustakil-ev,emlak/konut/kiralik,3,2,true
+emlak/konut/kiralik/villa,Villa,villa,emlak/konut/kiralik,3,3,true
+emlak/konut/kiralik/ciftlik-evi,Çiftlik Evi,ciftlik-evi,emlak/konut/kiralik,3,4,true
+emlak/konut/kiralik/kosk-ve-konak,Köşk & Konak,kosk-ve-konak,emlak/konut/kiralik,3,5,true
+emlak/konut/kiralik/yali,Yalı,yali,emlak/konut/kiralik,3,6,true
+emlak/konut/kiralik/yali-dairesi,Yalı Dairesi,yali-dairesi,emlak/konut/kiralik,3,7,true
+
+# Konut > Devren Satılık Konut leaf
+emlak/konut/devren-satilik-konut/daire,Daire,daire,emlak/konut/devren-satilik-konut,3,0,true
+emlak/konut/devren-satilik-konut/villa,Villa,villa,emlak/konut/devren-satilik-konut,3,1,true
+
+emlak/is-yeri,İş Yeri,is-yeri,emlak,1,1,true
+emlak/is-yeri/satilik,Satılık,satilik,emlak/is-yeri,2,0,true
+emlak/is-yeri/kiralik,Kiralık,kiralik,emlak/is-yeri,2,1,true
+emlak/is-yeri/devren-satilik,Devren Satılık,devren-satilik,emlak/is-yeri,2,2,true
+emlak/is-yeri/devren-kiralik,Devren Kiralık,devren-kiralik,emlak/is-yeri,2,3,true
+
+# İş Yeri > Satılık leaf
+emlak/is-yeri/satilik/akaryakit-istasyonu,Akaryakıt İstasyonu,akaryakit-istasyonu,emlak/is-yeri/satilik,3,0,true
+emlak/is-yeri/satilik/apartman-dairesi,Apartman Dairesi,apartman-dairesi,emlak/is-yeri/satilik,3,1,true
+emlak/is-yeri/satilik/atolye,Atölye,atolye,emlak/is-yeri/satilik,3,2,true
+emlak/is-yeri/satilik/avm,AVM,avm,emlak/is-yeri/satilik,3,3,true
+emlak/is-yeri/satilik/bufe,Büfe,bufe,emlak/is-yeri/satilik,3,4,true
+emlak/is-yeri/satilik/buro-ofis,Büro & Ofis,buro-ofis,emlak/is-yeri/satilik,3,5,true
+emlak/is-yeri/satilik/ciftlik,Çiftlik,ciftlik,emlak/is-yeri/satilik,3,6,true
+emlak/is-yeri/satilik/depo-antrepo,Depo & Antrepo,depo-antrepo,emlak/is-yeri/satilik,3,7,true
+emlak/is-yeri/satilik/dugun-salonu,Düğün Salonu,dugun-salonu,emlak/is-yeri/satilik,3,8,true
+emlak/is-yeri/satilik/dukkan-magaza,Dükkan & Mağaza,dukkan-magaza,emlak/is-yeri/satilik,3,9,true
+emlak/is-yeri/satilik/enerji-santrali,Enerji Santrali,enerji-santrali,emlak/is-yeri/satilik,3,10,true
+emlak/is-yeri/satilik/fabrika-uretim,Fabrika & Üretim Tesisi,fabrika-uretim,emlak/is-yeri/satilik,3,11,true
+emlak/is-yeri/satilik/garaj-park,Garaj & Park Yeri,garaj-park,emlak/is-yeri/satilik,3,12,true
+emlak/is-yeri/satilik/imalathane,İmalathane,imalathane,emlak/is-yeri/satilik,3,13,true
+emlak/is-yeri/satilik/is-hani-kati-ofisi,İş Hanı Katı & Ofisi,is-hani-kati-ofisi,emlak/is-yeri/satilik,3,14,true
+emlak/is-yeri/satilik/kafe-bar,Kafe & Bar,kafe-bar,emlak/is-yeri/satilik,3,15,true
+emlak/is-yeri/satilik/kantin,Kantin,kantin,emlak/is-yeri/satilik,3,16,true
+emlak/is-yeri/satilik/kir-kahvalti-bahcesi,Kır & Kahvaltı Bahçesi,kir-kahvalti-bahcesi,emlak/is-yeri/satilik,3,17,true
+emlak/is-yeri/satilik/kiraathane,Kıraathane,kiraathane,emlak/is-yeri/satilik,3,18,true
+emlak/is-yeri/satilik/komple-bina,Komple Bina,komple-bina,emlak/is-yeri/satilik,3,19,true
+emlak/is-yeri/satilik/maden-ocagi,Maden Ocağı,maden-ocagi,emlak/is-yeri/satilik,3,20,true
+emlak/is-yeri/satilik/otopark-garaj,Otopark & Garaj,otopark-garaj,emlak/is-yeri/satilik,3,21,true
+emlak/is-yeri/satilik/oto-yikama-kuafor,Oto Yıkama & Kuaför,oto-yikama-kuafor,emlak/is-yeri/satilik,3,22,true
+emlak/is-yeri/satilik/pastane-firin-tatlici,"Pastane, Fırın & Tatlıcı",pastane-firin-tatlici,emlak/is-yeri/satilik,3,23,true
+emlak/is-yeri/satilik/pazar-yeri,Pazar Yeri,pazar-yeri,emlak/is-yeri/satilik,3,24,true
+emlak/is-yeri/satilik/plaza,Plaza,plaza,emlak/is-yeri/satilik,3,25,true
+emlak/is-yeri/satilik/plaza-kati-ofisi,Plaza Katı & Ofisi,plaza-kati-ofisi,emlak/is-yeri/satilik,3,26,true
+emlak/is-yeri/satilik/radyo-tv,Radyo İstasyonu & TV Kanalı,radyo-tv,emlak/is-yeri/satilik,3,27,true
+emlak/is-yeri/satilik/restoran-lokanta,Restoran & Lokanta,restoran-lokanta,emlak/is-yeri/satilik,3,28,true
+emlak/is-yeri/satilik/rezidans-kati-ofisi,Rezidans Katı & Ofisi,rezidans-kati-ofisi,emlak/is-yeri/satilik,3,29,true
+emlak/is-yeri/satilik/saglik-merkezi,Sağlık Merkezi,saglik-merkezi,emlak/is-yeri/satilik,3,30,true
+emlak/is-yeri/satilik/sinema-konferans,Sinema & Konferans Salonu,sinema-konferans,emlak/is-yeri/satilik,3,31,true
+emlak/is-yeri/satilik/spa-hamam-sauna,"SPA, Hamam & Sauna",spa-hamam-sauna,emlak/is-yeri/satilik,3,32,true
+emlak/is-yeri/satilik/spor-tesisi,Spor Tesisi,spor-tesisi,emlak/is-yeri/satilik,3,33,true
+emlak/is-yeri/satilik/villa,Villa,villa,emlak/is-yeri/satilik,3,34,true
+emlak/is-yeri/satilik/yurt,Yurt,yurt,emlak/is-yeri/satilik,3,35,true
+
+# İş Yeri > Kiralık leaf
+emlak/is-yeri/kiralik/akaryakit-istasyonu,Akaryakıt İstasyonu,akaryakit-istasyonu,emlak/is-yeri/kiralik,3,0,true
+emlak/is-yeri/kiralik/apartman-dairesi,Apartman Dairesi,apartman-dairesi,emlak/is-yeri/kiralik,3,1,true
+emlak/is-yeri/kiralik/atolye,Atölye,atolye,emlak/is-yeri/kiralik,3,2,true
+emlak/is-yeri/kiralik/avm,AVM,avm,emlak/is-yeri/kiralik,3,3,true
+emlak/is-yeri/kiralik/bufe,Büfe,bufe,emlak/is-yeri/kiralik,3,4,true
+emlak/is-yeri/kiralik/buro-ofis,Büro & Ofis,buro-ofis,emlak/is-yeri/kiralik,3,5,true
+emlak/is-yeri/kiralik/ciftlik,Çiftlik,ciftlik,emlak/is-yeri/kiralik,3,6,true
+emlak/is-yeri/kiralik/depo-antrepo,Depo & Antrepo,depo-antrepo,emlak/is-yeri/kiralik,3,7,true
+emlak/is-yeri/kiralik/dugun-salonu,Düğün Salonu,dugun-salonu,emlak/is-yeri/kiralik,3,8,true
+emlak/is-yeri/kiralik/dukkan-magaza,Dükkan & Mağaza,dukkan-magaza,emlak/is-yeri/kiralik,3,9,true
+emlak/is-yeri/kiralik/eczane-medikal,Eczane & Medikal,eczane-medikal,emlak/is-yeri/kiralik,3,10,true
+emlak/is-yeri/kiralik/fabrika-uretim,Fabrika & Üretim Tesisi,fabrika-uretim,emlak/is-yeri/kiralik,3,11,true
+emlak/is-yeri/kiralik/fotograf-studyosu,Fotoğraf Stüdyosu,fotograf-studyosu,emlak/is-yeri/kiralik,3,12,true
+emlak/is-yeri/kiralik/garaj-park,Garaj & Park Yeri,garaj-park,emlak/is-yeri/kiralik,3,13,true
+emlak/is-yeri/kiralik/hazir-sanal-ofis,Hazır & Sanal Ofis,hazir-sanal-ofis,emlak/is-yeri/kiralik,3,14,true
+emlak/is-yeri/kiralik/imalathane,İmalathane,imalathane,emlak/is-yeri/kiralik,3,15,true
+emlak/is-yeri/kiralik/is-hani-kati-ofisi,İş Hanı Katı & Ofisi,is-hani-kati-ofisi,emlak/is-yeri/kiralik,3,16,true
+emlak/is-yeri/kiralik/kafe-bar,Kafe & Bar,kafe-bar,emlak/is-yeri/kiralik,3,17,true
+emlak/is-yeri/kiralik/kantin,Kantin,kantin,emlak/is-yeri/kiralik,3,18,true
+emlak/is-yeri/kiralik/kir-kahvalti-bahcesi,Kır & Kahvaltı Bahçesi,kir-kahvalti-bahcesi,emlak/is-yeri/kiralik,3,19,true
+emlak/is-yeri/kiralik/kiraathane,Kıraathane,kiraathane,emlak/is-yeri/kiralik,3,20,true
+emlak/is-yeri/kiralik/komple-bina,Komple Bina,komple-bina,emlak/is-yeri/kiralik,3,21,true
+emlak/is-yeri/kiralik/kuafor-guzellik-merkezi,Kuaför & Güzellik Merkezi,kuafor-guzellik-merkezi,emlak/is-yeri/kiralik,3,22,true
+emlak/is-yeri/kiralik/maden-ocagi,Maden Ocağı,maden-ocagi,emlak/is-yeri/kiralik,3,23,true
+emlak/is-yeri/kiralik/market,Market,market,emlak/is-yeri/kiralik,3,24,true
+emlak/is-yeri/kiralik/muayenehane,Muayenehane,muayenehane,emlak/is-yeri/kiralik,3,25,true
+emlak/is-yeri/kiralik/okul-kurs,Okul & Kurs,okul-kurs,emlak/is-yeri/kiralik,3,26,true
+emlak/is-yeri/kiralik/otopark,Otopark,otopark,emlak/is-yeri/kiralik,3,27,true
+emlak/is-yeri/kiralik/oto-yikama-kuafor,Oto Yıkama & Kuaför,oto-yikama-kuafor,emlak/is-yeri/kiralik,3,28,true
+emlak/is-yeri/kiralik/pastane-firin-tatlici,"Pastane, Fırın & Tatlıcı",pastane-firin-tatlici,emlak/is-yeri/kiralik,3,29,true
+emlak/is-yeri/kiralik/pazar-yeri,Pazar Yeri,pazar-yeri,emlak/is-yeri/kiralik,3,30,true
+emlak/is-yeri/kiralik/plaza,Plaza,plaza,emlak/is-yeri/kiralik,3,31,true
+emlak/is-yeri/kiralik/plaza-kati-ofisi,Plaza Katı & Ofisi,plaza-kati-ofisi,emlak/is-yeri/kiralik,3,32,true
+emlak/is-yeri/kiralik/prova-kayit-studyosu,Prova & Kayıt Stüdyosu,prova-kayit-studyosu,emlak/is-yeri/kiralik,3,33,true
+emlak/is-yeri/kiralik/radyo-tv,Radyo İstasyonu & TV Kanalı,radyo-tv,emlak/is-yeri/kiralik,3,34,true
+emlak/is-yeri/kiralik/restoran-lokanta,Restoran & Lokanta,restoran-lokanta,emlak/is-yeri/kiralik,3,35,true
+emlak/is-yeri/kiralik/rezidans-kati-ofisi,Rezidans Katı & Ofisi,rezidans-kati-ofisi,emlak/is-yeri/kiralik,3,36,true
+emlak/is-yeri/kiralik/saglik-merkezi,Sağlık Merkezi,saglik-merkezi,emlak/is-yeri/kiralik,3,37,true
+emlak/is-yeri/kiralik/sinema-konferans,Sinema & Konferans Salonu,sinema-konferans,emlak/is-yeri/kiralik,3,38,true
+emlak/is-yeri/kiralik/spa-hamam-sauna,"SPA, Hamam & Sauna",spa-hamam-sauna,emlak/is-yeri/kiralik,3,39,true
+emlak/is-yeri/kiralik/spor-tesisi,Spor Tesisi,spor-tesisi,emlak/is-yeri/kiralik,3,40,true
+emlak/is-yeri/kiralik/taksi-duragi,Taksi Durağı,taksi-duragi,emlak/is-yeri/kiralik,3,41,true
+emlak/is-yeri/kiralik/tamirhane,Tamirhane,tamirhane,emlak/is-yeri/kiralik,3,42,true
+emlak/is-yeri/kiralik/villa,Villa,villa,emlak/is-yeri/kiralik,3,43,true
+emlak/is-yeri/kiralik/yurt,Yurt,yurt,emlak/is-yeri/kiralik,3,44,true
+
+# İş Yeri > Devren Satılık leaf (devren-kiralik script ile otomatik kopyalanır)
+emlak/is-yeri/devren-satilik/acente,Acente,acente,emlak/is-yeri/devren-satilik,3,0,true
+emlak/is-yeri/devren-satilik/akaryakit-istasyonu,Akaryakıt İstasyonu,akaryakit-istasyonu,emlak/is-yeri/devren-satilik,3,1,true
+emlak/is-yeri/devren-satilik/aktar-baharatci,Aktar & Baharatçı,aktar-baharatci,emlak/is-yeri/devren-satilik,3,2,true
+emlak/is-yeri/devren-satilik/anaokulu-kres,Anaokulu & Kreş,anaokulu-kres,emlak/is-yeri/devren-satilik,3,3,true
+emlak/is-yeri/devren-satilik/apartman-dairesi,Apartman Dairesi,apartman-dairesi,emlak/is-yeri/devren-satilik,3,4,true
+emlak/is-yeri/devren-satilik/arac-showroom-servis,Araç Showroom & Servis,arac-showroom-servis,emlak/is-yeri/devren-satilik,3,5,true
+emlak/is-yeri/devren-satilik/atolye,Atölye,atolye,emlak/is-yeri/devren-satilik,3,6,true
+emlak/is-yeri/devren-satilik/avm-standi,AVM Standı,avm-standi,emlak/is-yeri/devren-satilik,3,7,true
+emlak/is-yeri/devren-satilik/balikci,Balıkçı,balikci,emlak/is-yeri/devren-satilik,3,8,true
+emlak/is-yeri/devren-satilik/bar,Bar,bar,emlak/is-yeri/devren-satilik,3,9,true
+emlak/is-yeri/devren-satilik/bijuteri,Bijuteri,bijuteri,emlak/is-yeri/devren-satilik,3,10,true
+emlak/is-yeri/devren-satilik/borekci,Börekçi,borekci,emlak/is-yeri/devren-satilik,3,11,true
+emlak/is-yeri/devren-satilik/bufe,Büfe,bufe,emlak/is-yeri/devren-satilik,3,12,true
+emlak/is-yeri/devren-satilik/buro-ofis,Büro & Ofis,buro-ofis,emlak/is-yeri/devren-satilik,3,13,true
+emlak/is-yeri/devren-satilik/cep-telefonu-dukkani,Cep Telefonu Dükkanı,cep-telefonu-dukkani,emlak/is-yeri/devren-satilik,3,14,true
+emlak/is-yeri/devren-satilik/camasirhane,Çamaşırhane,camasirhane,emlak/is-yeri/devren-satilik,3,15,true
+emlak/is-yeri/devren-satilik/cay-ocagi,Çay Ocağı,cay-ocagi,emlak/is-yeri/devren-satilik,3,16,true
+emlak/is-yeri/devren-satilik/cicekci-fidanlik,Çiçekçi & Fidanlık,cicekci-fidanlik,emlak/is-yeri/devren-satilik,3,17,true
+emlak/is-yeri/devren-satilik/ciftlik,Çiftlik,ciftlik,emlak/is-yeri/devren-satilik,3,18,true
+emlak/is-yeri/devren-satilik/depo-antrepo,Depo & Antrepo,depo-antrepo,emlak/is-yeri/devren-satilik,3,19,true
+emlak/is-yeri/devren-satilik/dugun-salonu,Düğün Salonu,dugun-salonu,emlak/is-yeri/devren-satilik,3,20,true
+emlak/is-yeri/devren-satilik/dukkan-magaza,Dükkan & Mağaza,dukkan-magaza,emlak/is-yeri/devren-satilik,3,21,true
+emlak/is-yeri/devren-satilik/eczane-medikal,Eczane & Medikal,eczane-medikal,emlak/is-yeri/devren-satilik,3,22,true
+emlak/is-yeri/devren-satilik/elektrikci-hirdavatci,Elektrikçi & Hırdavatçı,elektrikci-hirdavatci,emlak/is-yeri/devren-satilik,3,23,true
+emlak/is-yeri/devren-satilik/elektronik-magazasi,Elektronik Mağazası,elektronik-magazasi,emlak/is-yeri/devren-satilik,3,24,true
+emlak/is-yeri/devren-satilik/enerji-santrali,Enerji Santrali,enerji-santrali,emlak/is-yeri/devren-satilik,3,25,true
+emlak/is-yeri/devren-satilik/etkinlik-performans-salonu,Etkinlik & Performans Salonu,etkinlik-performans-salonu,emlak/is-yeri/devren-satilik,3,26,true
+emlak/is-yeri/devren-satilik/fabrika-uretim,Fabrika & Üretim Tesisi,fabrika-uretim,emlak/is-yeri/devren-satilik,3,27,true
+emlak/is-yeri/devren-satilik/fatura-merkezi,Fatura Merkezi,fatura-merkezi,emlak/is-yeri/devren-satilik,3,28,true
+emlak/is-yeri/devren-satilik/fotograf-studyosu,Fotoğraf Stüdyosu,fotograf-studyosu,emlak/is-yeri/devren-satilik,3,29,true
+emlak/is-yeri/devren-satilik/gece-kulubu-disko,Gece Kulübü & Disko,gece-kulubu-disko,emlak/is-yeri/devren-satilik,3,30,true
+emlak/is-yeri/devren-satilik/giyim-magazasi,Giyim Mağazası,giyim-magazasi,emlak/is-yeri/devren-satilik,3,31,true
+emlak/is-yeri/devren-satilik/gozlukcu,Gözlükçü,gozlukcu,emlak/is-yeri/devren-satilik,3,32,true
+emlak/is-yeri/devren-satilik/hali-yikama,Halı Yıkama,hali-yikama,emlak/is-yeri/devren-satilik,3,33,true
+emlak/is-yeri/devren-satilik/huzur-evi,Huzur Evi,huzur-evi,emlak/is-yeri/devren-satilik,3,34,true
+emlak/is-yeri/devren-satilik/imalathane,İmalathane,imalathane,emlak/is-yeri/devren-satilik,3,35,true
+emlak/is-yeri/devren-satilik/internet-oyun-kafe,İnternet & Oyun Kafe,internet-oyun-kafe,emlak/is-yeri/devren-satilik,3,36,true
+emlak/is-yeri/devren-satilik/is-hani,İş Hanı,is-hani,emlak/is-yeri/devren-satilik,3,37,true
+emlak/is-yeri/devren-satilik/is-hani-kati-ofisi,İş Hanı Katı & Ofisi,is-hani-kati-ofisi,emlak/is-yeri/devren-satilik,3,38,true
+emlak/is-yeri/devren-satilik/kafe,Kafe,kafe,emlak/is-yeri/devren-satilik,3,39,true
+emlak/is-yeri/devren-satilik/kantin,Kantin,kantin,emlak/is-yeri/devren-satilik,3,40,true
+emlak/is-yeri/devren-satilik/kasap,Kasap,kasap,emlak/is-yeri/devren-satilik,3,41,true
+emlak/is-yeri/devren-satilik/kir-kahvalti-bahcesi,Kır & Kahvaltı Bahçesi,kir-kahvalti-bahcesi,emlak/is-yeri/devren-satilik,3,42,true
+emlak/is-yeri/devren-satilik/kiraathane,Kıraathane,kiraathane,emlak/is-yeri/devren-satilik,3,43,true
+emlak/is-yeri/devren-satilik/kirtasiye,Kırtasiye,kirtasiye,emlak/is-yeri/devren-satilik,3,44,true
+emlak/is-yeri/devren-satilik/kozmetik-magazasi,Kozmetik Mağazası,kozmetik-magazasi,emlak/is-yeri/devren-satilik,3,45,true
+emlak/is-yeri/devren-satilik/kuafor-guzellik-merkezi,Kuaför & Güzellik Merkezi,kuafor-guzellik-merkezi,emlak/is-yeri/devren-satilik,3,46,true
+emlak/is-yeri/devren-satilik/kurs-egitim-merkezi,Kurs & Eğitim Merkezi,kurs-egitim-merkezi,emlak/is-yeri/devren-satilik,3,47,true
+emlak/is-yeri/devren-satilik/kuru-temizleme,Kuru Temizleme,kuru-temizleme,emlak/is-yeri/devren-satilik,3,48,true
+emlak/is-yeri/devren-satilik/kuruyemisci,Kuruyemişçi,kuruyemisci,emlak/is-yeri/devren-satilik,3,49,true
+emlak/is-yeri/devren-satilik/kuyumcu,Kuyumcu,kuyumcu,emlak/is-yeri/devren-satilik,3,50,true
+emlak/is-yeri/devren-satilik/lunapark,Lunapark,lunapark,emlak/is-yeri/devren-satilik,3,51,true
+emlak/is-yeri/devren-satilik/maden-ocagi,Maden Ocağı,maden-ocagi,emlak/is-yeri/devren-satilik,3,52,true
+emlak/is-yeri/devren-satilik/manav,Manav,manav,emlak/is-yeri/devren-satilik,3,53,true
+emlak/is-yeri/devren-satilik/market,Market,market,emlak/is-yeri/devren-satilik,3,54,true
+emlak/is-yeri/devren-satilik/matbaa,Matbaa,matbaa,emlak/is-yeri/devren-satilik,3,55,true
+emlak/is-yeri/devren-satilik/modaevi,Modaevi,modaevi,emlak/is-yeri/devren-satilik,3,56,true
+emlak/is-yeri/devren-satilik/muayenehane,Muayenehane,muayenehane,emlak/is-yeri/devren-satilik,3,57,true
+emlak/is-yeri/devren-satilik/nakliyat-kargo,Nakliyat & Kargo,nakliyat-kargo,emlak/is-yeri/devren-satilik,3,58,true
+emlak/is-yeri/devren-satilik/nalbur,Nalbur,nalbur,emlak/is-yeri/devren-satilik,3,59,true
+emlak/is-yeri/devren-satilik/okul-kurs,Okul & Kurs,okul-kurs,emlak/is-yeri/devren-satilik,3,60,true
+emlak/is-yeri/devren-satilik/otopark-garaj-slash,Otopark / Garaj,otopark-garaj-slash,emlak/is-yeri/devren-satilik,3,61,true
+emlak/is-yeri/devren-satilik/oto-servis-bakim,Oto Servis & Bakım,oto-servis-bakim,emlak/is-yeri/devren-satilik,3,62,true
+emlak/is-yeri/devren-satilik/oto-yedek-parca,Oto Yedek Parça,oto-yedek-parca,emlak/is-yeri/devren-satilik,3,63,true
+emlak/is-yeri/devren-satilik/oto-yikama-kuafor,Oto Yıkama & Kuaför,oto-yikama-kuafor,emlak/is-yeri/devren-satilik,3,64,true
+emlak/is-yeri/devren-satilik/ogrenci-yurdu,Öğrenci Yurdu,ogrenci-yurdu,emlak/is-yeri/devren-satilik,3,65,true
+emlak/is-yeri/devren-satilik/pastane-firin-tatlici,"Pastane, Fırın & Tatlıcı",pastane-firin-tatlici,emlak/is-yeri/devren-satilik,3,66,true
+emlak/is-yeri/devren-satilik/pazar-yeri,Pazar Yeri,pazar-yeri,emlak/is-yeri/devren-satilik,3,67,true
+emlak/is-yeri/devren-satilik/pet-shop,Pet Shop,pet-shop,emlak/is-yeri/devren-satilik,3,68,true
+emlak/is-yeri/devren-satilik/plaza,Plaza,plaza,emlak/is-yeri/devren-satilik,3,69,true
+emlak/is-yeri/devren-satilik/plaza-kati-ofisi,Plaza Katı & Ofisi,plaza-kati-ofisi,emlak/is-yeri/devren-satilik,3,70,true
+emlak/is-yeri/devren-satilik/prova-kayit-studyosu,Prova & Kayıt Stüdyosu,prova-kayit-studyosu,emlak/is-yeri/devren-satilik,3,71,true
+emlak/is-yeri/devren-satilik/radyo-tv,Radyo İstasyonu & TV Kanalı,radyo-tv,emlak/is-yeri/devren-satilik,3,72,true
+emlak/is-yeri/devren-satilik/restoran-lokanta,Restoran & Lokanta,restoran-lokanta,emlak/is-yeri/devren-satilik,3,73,true
+emlak/is-yeri/devren-satilik/rezidans-kati-ofisi,Rezidans Katı & Ofisi,rezidans-kati-ofisi,emlak/is-yeri/devren-satilik,3,74,true
+emlak/is-yeri/devren-satilik/saat-magazasi,Saat Mağazası,saat-magazasi,emlak/is-yeri/devren-satilik,3,75,true
+emlak/is-yeri/devren-satilik/saglik-merkezi,Sağlık Merkezi,saglik-merkezi,emlak/is-yeri/devren-satilik,3,76,true
+emlak/is-yeri/devren-satilik/sebze-meyve-hali,Sebze & Meyve Hali,sebze-meyve-hali,emlak/is-yeri/devren-satilik,3,77,true
+emlak/is-yeri/devren-satilik/sinema-konferans,Sinema & Konferans Salonu,sinema-konferans,emlak/is-yeri/devren-satilik,3,78,true
+emlak/is-yeri/devren-satilik/soguk-hava-deposu,Soğuk Hava Deposu,soguk-hava-deposu,emlak/is-yeri/devren-satilik,3,79,true
+emlak/is-yeri/devren-satilik/spa-hamam-sauna,"SPA, Hamam & Sauna",spa-hamam-sauna,emlak/is-yeri/devren-satilik,3,80,true
+emlak/is-yeri/devren-satilik/spor-tesisi,Spor Tesisi,spor-tesisi,emlak/is-yeri/devren-satilik,3,81,true
+emlak/is-yeri/devren-satilik/su-tup-bayi,Su & Tüp Bayi,su-tup-bayi,emlak/is-yeri/devren-satilik,3,82,true
+emlak/is-yeri/devren-satilik/sans-oyunlari-bayisi,Şans Oyunları Bayisi,sans-oyunlari-bayisi,emlak/is-yeri/devren-satilik,3,83,true
+emlak/is-yeri/devren-satilik/sarkuteri,Şarküteri,sarkuteri,emlak/is-yeri/devren-satilik,3,84,true
+emlak/is-yeri/devren-satilik/taksi-duragi,Taksi Durağı,taksi-duragi,emlak/is-yeri/devren-satilik,3,85,true
+emlak/is-yeri/devren-satilik/tamirhane,Tamirhane,tamirhane,emlak/is-yeri/devren-satilik,3,86,true
+emlak/is-yeri/devren-satilik/tekel-bayi,Tekel Bayi,tekel-bayi,emlak/is-yeri/devren-satilik,3,87,true
+emlak/is-yeri/devren-satilik/teknik-servis,Teknik Servis,teknik-servis,emlak/is-yeri/devren-satilik,3,88,true
+emlak/is-yeri/devren-satilik/terzi,Terzi,terzi,emlak/is-yeri/devren-satilik,3,89,true
+emlak/is-yeri/devren-satilik/tuhafiye,Tuhafiye,tuhafiye,emlak/is-yeri/devren-satilik,3,90,true
+emlak/is-yeri/devren-satilik/tuvalet,Tuvalet,tuvalet,emlak/is-yeri/devren-satilik,3,91,true
+emlak/is-yeri/devren-satilik/veteriner,Veteriner,veteriner,emlak/is-yeri/devren-satilik,3,92,true
+emlak/is-yeri/devren-satilik/zuccaciye,Züccaciye,zuccaciye,emlak/is-yeri/devren-satilik,3,93,true
