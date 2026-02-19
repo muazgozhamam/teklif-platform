@@ -7,6 +7,12 @@ type LatLng = { lat: number; lng: number };
 type Props = {
   value: LatLng | null;
   onChange: (next: LatLng) => void;
+  focusAddress?: {
+    city?: string | null;
+    district?: string | null;
+    neighborhood?: string | null;
+    country?: string | null;
+  };
   className?: string;
 };
 
@@ -41,6 +47,15 @@ type MapsNamespace = {
     },
   ) => MapsInstance;
   Marker: new (options: { position: LatLng; map: MapsInstance; draggable?: boolean }) => MapsMarker;
+  Geocoder: new () => {
+    geocode: (
+      request: { address: string },
+      callback: (
+        results: Array<{ geometry?: { location?: { lat: () => number; lng: () => number } } }> | null,
+        status: string,
+      ) => void,
+    ) => void;
+  };
 };
 
 type GoogleNamespace = { maps: MapsNamespace };
@@ -77,8 +92,9 @@ async function loadGoogleMaps(): Promise<GoogleNamespace> {
   return mapsLoaderPromise;
 }
 
-export function MapPinPicker({ value, onChange, className }: Props) {
+export function MapPinPicker({ value, onChange, focusAddress, className }: Props) {
   const mapRef = React.useRef<HTMLDivElement | null>(null);
+  const mapInstanceRef = React.useRef<MapsInstance | null>(null);
   const markerRef = React.useRef<MapsMarker | null>(null);
   const onChangeRef = React.useRef(onChange);
   const valueRef = React.useRef<LatLng | null>(value);
@@ -112,6 +128,7 @@ export function MapPinPicker({ value, onChange, className }: Props) {
           streetViewControl: false,
           fullscreenControl: false,
         });
+        mapInstanceRef.current = map;
 
         const marker = new googleNs.maps.Marker({
           position: initial,
@@ -151,6 +168,29 @@ export function MapPinPicker({ value, onChange, className }: Props) {
     if (!value || !markerRef.current) return;
     markerRef.current.setPosition(value);
   }, [value]);
+
+  const focusKey = React.useMemo(() => {
+    const city = String(focusAddress?.city || '').trim();
+    const district = String(focusAddress?.district || '').trim();
+    const neighborhood = String(focusAddress?.neighborhood || '').trim();
+    const country = String(focusAddress?.country || 'Türkiye').trim();
+    return [neighborhood, district, city, country].filter(Boolean).join(', ');
+  }, [focusAddress?.city, focusAddress?.district, focusAddress?.neighborhood, focusAddress?.country]);
+
+  React.useEffect(() => {
+    if (!focusKey || typeof window === 'undefined' || !window.google?.maps || !mapInstanceRef.current) return;
+    const geocoder = new window.google.maps.Geocoder();
+    geocoder.geocode({ address: focusKey }, (results, status) => {
+      if (status !== 'OK' || !results?.length) return;
+      const loc = results[0]?.geometry?.location;
+      if (!loc) return;
+      const lat = loc.lat();
+      const lng = loc.lng();
+      const anyMap = mapInstanceRef.current as unknown as { panTo?: (pos: LatLng) => void; setZoom?: (z: number) => void };
+      anyMap.panTo?.({ lat, lng });
+      anyMap.setZoom?.(15);
+    });
+  }, [focusKey]);
 
   return (
     <div className={className}>

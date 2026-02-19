@@ -260,6 +260,12 @@ export default function EditListingPage() {
               <div className="md:col-span-2 grid gap-2">
                 <MapPinPicker
                   value={typeof row.lat === 'number' && typeof row.lng === 'number' ? { lat: row.lat, lng: row.lng } : null}
+                  focusAddress={{
+                    city: row.city,
+                    district: row.district,
+                    neighborhood: row.neighborhood,
+                    country: 'Türkiye',
+                  }}
                   onChange={(next) => {
                     setField('lat', next.lat);
                     setField('lng', next.lng);

@@ -248,6 +248,12 @@ export default function NewListingWizardPage() {
             </div>
             <MapPinPicker
               value={stepThreeValid ? { lat: Number(form.lat), lng: Number(form.lng) } : null}
+              focusAddress={{
+                city: form.city,
+                district: form.district,
+                neighborhood: form.neighborhood,
+                country: 'Türkiye',
+              }}
               onChange={(next) => {
                 setField('lat', String(next.lat));
                 setField('lng', String(next.lng));
