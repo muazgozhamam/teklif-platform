@@ -46,6 +46,9 @@ model User {
   assignedApplications         Application[]      @relation("ApplicationAssignee")
   applicationNotes             ApplicationNote[]  @relation("ApplicationNoteAuthor")
   applicationEvents            ApplicationEvent[] @relation("ApplicationEventActor")
+
+  createdListings              Listing[]          @relation("ListingCreatedBy")
+  exportedListings             Listing[]          @relation("ListingExportedBy")
 }
 
 enum Role {
@@ -172,6 +175,20 @@ enum ListingStatus {
   ARCHIVED
 }
 
+enum PrivacyMode {
+  EXACT
+  APPROXIMATE
+  HIDDEN
+}
+
+enum AttributeType {
+  TEXT
+  NUMBER
+  BOOLEAN
+  SELECT
+  MULTISELECT
+}
+
 enum ApplicationStatus {
   PENDING
   APPROVED
@@ -184,6 +201,18 @@ model Listing {
   updatedAt DateTime @updatedAt
 
   status ListingStatus @default(DRAFT)
+
+  createdById       String?
+  categoryLeafId    String?
+  categoryPathKey   String?
+  priceAmount       Decimal?    @db.Decimal(18, 2)
+  neighborhood      String?
+  lat               Float?
+  lng               Float?
+  privacyMode       PrivacyMode @default(EXACT)
+  sahibindenUrl     String?
+  exportedAt        DateTime?
+  exportedById      String?
 
   // Owner consultant (danışman)
   consultantId String
@@ -200,13 +229,72 @@ model Listing {
   price       Int?
   currency    String  @default("TRY")
 
-  deals  Deal[]
-  user   User?   @relation(fields: [userId], references: [id])
-  userId String?
+  deals              Deal[]
+  user               User?   @relation(fields: [userId], references: [id])
+  userId             String?
+  createdBy          User?   @relation("ListingCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  exportedBy         User?   @relation("ListingExportedBy", fields: [exportedById], references: [id], onDelete: SetNull)
+  categoryLeaf       CategoryNode? @relation("CategoryListings", fields: [categoryLeafId], references: [id], onDelete: SetNull)
+  listingAttributes  ListingAttribute[]
 
   @@index([status])
   @@index([consultantId, status])
   @@index([city, district, type])
+  @@index([status, categoryLeafId, city, district])
+  @@index([lat, lng])
+}
+
+model CategoryNode {
+  id         String   @id @default(cuid())
+  parentId   String?
+  name       String
+  slug       String
+  depth      Int
+  order      Int      @default(0)
+  isActive   Boolean  @default(true)
+  pathKey    String   @unique
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  parent     CategoryNode?  @relation("CategoryTree", fields: [parentId], references: [id], onDelete: SetNull)
+  children   CategoryNode[] @relation("CategoryTree")
+  attributes AttributeDefinition[]
+  listings   Listing[]      @relation("CategoryListings")
+
+  @@index([parentId, order])
+  @@index([depth, isActive])
+}
+
+model AttributeDefinition {
+  id             String        @id @default(cuid())
+  categoryLeafId String
+  key            String
+  label          String
+  type           AttributeType
+  required       Boolean       @default(false)
+  optionsJson    Json?
+  order          Int           @default(0)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  categoryLeaf   CategoryNode  @relation(fields: [categoryLeafId], references: [id], onDelete: Cascade)
+
+  @@unique([categoryLeafId, key])
+  @@index([categoryLeafId, order])
+}
+
+model ListingAttribute {
+  id         String   @id @default(cuid())
+  listingId  String
+  key        String
+  valueJson  Json
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  listing    Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@unique([listingId, key])
+  @@index([listingId])
 }
 
 model HunterApplication {

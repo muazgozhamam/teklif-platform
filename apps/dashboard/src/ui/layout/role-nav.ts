@@ -55,6 +55,7 @@ const roleSections: Record<ShellRole, NavSection[]> = {
           items: [
             { href: '/admin/users', label: 'Kullanıcılar', icon: 'users' },
             { href: '/admin/commission/policies', label: 'Komisyon', icon: 'percent' },
+            { href: '/dashboard/listings', label: 'İlanlar', icon: 'home' },
           ],
         },
       ],
@@ -177,6 +178,7 @@ const roleSections: Record<ShellRole, NavSection[]> = {
             { href: '/broker/leads/pending', label: 'Bekleyen Leadler', icon: 'list' },
             { href: '/broker/deals/new', label: 'Yeni Deal', icon: 'plus' },
             { href: '/broker/hunter-applications', label: 'İş Ortağı Başvuruları', icon: 'clipboard-check' },
+            { href: '/dashboard/listings', label: 'İlanlar', icon: 'home' },
           ],
         },
       ],
@@ -277,6 +279,7 @@ const roleSections: Record<ShellRole, NavSection[]> = {
             { href: '/hunter', label: 'Panel', icon: 'target' },
             { href: '/hunter/leads', label: 'Leadler', icon: 'list' },
             { href: '/hunter/leads/new', label: 'Yeni Lead', icon: 'plus' },
+            { href: '/dashboard/listings', label: 'İlanlar', icon: 'home' },
           ],
         },
       ],

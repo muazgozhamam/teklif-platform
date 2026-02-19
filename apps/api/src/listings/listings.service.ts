@@ -1,218 +1,506 @@
-import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  HttpException,
+  HttpStatus,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { ListingStatus, Prisma, Role } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import {
+  CreateListingDto,
+  ListListingsQuery,
+  UpdateListingDto,
+  UpdateSahibindenDto,
+  UpsertListingAttributesDto,
+} from './listings.dto';
+
+type AuthUser = { sub: string; role: Role | string };
+
+const DEFAULT_TAKE = 24;
+const MAX_TAKE = 100;
+const TRY_CURRENCY = 'TRY';
+const RATE_WINDOW_MS = 60_000;
+const RATE_LIMIT_PER_WINDOW = 120;
+
+const rateBucket = new Map<string, { count: number; resetAt: number }>();
 
 @Injectable()
 export class ListingsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async getById(id: string) {
-    const listing = await this.prisma.listing.findUnique({ where: { id } });
+  private parseDecimal(value: string | number | null | undefined, fieldName: string) {
+    if (value === null || value === undefined || value === '') return null;
+    const normalized =
+      typeof value === 'number'
+        ? String(value)
+        : String(value).trim().replace(/\./g, '').replace(',', '.');
+    const num = Number(normalized);
+    if (!Number.isFinite(num)) throw new BadRequestException(`${fieldName} geçersiz`);
+    if (num <= 0) throw new BadRequestException(`${fieldName} pozitif olmalı`);
+    return new Prisma.Decimal(normalized);
+  }
+
+  private parseTakeSkip(query: ListListingsQuery) {
+    const takeNum = Number(query.take || DEFAULT_TAKE);
+    const skipNum = Number(query.skip || 0);
+    const take = Number.isFinite(takeNum) ? Math.min(Math.max(takeNum, 1), MAX_TAKE) : DEFAULT_TAKE;
+    const skip = Number.isFinite(skipNum) ? Math.max(skipNum, 0) : 0;
+    return { take, skip };
+  }
+
+  private parseBBox(raw?: string) {
+    if (!raw) return null;
+    const parts = String(raw)
+      .split(',')
+      .map((x) => Number(x.trim()));
+    if (parts.length !== 4 || parts.some((x) => !Number.isFinite(x))) {
+      throw new BadRequestException('bbox formatı geçersiz, latMin,lngMin,latMax,lngMax beklenir');
+    }
+    const [latMin, lngMin, latMax, lngMax] = parts;
+    if (latMin > latMax || lngMin > lngMax) {
+      throw new BadRequestException('bbox aralığı geçersiz');
+    }
+    return { latMin, lngMin, latMax, lngMax };
+  }
+
+  private enforcePublicRateLimit(ipOrKey: string) {
+    const key = ipOrKey || 'unknown';
+    const now = Date.now();
+    const existing = rateBucket.get(key);
+    if (!existing || existing.resetAt <= now) {
+      rateBucket.set(key, { count: 1, resetAt: now + RATE_WINDOW_MS });
+      return;
+    }
+    if (existing.count >= RATE_LIMIT_PER_WINDOW) {
+      throw new HttpException(
+        'Çok fazla istek gönderildi. Lütfen kısa süre sonra tekrar deneyin.',
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
+    }
+    existing.count += 1;
+    rateBucket.set(key, existing);
+  }
+
+  private isAdmin(user: AuthUser) {
+    return String(user.role || '').toUpperCase() === 'ADMIN';
+  }
+
+  private resolveOwnerId(row: {
+    createdById?: string | null;
+    consultantId?: string | null;
+    userId?: string | null;
+  }) {
+    return row.createdById || row.consultantId || row.userId || null;
+  }
+
+  private assertCanMutate(user: AuthUser, row: { createdById?: string | null; consultantId?: string | null; userId?: string | null }) {
+    if (this.isAdmin(user)) return;
+    const ownerId = this.resolveOwnerId(row);
+    if (!ownerId || ownerId !== user.sub) {
+      throw new ForbiddenException('Bu ilanı düzenleme yetkiniz yok');
+    }
+  }
+
+  private async writeAudit(actorUserId: string, action: string, listingId: string, meta?: Record<string, unknown>) {
+    try {
+      await (this.prisma as any).commissionAuditEvent.create({
+        data: {
+          action: 'SNAPSHOT_CREATED',
+          entityType: 'SYSTEM',
+          entityId: listingId,
+          actorUserId,
+          payloadJson: { domain: 'LISTING', action, ...(meta || {}) },
+        },
+      });
+    } catch {
+      // Audit tablosu stage/prod drift nedeniyle yok olabilir; listing akışını bloklamayız.
+    }
+  }
+
+  private applyPrivacyForPublic<T extends { privacyMode?: string | null; lat?: number | null; lng?: number | null }>(
+    row: T,
+  ) {
+    if (!row) return row;
+    if (row.privacyMode === 'HIDDEN') {
+      return { ...row, lat: null, lng: null };
+    }
+    if (row.privacyMode === 'APPROXIMATE') {
+      const lat = typeof row.lat === 'number' ? Number(row.lat.toFixed(3)) : row.lat;
+      const lng = typeof row.lng === 'number' ? Number(row.lng.toFixed(3)) : row.lng;
+      return { ...row, lat, lng };
+    }
+    return row;
+  }
+
+  private async ensurePublishRequirements(listingId: string) {
+    const listing = await this.prisma.listing.findUnique({
+      where: { id: listingId },
+      include: {
+        listingAttributes: true,
+      },
+    });
     if (!listing) throw new NotFoundException('Listing not found');
-    return listing;
-  }
 
-  async listAll() {
-    return this.prisma.listing.findMany({ orderBy: { createdAt: 'desc' as any } });
-  }
-
-  async create(dto: any) {
-    const data: any = {};
-    if (dto?.title !== undefined) data.title = String(dto.title).trim() || 'İlan Taslağı';
-    if (dto?.description !== undefined) data.description = (dto.description ?? '').trim() || null;
-    if (dto?.price !== undefined) data.price = dto.price ?? null;
-    if (dto?.currency !== undefined) data.currency = String(dto.currency ?? 'TRY').trim() || 'TRY';
-    if (dto?.city !== undefined) data.city = (dto.city ?? '').trim() || null;
-    if (dto?.district !== undefined) data.district = (dto.district ?? '').trim() || null;
-    if (dto?.type !== undefined) data.type = (dto.type ?? '').trim() || null;
-    if (dto?.rooms !== undefined) data.rooms = (dto.rooms ?? '').trim() || null;
-    if (dto?.status !== undefined) data.status = dto.status as any;
-
-    if (dto?.consultantId) {
-      data.consultant = { connect: { id: String(dto.consultantId) } };
+    if (!listing.title?.trim()) throw new BadRequestException('Publish için başlık zorunlu');
+    if (!listing.description?.trim()) throw new BadRequestException('Publish için açıklama zorunlu');
+    if (!listing.city?.trim() || !listing.district?.trim() || !listing.neighborhood?.trim()) {
+      throw new BadRequestException('Publish için şehir/ilçe/mahalle zorunlu');
+    }
+    if (listing.lat === null || listing.lat === undefined || listing.lng === null || listing.lng === undefined) {
+      throw new BadRequestException('Map pin zorunlu: lat/lng olmadan yayınlanamaz');
     }
 
-    if (!data.title) {
-      const t = [data.city, data.district, data.type, data.rooms].filter(Boolean).join(' - ');
-      data.title = t || 'İlan Taslağı';
+    const hasPrice = Boolean(listing.priceAmount) || listing.price !== null;
+    if (!hasPrice) {
+      throw new BadRequestException('Publish için fiyat zorunlu');
     }
 
-    /* __AUTO_DEFAULT_CONSULTANT__ */
-    if (!(data as any).consultant && !(data as any).consultantId) {
-      const u =
-        (await this.prisma.user.findFirst({ where: { role: 'CONSULTANT' as any } })) ??
-        (await this.prisma.user.findFirst());
-      if (!u) {
-        throw new BadRequestException('No consultant user found to attach to listing');
+    if (listing.categoryLeafId) {
+      const requiredDefs = await (this.prisma as any).attributeDefinition.findMany({
+        where: { categoryLeafId: listing.categoryLeafId, required: true },
+        select: { key: true },
+      });
+      const requiredKeys = new Set<string>(requiredDefs.map((x: { key: string }) => x.key));
+      const provided = new Set(listing.listingAttributes.map((x) => x.key));
+      const missing = [...requiredKeys].filter((k) => !provided.has(k));
+      if (missing.length > 0) {
+        throw new BadRequestException(`Publish için eksik zorunlu özellikler: ${missing.join(', ')}`);
       }
-      (data as any).consultant = { connect: { id: u.id } };
-    }
-    return this.prisma.listing.create({ data });
-  }
-
-  async update(id: string, dto: any) {
-    const exists = await this.prisma.listing.findUnique({ where: { id } });
-    if (!exists) throw new NotFoundException('Listing not found');
-
-    const data: any = {};
-    if (dto?.title !== undefined) data.title = String(dto.title).trim() || 'İlan Taslağı';
-    if (dto?.description !== undefined) data.description = (dto.description ?? '').trim() || null;
-    if (dto?.price !== undefined) data.price = dto.price ?? null;
-    if (dto?.currency !== undefined) data.currency = String(dto.currency ?? 'TRY').trim() || 'TRY';
-    if (dto?.city !== undefined) data.city = (dto.city ?? '').trim() || null;
-    if (dto?.district !== undefined) data.district = (dto.district ?? '').trim() || null;
-    if (dto?.type !== undefined) data.type = (dto.type ?? '').trim() || null;
-    if (dto?.rooms !== undefined) data.rooms = (dto.rooms ?? '').trim() || null;
-    if (dto?.status !== undefined) data.status = dto.status as any;
-
-    if (dto?.consultantId !== undefined) {
-      const cid = dto.consultantId ? String(dto.consultantId) : null;
-      if (cid) data.consultant = { connect: { id: cid } };
     }
 
-    if (dto?.title === undefined && (dto?.city !== undefined || dto?.district !== undefined || dto?.type !== undefined || dto?.rooms !== undefined)) {
-      const city = data.city ?? exists.city ?? null;
-      const district = data.district ?? exists.district ?? null;
-      const type = data.type ?? exists.type ?? null;
-      const rooms = data.rooms ?? exists.rooms ?? null;
-      const t = [city, district, type, rooms].filter(Boolean).join(' - ');
-      data.title = t || 'İlan Taslağı';
-    }
-
-    return this.prisma.listing.update({ where: { id }, data });
-  }
-
-  async getByDealId(dealId: string) {
-    const deal = await this.prisma.deal.findUnique({ where: { id: dealId } });
-    if (!deal) throw new NotFoundException('Deal not found');
-
-    const listingId = (deal as any).listingId as string | null | undefined;
-    if (!listingId) throw new NotFoundException('Listing not linked to this deal yet');
-
-    const listing = await this.prisma.listing.findUnique({ where: { id: listingId } });
-    if (!listing) throw new NotFoundException('Listing not found');
     return listing;
   }
 
-  async upsertFromDealMeta(dealId: string): Promise<{ listing: any; created: boolean }> {
-    const deal = await this.prisma.deal.findUnique({ where: { id: dealId } });
-    if (!deal) throw new NotFoundException('Deal not found');
+  async listPublic(query: ListListingsQuery, ipOrKey: string) {
+    this.enforcePublicRateLimit(ipOrKey);
+    const { take, skip } = this.parseTakeSkip(query);
+    const bbox = this.parseBBox(query.bbox);
+    const q = String(query.q || '').trim();
 
-    const consultantId = (deal as any).consultantId as string | null | undefined;
-    if (!consultantId) throw new ConflictException('Deal is not assigned to a consultant yet');
+    const where: Prisma.ListingWhereInput = {
+      status: ListingStatus.PUBLISHED,
+      ...(query.categoryPathKey ? { categoryPathKey: String(query.categoryPathKey) } : {}),
+      ...(query.city ? { city: String(query.city) } : {}),
+      ...(query.district ? { district: String(query.district) } : {}),
+      ...(query.neighborhood ? { neighborhood: String(query.neighborhood) } : {}),
+      ...(bbox
+        ? {
+            lat: { gte: bbox.latMin, lte: bbox.latMax },
+            lng: { gte: bbox.lngMin, lte: bbox.lngMax },
+          }
+        : {}),
+      ...(query.priceMin || query.priceMax
+        ? {
+            priceAmount: {
+              gte: query.priceMin ? this.parseDecimal(query.priceMin, 'priceMin') || undefined : undefined,
+              lte: query.priceMax ? this.parseDecimal(query.priceMax, 'priceMax') || undefined : undefined,
+            },
+          }
+        : {}),
+      ...(q
+        ? {
+            OR: [
+              { title: { contains: q, mode: 'insensitive' } },
+              { description: { contains: q, mode: 'insensitive' } },
+            ],
+          }
+        : {}),
+    };
 
-    const _city = (deal as any).city ?? null;
-    const _district = (deal as any).district ?? null;
-    const _type = (deal as any).type ?? null;
-    const _rooms = (deal as any).rooms ?? null;
-    const _title = [_city, _district, _type, _rooms].filter(Boolean).join(' - ') || 'İlan Taslağı';
+    const [items, total] = await Promise.all([
+      this.prisma.listing.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take,
+        include: {
+          categoryLeaf: { select: { id: true, name: true, pathKey: true } },
+        },
+      }),
+      this.prisma.listing.count({ where }),
+    ]);
 
-    const updateData: any = { city: _city, district: _district, type: _type, rooms: _rooms, title: _title };
+    return {
+      items: items.map((row) => this.applyPrivacyForPublic(row)),
+      total,
+      take,
+      skip,
+    };
+  }
 
-    const listingId = (deal as any).listingId as string | null | undefined;
+  async getPublicById(id: string) {
+    const row = await this.prisma.listing.findFirst({
+      where: { id, status: ListingStatus.PUBLISHED },
+      include: {
+        categoryLeaf: { select: { id: true, name: true, pathKey: true } },
+        listingAttributes: true,
+      },
+    });
+    if (!row) throw new NotFoundException('Listing not found');
+    return this.applyPrivacyForPublic(row);
+  }
 
-    if (listingId) {
-      const updated = await this.prisma.listing.update({ where: { id: listingId }, data: updateData });
-      return { listing: updated, created: false };
-    }
-
-    const created = await this.prisma.listing.create({
+  async createForUser(user: AuthUser, dto: CreateListingDto) {
+    const priceAmount = this.parseDecimal(dto.priceAmount, 'priceAmount');
+    const row = await this.prisma.listing.create({
       data: {
-        ...updateData,
-        consultant: { connect: { id: consultantId } },
+        createdById: user.sub,
+        consultantId: dto.consultantId || user.sub,
+        categoryLeafId: dto.categoryLeafId || null,
+        categoryPathKey: dto.categoryPathKey || null,
+        title: String(dto.title || '').trim() || 'Yeni İlan Taslağı',
+        description: String(dto.description || '').trim() || null,
+        priceAmount,
+        price: priceAmount ? Number(priceAmount) : null,
+        currency: String(dto.currency || TRY_CURRENCY).toUpperCase(),
+        city: dto.city?.trim() || null,
+        district: dto.district?.trim() || null,
+        neighborhood: dto.neighborhood?.trim() || null,
+        lat: dto.lat ?? null,
+        lng: dto.lng ?? null,
+        privacyMode: dto.privacyMode || 'EXACT',
+        type: dto.type?.trim() || null,
+        rooms: dto.rooms?.trim() || null,
+        status: 'DRAFT',
       },
     });
 
-    await this.prisma.deal.update({ where: { id: dealId }, data: { listingId: created.id } });
-    return { listing: created, created: true };
+    await this.writeAudit(user.sub, 'LISTING_CREATED', row.id, { status: row.status });
+    return row;
   }
 
-  // Backward-compatible wrapper
-  async upsertFromDeal(dealId: string) {
-    const r = await this.upsertFromDealMeta(dealId);
-    return r.listing;
+  async listForUser(user: AuthUser, query: ListListingsQuery) {
+    const { take, skip } = this.parseTakeSkip(query);
+    const q = String(query.q || '').trim();
+
+    const where: Prisma.ListingWhereInput = {
+      ...(query.status ? { status: query.status } : {}),
+      ...(query.categoryPathKey ? { categoryPathKey: String(query.categoryPathKey) } : {}),
+      ...(query.city ? { city: String(query.city) } : {}),
+      ...(query.district ? { district: String(query.district) } : {}),
+      ...(query.neighborhood ? { neighborhood: String(query.neighborhood) } : {}),
+      ...(q
+        ? {
+            OR: [
+              { title: { contains: q, mode: 'insensitive' } },
+              { description: { contains: q, mode: 'insensitive' } },
+            ],
+          }
+        : {}),
+    };
+
+    if (!(this.isAdmin(user) && query.scope === 'all')) {
+      where.OR = [
+        { createdById: user.sub },
+        { consultantId: user.sub },
+        { userId: user.sub },
+      ];
+    }
+
+    const [items, total] = await Promise.all([
+      this.prisma.listing.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take,
+      }),
+      this.prisma.listing.count({ where }),
+    ]);
+    return { items, total, take, skip };
   }
-  /**
-   * Publish listing: DRAFT -> PUBLISHED
-   * Minimal validation: title must be present, price must be set.
-   */
-  async publish(id: string) {
-    const listing = await this.prisma.listing.findUnique({ where: { id } });
-    if (!listing) throw new NotFoundException('Listing not found');
 
-    const title = (listing as any).title ?? null;
-    const price = (listing as any).price ?? null;
-
-    if (!title || String(title).trim().length === 0) {
-      throw new BadRequestException('Listing title is required before publish');
-    }
-    if (price === null || price === undefined) {
-      throw new BadRequestException('Listing price is required before publish');
-    }
-
-    const updated = await this.prisma.listing.update({
+  async getByIdForUser(user: AuthUser, id: string) {
+    const row = await this.prisma.listing.findUnique({
       where: { id },
-      data: { status: 'PUBLISHED' },
+      include: { listingAttributes: true, categoryLeaf: true },
     });
+    if (!row) throw new NotFoundException('Listing not found');
+    if (!this.isAdmin(user)) {
+      this.assertCanMutate(user, row);
+    }
+    return row;
+  }
 
+  async patchForUser(user: AuthUser, id: string, dto: UpdateListingDto) {
+    const current = await this.prisma.listing.findUnique({ where: { id } });
+    if (!current) throw new NotFoundException('Listing not found');
+    this.assertCanMutate(user, current);
+
+    const priceAmount = dto.priceAmount !== undefined ? this.parseDecimal(dto.priceAmount, 'priceAmount') : undefined;
+    const data: Prisma.ListingUncheckedUpdateInput = {
+      categoryLeafId: dto.categoryLeafId !== undefined ? dto.categoryLeafId || null : undefined,
+      categoryPathKey: dto.categoryPathKey !== undefined ? dto.categoryPathKey || null : undefined,
+      title: dto.title !== undefined ? String(dto.title).trim() || 'Yeni İlan Taslağı' : undefined,
+      description: dto.description !== undefined ? String(dto.description).trim() || null : undefined,
+      priceAmount,
+      price: priceAmount ? Number(priceAmount) : undefined,
+      currency: dto.currency !== undefined ? String(dto.currency || TRY_CURRENCY).toUpperCase() : undefined,
+      city: dto.city !== undefined ? dto.city?.trim() || null : undefined,
+      district: dto.district !== undefined ? dto.district?.trim() || null : undefined,
+      neighborhood: dto.neighborhood !== undefined ? dto.neighborhood?.trim() || null : undefined,
+      lat: dto.lat !== undefined ? dto.lat : undefined,
+      lng: dto.lng !== undefined ? dto.lng : undefined,
+      privacyMode: dto.privacyMode !== undefined ? dto.privacyMode : undefined,
+      sahibindenUrl: dto.sahibindenUrl !== undefined ? dto.sahibindenUrl || null : undefined,
+      type: dto.type !== undefined ? dto.type?.trim() || null : undefined,
+      rooms: dto.rooms !== undefined ? dto.rooms?.trim() || null : undefined,
+      status: dto.status !== undefined ? dto.status : undefined,
+    };
+
+    const updated = await this.prisma.listing.update({ where: { id }, data });
+    await this.writeAudit(user.sub, 'LISTING_UPDATED', id);
     return updated;
   }
 
-                                async list(filters: any = {}) {
-                  const where: any = {};
+  async upsertAttributesForUser(user: AuthUser, id: string, dto: UpsertListingAttributesDto) {
+    const row = await this.prisma.listing.findUnique({ where: { id } });
+    if (!row) throw new NotFoundException('Listing not found');
+    this.assertCanMutate(user, row);
+    if (!Array.isArray(dto.attributes)) throw new BadRequestException('attributes array zorunlu');
 
-                  
-    // Default feed behavior: if caller doesn't specify status, show only PUBLISHED
-    if ((filters as any)?.status) {
-      where.status = (filters as any).status;
-    } else {
-      where.status = 'PUBLISHED';
+    await this.prisma.$transaction(
+      dto.attributes.map((attr) => {
+        const key = String(attr.key || '').trim();
+        if (!key) throw new BadRequestException('attribute.key zorunlu');
+        return (this.prisma as any).listingAttribute.upsert({
+          where: { listingId_key: { listingId: id, key } },
+          update: { valueJson: attr.value as Prisma.InputJsonValue },
+          create: { listingId: id, key, valueJson: attr.value as Prisma.InputJsonValue },
+        });
+      }),
+    );
+
+    await this.writeAudit(user.sub, 'LISTING_ATTRIBUTES_UPSERT', id, {
+      count: dto.attributes.length,
+    });
+    return { ok: true };
+  }
+
+  async publishForUser(user: AuthUser, id: string) {
+    const current = await this.prisma.listing.findUnique({ where: { id } });
+    if (!current) throw new NotFoundException('Listing not found');
+    this.assertCanMutate(user, current);
+    await this.ensurePublishRequirements(id);
+
+    const updated = await this.prisma.listing.update({
+      where: { id },
+      data: { status: ListingStatus.PUBLISHED },
+    });
+    await this.writeAudit(user.sub, 'LISTING_PUBLISHED', id);
+    return updated;
+  }
+
+  async archiveForUser(user: AuthUser, id: string) {
+    const current = await this.prisma.listing.findUnique({ where: { id } });
+    if (!current) throw new NotFoundException('Listing not found');
+    this.assertCanMutate(user, current);
+
+    const updated = await this.prisma.listing.update({
+      where: { id },
+      data: { status: ListingStatus.ARCHIVED },
+    });
+    await this.writeAudit(user.sub, 'LISTING_ARCHIVED', id);
+    return updated;
+  }
+
+  async getSahibindenExportForUser(user: AuthUser, id: string) {
+    const listing = await this.prisma.listing.findUnique({
+      where: { id },
+      include: {
+        categoryLeaf: { select: { name: true, pathKey: true } },
+        listingAttributes: true,
+      },
+    });
+    if (!listing) throw new NotFoundException('Listing not found');
+    this.assertCanMutate(user, listing);
+
+    const guideSteps = [
+      'Sahibinden hesabına giriş yap ve "İlan Ver" adımını aç.',
+      'Kategori olarak export edilen kategori yolunu seç.',
+      'Başlık, açıklama, fiyat ve konum alanlarını kopyala-yapıştır ile doldur.',
+      'Özellik alanlarını export listesindeki karşılıklarıyla gir.',
+      'Önizleme sonrası ilanı yayınla ve oluşan URL’yi SatDedi ekranına geri kaydet.',
+    ];
+
+    await this.writeAudit(user.sub, 'LISTING_EXPORT_REQUESTED', id);
+
+    return {
+      listingId: listing.id,
+      categoryPath: listing.categoryPathKey || listing.categoryLeaf?.pathKey || null,
+      title: listing.title,
+      description: listing.description,
+      priceAmount: listing.priceAmount ?? listing.price,
+      currency: listing.currency,
+      location: {
+        city: listing.city,
+        district: listing.district,
+        neighborhood: listing.neighborhood,
+        lat: listing.lat,
+        lng: listing.lng,
+      },
+      attributes: listing.listingAttributes.map((x) => ({ key: x.key, value: x.valueJson })),
+      guideSteps,
+    };
+  }
+
+  async patchSahibindenForUser(user: AuthUser, id: string, dto: UpdateSahibindenDto) {
+    const current = await this.prisma.listing.findUnique({ where: { id } });
+    if (!current) throw new NotFoundException('Listing not found');
+    this.assertCanMutate(user, current);
+
+    const updated = await this.prisma.listing.update({
+      where: { id },
+      data: {
+        sahibindenUrl: dto.sahibindenUrl !== undefined ? dto.sahibindenUrl || null : undefined,
+        exportedAt: dto.markExported ? new Date() : undefined,
+        exportedById: dto.markExported ? user.sub : undefined,
+      },
+    });
+    await this.writeAudit(user.sub, 'LISTING_SAHIBINDEN_UPDATED', id, {
+      markExported: Boolean(dto.markExported),
+    });
+    return updated;
+  }
+
+  // Backward compatibility for existing consultant inbox integration
+  async upsertFromDealMeta(dealId: string): Promise<{ listing: any; created: boolean }> {
+    const deal = await this.prisma.deal.findUnique({ where: { id: dealId } });
+    if (!deal) throw new NotFoundException('Deal not found');
+    const consultantId = (deal as any).consultantId as string | null | undefined;
+    if (!consultantId) throw new BadRequestException('Deal consultant ataması yok');
+
+    const listingId = (deal as any).listingId as string | null | undefined;
+    const title = [deal.city, deal.district, deal.type, deal.rooms].filter(Boolean).join(' - ') || 'Yeni İlan Taslağı';
+    const baseData: Prisma.ListingUncheckedCreateInput = {
+      consultantId,
+      createdById: consultantId,
+      title,
+      city: deal.city || null,
+      district: deal.district || null,
+      type: deal.type || null,
+      rooms: deal.rooms || null,
+      status: 'DRAFT',
+      currency: TRY_CURRENCY,
+    };
+
+    if (listingId) {
+      const updated = await this.prisma.listing.update({
+        where: { id: listingId },
+        data: {
+          title,
+          city: deal.city || null,
+          district: deal.district || null,
+          type: deal.type || null,
+          rooms: deal.rooms || null,
+        },
+      });
+      return { listing: updated, created: false };
     }
-// status-based publishing:
-                  // default: only PUBLISHED
-                  // published=false: include drafts too
-if ((filters as any)?.status) {
-                    where.status = (filters as any).status;
-                  }
-if ((filters as any)?.city) where.city = (filters as any).city;
-                  if ((filters as any)?.district) where.district = (filters as any).district;
-                  if ((filters as any)?.type) where.type = (filters as any).type;
-                  if ((filters as any)?.rooms) where.rooms = (filters as any).rooms;
-                  if ((filters as any)?.consultantId) where.consultantId = (filters as any).consultantId;
 
-                  // pagination: page/pageSize OR skip/take
-                  const pageSizeRaw = Number((filters as any)?.pageSize ?? (filters as any)?.take ?? 20);
-                  const pageRaw = Number((filters as any)?.page ?? 1);
-                  const pageSize = Number.isFinite(pageSizeRaw) && pageSizeRaw > 0 ? Math.min(pageSizeRaw, 100) : 20;
-                  const page = Number.isFinite(pageRaw) && pageRaw > 0 ? pageRaw : 1;
-
-                  let take = pageSize;
-                  let skip = (page - 1) * pageSize;
-
-                  const takeRaw = Number((filters as any)?.take);
-                  const skipRaw = Number((filters as any)?.skip);
-                  if (Number.isFinite(takeRaw) && takeRaw > 0) take = Math.min(takeRaw, 100);
-                  if (Number.isFinite(skipRaw) && skipRaw >= 0) skip = skipRaw;
-
-                  // ordering
-                  const sortByRaw = String((filters as any)?.sortBy ?? (filters as any)?.orderBy ?? 'createdAt');
-                  const dirRaw = String((filters as any)?.sortDir ?? (filters as any)?.direction ?? 'desc').toLowerCase();
-                  const direction = dirRaw === 'asc' ? 'asc' : 'desc';
-                  const allowed = new Set(['createdAt', 'updatedAt', 'price', 'title']);
-                  const sortBy = allowed.has(sortByRaw) ? sortByRaw : 'createdAt';
-
-                  const orderBy: any = {};
-                  orderBy[sortBy] = direction;
-
-                  const [items, total] = await Promise.all([
-                    this.prisma.listing.findMany({ where, orderBy, skip, take }),
-                    this.prisma.listing.count({ where }),
-                  ]);
-
-                  return { items, total, page, pageSize };
-                }
-
-
-
-
-
+    const created = await this.prisma.listing.create({ data: baseData });
+    await this.prisma.deal.update({ where: { id: dealId }, data: { listingId: created.id } });
+    return { listing: created, created: true };
+  }
 }
