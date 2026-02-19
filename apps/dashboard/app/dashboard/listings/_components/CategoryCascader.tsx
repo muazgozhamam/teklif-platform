@@ -95,8 +95,12 @@ export function CategoryCascader({ value, onChange }: Props) {
   }
 
   const selects: Array<{ label: string; options: CategoryNode[]; selected: string }> = [];
-  let options = tree;
-  let level = 0;
+  const startOptions =
+    tree.length === 1 && Array.isArray(tree[0].children) && tree[0].children.length > 0
+      ? tree[0].children
+      : tree;
+  let options = startOptions;
+  let level = tree.length === 1 && tree[0].children?.length ? 1 : 0;
   while (options.length > 0) {
     const selected = path[level]?.pathKey || options[0].pathKey;
     selects.push({
@@ -131,4 +135,3 @@ export function CategoryCascader({ value, onChange }: Props) {
     </div>
   );
 }
-
