@@ -1,6 +1,6 @@
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { NestFactory } from '@nestjs/core';
+import { AppModule } from '../src/app.module';
+import { PrismaService } from '../src/prisma/prisma.service';
 
 type NodeInput = {
   pathKey: string;
@@ -39,15 +39,14 @@ const DAIRE_ATTRS = [
   { key: 'heating', label: 'Isıtma', type: 'SELECT', required: true, order: 6, optionsJson: ['Kombi (Doğalgaz)', 'Merkezi', 'Soba', 'Yerden Isıtma'] },
 ] as const;
 
-async function upsertNodes() {
+async function upsertNodes(prisma: any) {
   for (const node of NODES) {
     let parentId: string | undefined;
     if (node.parentPathKey) {
-      const parent = await (prisma as any).categoryNode.findUnique({ where: { pathKey: node.parentPathKey } });
+      const parent = await prisma.categoryNode.findUnique({ where: { pathKey: node.parentPathKey } });
       parentId = parent?.id;
     }
-
-    await (prisma as any).categoryNode.upsert({
+    await prisma.categoryNode.upsert({
       where: { pathKey: node.pathKey },
       update: {
         name: node.name,
@@ -70,12 +69,12 @@ async function upsertNodes() {
   }
 }
 
-async function upsertAttributesForLeaf(pathKey: string) {
-  const leaf = await (prisma as any).categoryNode.findUnique({ where: { pathKey } });
+async function upsertAttributesForLeaf(prisma: any, pathKey: string) {
+  const leaf = await prisma.categoryNode.findUnique({ where: { pathKey } });
   if (!leaf?.id) throw new Error(`Category leaf not found: ${pathKey}`);
 
   for (const attr of DAIRE_ATTRS) {
-    await (prisma as any).attributeDefinition.upsert({
+    await prisma.attributeDefinition.upsert({
       where: { categoryLeafId_key: { categoryLeafId: leaf.id, key: attr.key } },
       update: {
         label: attr.label,
@@ -97,19 +96,18 @@ async function upsertAttributesForLeaf(pathKey: string) {
   }
 }
 
-async function main() {
-  await upsertNodes();
-  await upsertAttributesForLeaf('emlak/konut/satilik/daire');
-  await upsertAttributesForLeaf('emlak/konut/kiralik/daire');
+async function run() {
+  const app = await NestFactory.createApplicationContext(AppModule);
+  const prisma = app.get(PrismaService) as any;
+  await upsertNodes(prisma);
+  await upsertAttributesForLeaf(prisma, 'emlak/konut/satilik/daire');
+  await upsertAttributesForLeaf(prisma, 'emlak/konut/kiralik/daire');
   console.log('✅ listings taxonomy + attributes seeded (idempotent)');
+  await app.close();
 }
 
-main()
-  .catch((err) => {
-    console.error(err);
-    process.exit(1);
-  })
-  .finally(async () => {
-    await prisma.$disconnect();
-  });
+run().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});
 
