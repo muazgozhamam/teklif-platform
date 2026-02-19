@@ -39,6 +39,7 @@ const rateBucket = new Map<string, { count: number; resetAt: number }>();
 const citiesCache = { fetchedAt: 0, value: [] as string[] };
 const districtsCache = new Map<string, string[]>();
 const neighborhoodsCache = new Map<string, string[]>();
+const localAddressMode = { checked: false, enabled: false };
 
 @Injectable()
 export class ListingsService {
@@ -255,7 +256,13 @@ export class ListingsService {
       .trim()
       .toLocaleLowerCase('tr-TR')
       .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '');
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/ç/g, 'c')
+      .replace(/ğ/g, 'g')
+      .replace(/ı/g, 'i')
+      .replace(/ö/g, 'o')
+      .replace(/ş/g, 's')
+      .replace(/ü/g, 'u');
   }
 
   private parseNames(data: unknown): string[] {
@@ -281,6 +288,22 @@ export class ListingsService {
           .filter(Boolean),
       ),
     ).sort((a, b) => a.localeCompare(b, 'tr'));
+  }
+
+  private async hasLocalAddressData() {
+    if (localAddressMode.checked) return localAddressMode.enabled;
+    try {
+      const rows = await this.prisma.$queryRawUnsafe<Array<{ count: number | bigint }>>(
+        `SELECT COUNT(*)::bigint AS count FROM city`,
+      );
+      const count = Number(rows?.[0]?.count || 0);
+      localAddressMode.enabled = count > 0;
+    } catch {
+      localAddressMode.enabled = false;
+    } finally {
+      localAddressMode.checked = true;
+    }
+    return localAddressMode.enabled;
   }
 
   private async fetchLocalCities(): Promise<string[] | null> {
@@ -407,8 +430,9 @@ export class ListingsService {
       return { cities: citiesCache.value };
     }
 
-    const local = await this.fetchLocalCities();
-    const data = local ? null : await this.fetchTurkiyeApi('/provinces');
+    const useLocal = await this.hasLocalAddressData();
+    const local = useLocal ? await this.fetchLocalCities() : null;
+    const data = local || useLocal ? null : await this.fetchTurkiyeApi('/provinces');
     const names = local || this.parseNames(data);
     const value = names.length > 0 ? names : FALLBACK_CITIES.slice().sort((a, b) => a.localeCompare(b, 'tr'));
 
@@ -425,11 +449,13 @@ export class ListingsService {
     const cached = districtsCache.get(cacheKey);
     if (cached) return { districts: cached };
 
-    const local = await this.fetchLocalDistricts(cityName);
+    const useLocal = await this.hasLocalAddressData();
+    const local = useLocal ? await this.fetchLocalDistricts(cityName) : null;
     if (local && local.length > 0) {
       districtsCache.set(cacheKey, local);
       return { districts: local };
     }
+    if (useLocal) return { districts: [] as string[] };
 
     const dataByProvince = await this.fetchTurkiyeApi(`/districts?province=${encodeURIComponent(cityName)}`);
     const byProvince = this.parseNames(dataByProvince);
@@ -465,11 +491,13 @@ export class ListingsService {
     const cached = neighborhoodsCache.get(cacheKey);
     if (cached) return { neighborhoods: cached };
 
-    const local = await this.fetchLocalNeighborhoods(cityName, districtName);
+    const useLocal = await this.hasLocalAddressData();
+    const local = useLocal ? await this.fetchLocalNeighborhoods(cityName, districtName) : null;
     if (local && local.length > 0) {
       neighborhoodsCache.set(cacheKey, local);
       return { neighborhoods: local };
     }
+    if (useLocal) return { neighborhoods: [] as string[] };
 
     const first = await this.fetchTurkiyeApi(
       `/neighborhoods?province=${encodeURIComponent(cityName)}&district=${encodeURIComponent(districtName)}`,
