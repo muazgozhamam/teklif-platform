@@ -293,12 +293,13 @@ export class ListingsService {
   private async fetchTurkiyeApi(path: string): Promise<unknown[] | null> {
     try {
       const out: unknown[] = [];
-      let page = 1;
+      const limit = 200;
+      let offset = 0;
       let hasMore = true;
 
-      while (hasMore && page <= 40) {
+      while (hasMore && offset <= 20000) {
         const separator = path.includes('?') ? '&' : '?';
-        const pagedPath = `${path}${separator}page=${page}`;
+        const pagedPath = `${path}${separator}offset=${offset}&limit=${limit}`;
         const res = await fetch(`${TURKIYE_API_BASE}${pagedPath}`, {
           headers: { Accept: 'application/json' },
         });
@@ -309,9 +310,12 @@ export class ListingsService {
         if (!Array.isArray(pageData) || pageData.length === 0) break;
         out.push(...pageData);
 
-        const meta = this.resolveTurkiyePageMeta(json, page, pageData.length);
+        const meta = this.resolveTurkiyePageMeta(json, offset / limit + 1, pageData.length);
         hasMore = meta.hasMore;
-        page += 1;
+        if (!hasMore && pageData.length >= limit) {
+          hasMore = true;
+        }
+        offset += limit;
       }
 
       return out.length > 0 ? out : null;

@@ -66,12 +66,13 @@ async function fetchOptions(path: string) {
 
 async function fetchTurkiyeApi(path: string) {
   const allRows: Array<{ name?: string }> = [];
-  let page = 1;
+  const limit = 200;
+  let offset = 0;
   let hasMore = true;
 
-  while (hasMore && page <= 40) {
+  while (hasMore && offset <= 20000) {
     const separator = path.includes('?') ? '&' : '?';
-    const pagedPath = `${PUBLIC_TR_API}${path}${separator}page=${page}`;
+    const pagedPath = `${PUBLIC_TR_API}${path}${separator}offset=${offset}&limit=${limit}`;
     const res = await fetch(pagedPath, { cache: 'no-store' });
     if (!res.ok) throw new Error('Turkiye API hatası');
 
@@ -83,11 +84,14 @@ async function fetchTurkiyeApi(path: string) {
     allRows.push(...rows);
 
     const pagination = !Array.isArray(json) ? json?.meta?.pagination : undefined;
-    const currentPage = Number(pagination?.currentPage ?? page);
+    const currentPage = Number(pagination?.currentPage ?? offset / limit + 1);
     const totalPages = Number(pagination?.totalPages ?? pagination?.lastPage ?? 0);
     const hasNext = Boolean(pagination?.hasNextPage);
     hasMore = totalPages > 0 ? currentPage < totalPages : hasNext || rows.length > 0;
-    page += 1;
+    if (!hasMore && rows.length >= limit) {
+      hasMore = true;
+    }
+    offset += limit;
   }
 
   return Array.from(
