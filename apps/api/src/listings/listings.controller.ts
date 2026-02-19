@@ -43,6 +43,11 @@ export class PublicListingsController {
     return this.listings.getPublicCategoryLeaves();
   }
 
+  @Get('categories/attributes')
+  categoryAttributes(@Query('pathKey') pathKey: string) {
+    return this.listings.getPublicCategoryAttributes(pathKey);
+  }
+
   @Get()
   list(@Req() req: Request, @Query() query: ListListingsQuery) {
     return this.listings.listPublic(query, resolveIp(req));

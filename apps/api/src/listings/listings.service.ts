@@ -211,6 +211,31 @@ export class ListingsService {
     return rows.map((row: any) => ({ ...row, isLeaf: true }));
   }
 
+  async getPublicCategoryAttributes(pathKey: string) {
+    const key = String(pathKey || '').trim();
+    if (!key) throw new BadRequestException('pathKey zorunlu');
+
+    const leaf = await (this.prisma as any).categoryNode.findUnique({
+      where: { pathKey: key },
+      select: { id: true, pathKey: true, name: true, _count: { select: { children: true } } },
+    });
+    if (!leaf) throw new NotFoundException('Kategori bulunamadı');
+    if (Number(leaf._count?.children || 0) > 0) {
+      throw new BadRequestException('Sadece leaf kategori için özellik döner');
+    }
+
+    const attrs = await (this.prisma as any).attributeDefinition.findMany({
+      where: { categoryLeafId: leaf.id },
+      orderBy: [{ order: 'asc' }, { label: 'asc' }],
+      select: { key: true, label: true, type: true, required: true, optionsJson: true, order: true },
+    });
+
+    return {
+      category: { pathKey: leaf.pathKey, name: leaf.name },
+      attributes: attrs,
+    };
+  }
+
   private async ensurePublishRequirements(listingId: string) {
     const listing = await this.prisma.listing.findUnique({
       where: { id: listingId },

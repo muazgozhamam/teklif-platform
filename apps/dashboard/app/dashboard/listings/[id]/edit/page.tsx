@@ -24,6 +24,15 @@ type Listing = {
   categoryPathKey?: string | null;
   status?: string;
   sahibindenUrl?: string | null;
+  listingAttributes?: Array<{ key: string; valueJson: unknown }>;
+};
+
+type AttributeDef = {
+  key: string;
+  label: string;
+  type: 'TEXT' | 'NUMBER' | 'BOOLEAN' | 'SELECT' | 'MULTISELECT';
+  required: boolean;
+  optionsJson?: string[] | null;
 };
 
 type ExportPayload = {
@@ -44,6 +53,8 @@ export default function EditListingPage() {
   const [error, setError] = React.useState<string | null>(null);
   const [message, setMessage] = React.useState<string | null>(null);
   const [row, setRow] = React.useState<Listing | null>(null);
+  const [attributeDefs, setAttributeDefs] = React.useState<AttributeDef[]>([]);
+  const [attributeValues, setAttributeValues] = React.useState<Record<string, string>>({});
   const [exportPayload, setExportPayload] = React.useState<ExportPayload | null>(null);
 
   React.useEffect(() => {
@@ -57,6 +68,12 @@ export default function EditListingPage() {
     try {
       const res = await api.get<Listing>(`/listings/${id}`);
       setRow(res.data);
+      const existing = Array.isArray(res.data?.listingAttributes) ? res.data.listingAttributes : [];
+      const mapped: Record<string, string> = {};
+      existing.forEach((item) => {
+        mapped[item.key] = item?.valueJson == null ? '' : String(item.valueJson);
+      });
+      setAttributeValues(mapped);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'İlan yüklenemedi');
     } finally {
@@ -72,6 +89,43 @@ export default function EditListingPage() {
   function setField<K extends keyof Listing>(key: K, value: Listing[K]) {
     setRow((prev) => (prev ? { ...prev, [key]: value } : prev));
   }
+
+  function setAttrValue(key: string, value: string) {
+    setAttributeValues((prev) => ({ ...prev, [key]: value }));
+  }
+
+  React.useEffect(() => {
+    const key = row?.categoryPathKey?.trim();
+    if (!key) {
+      setAttributeDefs([]);
+      return;
+    }
+    let alive = true;
+    fetch(`/api/public/listings/categories/attributes?pathKey=${encodeURIComponent(key)}`, { cache: 'no-store' })
+      .then(async (res) => {
+        if (!res.ok) throw new Error('Kategori özellikleri alınamadı');
+        return res.json();
+      })
+      .then((payload: { attributes?: AttributeDef[] }) => {
+        if (!alive) return;
+        const defs = Array.isArray(payload?.attributes) ? payload.attributes : [];
+        setAttributeDefs(defs);
+        setAttributeValues((prev) => {
+          const next: Record<string, string> = { ...prev };
+          defs.forEach((d) => {
+            if (next[d.key] === undefined) next[d.key] = '';
+          });
+          return next;
+        });
+      })
+      .catch(() => {
+        if (!alive) return;
+        setAttributeDefs([]);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [row?.categoryPathKey]);
 
   async function save() {
     if (!row) return;
@@ -91,6 +145,13 @@ export default function EditListingPage() {
         lng: row.lng ?? null,
         privacyMode: row.privacyMode || 'EXACT',
       });
+      if (attributeDefs.length > 0) {
+        await api.put(`/listings/${id}/attributes`, {
+          attributes: attributeDefs
+            .filter((d) => String(attributeValues[d.key] || '').trim())
+            .map((d) => ({ key: d.key, value: attributeValues[d.key] })),
+        });
+      }
       setMessage('İlan kaydedildi.');
       await load();
     } catch (e) {
@@ -198,6 +259,38 @@ export default function EditListingPage() {
               <Input value={String(row.lat ?? '')} onChange={(e) => setField('lat', Number(e.target.value))} placeholder="Latitude (zorunlu)" />
               <Input value={String(row.lng ?? '')} onChange={(e) => setField('lng', Number(e.target.value))} placeholder="Longitude (zorunlu)" />
             </div>
+            {attributeDefs.length > 0 ? (
+              <div className="grid gap-2 rounded-xl border border-[var(--border)] bg-[var(--card-2)] p-3">
+                <div className="text-sm font-medium">İlan Bilgileri</div>
+                {attributeDefs.map((attr) => (
+                  <label key={attr.key} className="grid gap-1">
+                    <span className="text-xs text-[var(--muted)]">
+                      {attr.label} {attr.required ? '*' : ''}
+                    </span>
+                    {attr.type === 'SELECT' ? (
+                      <select
+                        className="h-10 rounded-xl border border-[var(--border)] bg-[var(--card)] px-3 text-sm"
+                        value={attributeValues[attr.key] || ''}
+                        onChange={(e) => setAttrValue(attr.key, e.target.value)}
+                      >
+                        <option value="">Seçiniz</option>
+                        {(Array.isArray(attr.optionsJson) ? attr.optionsJson : []).map((opt) => (
+                          <option key={`${attr.key}-${opt}`} value={opt}>
+                            {opt}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <Input
+                        placeholder={attr.label}
+                        value={attributeValues[attr.key] || ''}
+                        onChange={(e) => setAttrValue(attr.key, e.target.value)}
+                      />
+                    )}
+                  </label>
+                ))}
+              </div>
+            ) : null}
             <Input
               value={row.sahibindenUrl || ''}
               onChange={(e) => setField('sahibindenUrl', e.target.value)}

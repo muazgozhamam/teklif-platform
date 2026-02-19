@@ -22,6 +22,14 @@ type FormState = {
   privacyMode: 'EXACT' | 'APPROXIMATE' | 'HIDDEN';
 };
 
+type AttributeDef = {
+  key: string;
+  label: string;
+  type: 'TEXT' | 'NUMBER' | 'BOOLEAN' | 'SELECT' | 'MULTISELECT';
+  required: boolean;
+  optionsJson?: string[] | null;
+};
+
 const INITIAL: FormState = {
   categoryLeafPathKey: '',
   title: '',
@@ -41,6 +49,8 @@ export default function NewListingWizardPage() {
   const [step, setStep] = React.useState(1);
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const [attributeDefs, setAttributeDefs] = React.useState<AttributeDef[]>([]);
+  const [attributeValues, setAttributeValues] = React.useState<Record<string, string>>({});
   const [form, setForm] = React.useState<FormState>(INITIAL);
 
   React.useEffect(() => {
@@ -51,7 +61,53 @@ export default function NewListingWizardPage() {
     setForm((prev) => ({ ...prev, [key]: value }));
   }
 
-  const stepOneValid = form.categoryLeafPathKey.trim() && form.title.trim() && form.description.trim() && form.priceAmount.trim();
+  function setAttrValue(key: string, value: string) {
+    setAttributeValues((prev) => ({ ...prev, [key]: value }));
+  }
+
+  React.useEffect(() => {
+    const key = form.categoryLeafPathKey?.trim();
+    if (!key) {
+      setAttributeDefs([]);
+      setAttributeValues({});
+      return;
+    }
+    let alive = true;
+    fetch(`/api/public/listings/categories/attributes?pathKey=${encodeURIComponent(key)}`, { cache: 'no-store' })
+      .then(async (res) => {
+        if (!res.ok) throw new Error('Kategori özellikleri alınamadı');
+        return res.json();
+      })
+      .then((payload: { attributes?: AttributeDef[] }) => {
+        if (!alive) return;
+        const defs = Array.isArray(payload?.attributes) ? payload.attributes : [];
+        setAttributeDefs(defs);
+        setAttributeValues((prev) => {
+          const next: Record<string, string> = {};
+          defs.forEach((d) => {
+            next[d.key] = prev[d.key] || '';
+          });
+          return next;
+        });
+      })
+      .catch(() => {
+        if (!alive) return;
+        setAttributeDefs([]);
+        setAttributeValues({});
+      });
+    return () => {
+      alive = false;
+    };
+  }, [form.categoryLeafPathKey]);
+
+  const requiredAttrMissing = attributeDefs.some((d) => d.required && !String(attributeValues[d.key] || '').trim());
+
+  const stepOneValid =
+    form.categoryLeafPathKey.trim() &&
+    form.title.trim() &&
+    form.description.trim() &&
+    form.priceAmount.trim() &&
+    !requiredAttrMissing;
   const stepTwoValid = form.city.trim() && form.district.trim() && form.neighborhood.trim();
   const stepThreeValid = form.lat.trim() && form.lng.trim();
 
@@ -77,6 +133,13 @@ export default function NewListingWizardPage() {
       });
       const id = String(created.data?.id || '');
       if (id) {
+        if (attributeDefs.length > 0) {
+          await api.put(`/listings/${id}/attributes`, {
+            attributes: attributeDefs
+              .filter((d) => String(attributeValues[d.key] || '').trim())
+              .map((d) => ({ key: d.key, value: attributeValues[d.key] })),
+          });
+        }
         router.push(`/dashboard/listings/${id}/edit`);
       } else {
         throw new Error('İlan oluşturuldu ama id dönmedi.');
@@ -118,6 +181,38 @@ export default function NewListingWizardPage() {
               onChange={(e) => setField('description', e.target.value)}
             />
             <Input placeholder="Fiyat *" value={form.priceAmount} onChange={(e) => setField('priceAmount', e.target.value)} />
+            {attributeDefs.length > 0 ? (
+              <div className="grid gap-2 rounded-xl border border-[var(--border)] bg-[var(--card-2)] p-3">
+                <div className="text-sm font-medium">İlan Bilgileri</div>
+                {attributeDefs.map((attr) => (
+                  <label key={attr.key} className="grid gap-1">
+                    <span className="text-xs text-[var(--muted)]">
+                      {attr.label} {attr.required ? '*' : ''}
+                    </span>
+                    {attr.type === 'SELECT' ? (
+                      <select
+                        className="h-10 rounded-xl border border-[var(--border)] bg-[var(--card)] px-3 text-sm"
+                        value={attributeValues[attr.key] || ''}
+                        onChange={(e) => setAttrValue(attr.key, e.target.value)}
+                      >
+                        <option value="">Seçiniz</option>
+                        {(Array.isArray(attr.optionsJson) ? attr.optionsJson : []).map((opt) => (
+                          <option key={`${attr.key}-${opt}`} value={opt}>
+                            {opt}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <Input
+                        placeholder={attr.label}
+                        value={attributeValues[attr.key] || ''}
+                        onChange={(e) => setAttrValue(attr.key, e.target.value)}
+                      />
+                    )}
+                  </label>
+                ))}
+              </div>
+            ) : null}
             <div className="flex justify-end">
               <Button variant="primary" disabled={!stepOneValid} onClick={() => setStep(2)}>Devam</Button>
             </div>
