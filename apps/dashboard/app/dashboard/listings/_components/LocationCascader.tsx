@@ -13,10 +13,48 @@ type Props = {
   onChange: (next: LocationValue) => void;
 };
 
+const PUBLIC_TR_API = 'https://turkiyeapi.dev/api/v1';
+const FALLBACK_DISTRICTS: Record<string, string[]> = {
+  konya: [
+    'Ahırlı', 'Akören', 'Akşehir', 'Altınekin', 'Beyşehir', 'Bozkır', 'Cihanbeyli', 'Çeltik', 'Çumra',
+    'Derbent', 'Derebucak', 'Doğanhisar', 'Emirgazi', 'Ereğli', 'Güneysınır', 'Hadim', 'Halkapınar', 'Hüyük',
+    'Ilgın', 'Kadınhanı', 'Karapınar', 'Karatay', 'Kulu', 'Meram', 'Sarayönü', 'Selçuklu', 'Seydişehir',
+    'Taşkent', 'Tuzlukçu', 'Yalıhüyük', 'Yunak',
+  ],
+};
+
+const FALLBACK_NEIGHBORHOODS: Record<string, string[]> = {
+  'konya::meram': ['Aşkan', 'Ayanbey', 'Dere', 'Harmancık', 'Kozağaç', 'Lalebahçe', 'Pirebi', 'Uluırmak', 'Yaka'],
+  'konya::selçuklu': ['Akşemsettin', 'Bosna Hersek', 'Ferhuniye', 'Işıklar', 'Nişantaş', 'Sancak', 'Yazır'],
+  'konya::karatay': ['Akabe', 'Aziziye', 'Çimenlik', 'Fevziçakmak', 'Hacıveyiszade', 'İşgalaman', 'Tatlıcak'],
+};
+
+function norm(value: string) {
+  return String(value || '')
+    .trim()
+    .toLocaleLowerCase('tr-TR')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+}
+
 async function fetchOptions(path: string) {
   const res = await fetch(path, { cache: 'no-store' });
   if (!res.ok) throw new Error('Lokasyon verisi alınamadı');
   return res.json() as Promise<{ cities?: string[]; districts?: string[]; neighborhoods?: string[] }>;
+}
+
+async function fetchTurkiyeApi(path: string) {
+  const res = await fetch(`${PUBLIC_TR_API}${path}`, { cache: 'no-store' });
+  if (!res.ok) throw new Error('Turkiye API hatası');
+  const json = (await res.json()) as { data?: Array<{ name?: string }> } | Array<{ name?: string }>;
+  const rows = Array.isArray(json) ? json : Array.isArray(json?.data) ? json.data : [];
+  return Array.from(
+    new Set(
+      rows
+        .map((r) => String(r?.name || '').trim())
+        .filter(Boolean),
+    ),
+  ).sort((a, b) => a.localeCompare(b, 'tr'));
 }
 
 export function LocationCascader({ value, onChange }: Props) {
@@ -57,14 +95,24 @@ export function LocationCascader({ value, onChange }: Props) {
     let alive = true;
     setLoadingDistricts(true);
     fetchOptions(`/api/public/listings/locations/districts?city=${encodeURIComponent(value.city)}`)
-      .then((payload) => {
+      .then(async (payload) => {
         if (!alive) return;
-        const next = Array.isArray(payload.districts) ? payload.districts : [];
+        let next = Array.isArray(payload.districts) ? payload.districts : [];
+        if (next.length === 0) {
+          try {
+            next = await fetchTurkiyeApi(`/districts?province=${encodeURIComponent(value.city)}`);
+          } catch {
+            next = [];
+          }
+        }
+        if (next.length === 0) {
+          next = FALLBACK_DISTRICTS[norm(value.city)] || [];
+        }
         setDistricts(next);
       })
       .catch(() => {
         if (!alive) return;
-        setDistricts([]);
+        setDistricts(FALLBACK_DISTRICTS[norm(value.city)] || []);
       })
       .finally(() => {
         if (!alive) return;
@@ -85,14 +133,26 @@ export function LocationCascader({ value, onChange }: Props) {
     fetchOptions(
       `/api/public/listings/locations/neighborhoods?city=${encodeURIComponent(value.city)}&district=${encodeURIComponent(value.district)}`,
     )
-      .then((payload) => {
+      .then(async (payload) => {
         if (!alive) return;
-        const next = Array.isArray(payload.neighborhoods) ? payload.neighborhoods : [];
+        let next = Array.isArray(payload.neighborhoods) ? payload.neighborhoods : [];
+        if (next.length === 0) {
+          try {
+            next = await fetchTurkiyeApi(
+              `/neighborhoods?province=${encodeURIComponent(value.city)}&district=${encodeURIComponent(value.district)}`,
+            );
+          } catch {
+            next = [];
+          }
+        }
+        if (next.length === 0) {
+          next = FALLBACK_NEIGHBORHOODS[`${norm(value.city)}::${norm(value.district)}`] || [];
+        }
         setNeighborhoods(next);
       })
       .catch(() => {
         if (!alive) return;
-        setNeighborhoods([]);
+        setNeighborhoods(FALLBACK_NEIGHBORHOODS[`${norm(value.city)}::${norm(value.district)}`] || []);
       })
       .finally(() => {
         if (!alive) return;
