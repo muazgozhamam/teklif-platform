@@ -301,7 +301,13 @@ export class ListingsService {
         `SELECT d.name
          FROM district d
          JOIN city c ON c.id = d.city_id
-         WHERE c.name = $1
+         WHERE lower(
+           replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(c.name,
+             'İ','i'),'I','i'),'ı','i'),'Ş','s'),'ş','s'),'Ğ','g'),'ğ','g'),'Ü','u'),'ü','u'),'Ö','o')
+         ) = lower(
+           replace(replace(replace(replace(replace(replace(replace(replace(replace(replace($1,
+             'İ','i'),'I','i'),'ı','i'),'Ş','s'),'ş','s'),'Ğ','g'),'ğ','g'),'Ü','u'),'ü','u'),'Ö','o')
+         )
          ORDER BY d.name ASC`,
         city,
       );
@@ -319,7 +325,20 @@ export class ListingsService {
          FROM neighbourhood n
          JOIN district d ON d.id = n.district_id
          JOIN city c ON c.id = d.city_id
-         WHERE c.name = $1 AND d.name = $2
+         WHERE lower(
+           replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(c.name,
+             'İ','i'),'I','i'),'ı','i'),'Ş','s'),'ş','s'),'Ğ','g'),'ğ','g'),'Ü','u'),'ü','u'),'Ö','o')
+         ) = lower(
+           replace(replace(replace(replace(replace(replace(replace(replace(replace(replace($1,
+             'İ','i'),'I','i'),'ı','i'),'Ş','s'),'ş','s'),'Ğ','g'),'ğ','g'),'Ü','u'),'ü','u'),'Ö','o')
+         )
+         AND lower(
+           replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(d.name,
+             'İ','i'),'I','i'),'ı','i'),'Ş','s'),'ş','s'),'Ğ','g'),'ğ','g'),'Ü','u'),'ü','u'),'Ö','o')
+         ) = lower(
+           replace(replace(replace(replace(replace(replace(replace(replace(replace(replace($2,
+             'İ','i'),'I','i'),'ı','i'),'Ş','s'),'ş','s'),'Ğ','g'),'ğ','g'),'Ü','u'),'ü','u'),'Ö','o')
+         )
          ORDER BY n.name ASC`,
         city,
         district,
