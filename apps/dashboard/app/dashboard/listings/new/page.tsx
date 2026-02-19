@@ -9,6 +9,7 @@ import { Input } from '@/src/ui/components/Input';
 import { Card } from '@/src/ui/components/Card';
 import { CategoryCascader } from '../_components/CategoryCascader';
 import { MapPinPicker } from '../_components/MapPinPicker';
+import { LocationCascader } from '../_components/LocationCascader';
 
 type FormState = {
   categoryLeafPathKey: string;
@@ -222,9 +223,18 @@ export default function NewListingWizardPage() {
 
         {step === 2 ? (
           <Card className="grid gap-3">
-            <Input placeholder="İl *" value={form.city} onChange={(e) => setField('city', e.target.value)} />
-            <Input placeholder="İlçe *" value={form.district} onChange={(e) => setField('district', e.target.value)} />
-            <Input placeholder="Mahalle *" value={form.neighborhood} onChange={(e) => setField('neighborhood', e.target.value)} />
+            <LocationCascader
+              value={{
+                city: form.city,
+                district: form.district,
+                neighborhood: form.neighborhood,
+              }}
+              onChange={(next) => {
+                setField('city', next.city);
+                setField('district', next.district);
+                setField('neighborhood', next.neighborhood);
+              }}
+            />
             <select
               className="h-10 rounded-xl border border-[var(--border)] bg-[var(--card)] px-3 text-sm"
               value={form.privacyMode}

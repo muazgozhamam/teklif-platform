@@ -9,6 +9,7 @@ import { Input } from '@/src/ui/components/Input';
 import { Card } from '@/src/ui/components/Card';
 import { CategoryCascader } from '../../_components/CategoryCascader';
 import { MapPinPicker } from '../../_components/MapPinPicker';
+import { LocationCascader } from '../../_components/LocationCascader';
 
 type Listing = {
   id: string;
@@ -245,9 +246,20 @@ export default function EditListingPage() {
                   onChange={(nextLeafPath) => setField('categoryPathKey', nextLeafPath)}
                 />
               </div>
-              <Input value={row.city || ''} onChange={(e) => setField('city', e.target.value)} placeholder="İl" />
-              <Input value={row.district || ''} onChange={(e) => setField('district', e.target.value)} placeholder="İlçe" />
-              <Input value={row.neighborhood || ''} onChange={(e) => setField('neighborhood', e.target.value)} placeholder="Mahalle" />
+              <div className="md:col-span-2">
+                <LocationCascader
+                  value={{
+                    city: row.city || '',
+                    district: row.district || '',
+                    neighborhood: row.neighborhood || '',
+                  }}
+                  onChange={(next) => {
+                    setField('city', next.city);
+                    setField('district', next.district);
+                    setField('neighborhood', next.neighborhood);
+                  }}
+                />
+              </div>
               <select
                 className="h-10 rounded-xl border border-[var(--border)] bg-[var(--card)] px-3 text-sm"
                 value={row.privacyMode || 'EXACT'}
