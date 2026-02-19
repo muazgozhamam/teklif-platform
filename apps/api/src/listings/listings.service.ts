@@ -6,6 +6,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { createHash } from 'crypto';
 import { ListingStatus, Prisma, Role } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import {
@@ -550,6 +551,49 @@ export class ListingsService {
     }
 
     return listing;
+  }
+
+  async getLocationsDebug() {
+    const dbUrl = String(process.env.DATABASE_URL || '');
+    let dbHost = 'unknown';
+    try {
+      const parsed = new URL(dbUrl);
+      dbHost = parsed.host || 'unknown';
+    } catch {
+      dbHost = 'invalid-url';
+    }
+    const fingerprint = createHash('sha1').update(dbUrl).digest('hex').slice(0, 10);
+
+    const counts: Record<string, number | null> = {
+      city: null,
+      district: null,
+      neighbourhood: null,
+    };
+    const errors: Record<string, string | null> = {
+      city: null,
+      district: null,
+      neighbourhood: null,
+    };
+
+    for (const table of ['city', 'district', 'neighbourhood'] as const) {
+      try {
+        const rows = await this.prisma.$queryRawUnsafe<Array<{ count: number | bigint }>>(
+          `SELECT COUNT(*)::bigint AS count FROM "${table}"`,
+        );
+        counts[table] = Number(rows?.[0]?.count || 0);
+      } catch (e) {
+        counts[table] = null;
+        errors[table] = e instanceof Error ? e.message : 'unknown';
+      }
+    }
+
+    return {
+      dbHost,
+      dbFingerprint: fingerprint,
+      counts,
+      errors,
+      localAddressEnabled: (counts.city || 0) > 0,
+    };
   }
 
   async listPublic(query: ListListingsQuery, ipOrKey: string) {

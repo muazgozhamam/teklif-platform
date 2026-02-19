@@ -63,6 +63,11 @@ export class PublicListingsController {
     return this.listings.getPublicNeighborhoods(city, district);
   }
 
+  @Get('locations/debug')
+  locationsDebug() {
+    return this.listings.getLocationsDebug();
+  }
+
   @Get()
   list(@Req() req: Request, @Query() query: ListListingsQuery) {
     return this.listings.listPublic(query, resolveIp(req));
