@@ -8,6 +8,7 @@ import { Button } from '@/src/ui/components/Button';
 import { Input } from '@/src/ui/components/Input';
 import { Card } from '@/src/ui/components/Card';
 import { CategoryCascader } from '../../_components/CategoryCascader';
+import { MapPinPicker } from '../../_components/MapPinPicker';
 
 type Listing = {
   id: string;
@@ -256,8 +257,21 @@ export default function EditListingPage() {
                 <option value="APPROXIMATE">APPROXIMATE</option>
                 <option value="HIDDEN">HIDDEN</option>
               </select>
-              <Input value={String(row.lat ?? '')} onChange={(e) => setField('lat', Number(e.target.value))} placeholder="Latitude (zorunlu)" />
-              <Input value={String(row.lng ?? '')} onChange={(e) => setField('lng', Number(e.target.value))} placeholder="Longitude (zorunlu)" />
+              <div className="md:col-span-2 grid gap-2">
+                <MapPinPicker
+                  value={typeof row.lat === 'number' && typeof row.lng === 'number' ? { lat: row.lat, lng: row.lng } : null}
+                  onChange={(next) => {
+                    setField('lat', next.lat);
+                    setField('lng', next.lng);
+                  }}
+                />
+                <div className="text-xs text-[var(--muted)]">
+                  Seçili Pin:{' '}
+                  {typeof row.lat === 'number' && typeof row.lng === 'number'
+                    ? `${row.lat.toFixed(6)}, ${row.lng.toFixed(6)}`
+                    : 'Henüz seçilmedi'}
+                </div>
+              </div>
             </div>
             {attributeDefs.length > 0 ? (
               <div className="grid gap-2 rounded-xl border border-[var(--border)] bg-[var(--card-2)] p-3">

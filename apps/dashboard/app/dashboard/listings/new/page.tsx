@@ -8,6 +8,7 @@ import { Button } from '@/src/ui/components/Button';
 import { Input } from '@/src/ui/components/Input';
 import { Card } from '@/src/ui/components/Card';
 import { CategoryCascader } from '../_components/CategoryCascader';
+import { MapPinPicker } from '../_components/MapPinPicker';
 
 type FormState = {
   categoryLeafPathKey: string;
@@ -243,10 +244,18 @@ export default function NewListingWizardPage() {
         {step === 3 ? (
           <Card className="grid gap-3">
             <div className="text-sm text-[var(--muted)]">
-              Harita pin zorunlu. Şimdilik lat/lng manuel giriliyor.
+              Harita pin zorunlu. Haritaya tıklayarak konumu seç.
             </div>
-            <Input placeholder="Latitude * (örn: 37.871)" value={form.lat} onChange={(e) => setField('lat', e.target.value)} />
-            <Input placeholder="Longitude * (örn: 32.484)" value={form.lng} onChange={(e) => setField('lng', e.target.value)} />
+            <MapPinPicker
+              value={stepThreeValid ? { lat: Number(form.lat), lng: Number(form.lng) } : null}
+              onChange={(next) => {
+                setField('lat', String(next.lat));
+                setField('lng', String(next.lng));
+              }}
+            />
+            <div className="text-xs text-[var(--muted)]">
+              Seçili Pin: {form.lat && form.lng ? `${Number(form.lat).toFixed(6)}, ${Number(form.lng).toFixed(6)}` : 'Henüz seçilmedi'}
+            </div>
             <div className="flex justify-between">
               <Button variant="secondary" onClick={() => setStep(2)}>Geri</Button>
               <Button variant="primary" loading={saving} disabled={!stepThreeValid} onClick={createListing}>
