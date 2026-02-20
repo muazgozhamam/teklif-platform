@@ -18,7 +18,7 @@ export const TYPE_LABELS: Record<string, string> = {
   CUSTOMER_LEAD: 'Müşteri Adayı',
   PORTFOLIO_LEAD: 'Portföy Adayı',
   CONSULTANT_CANDIDATE: 'Danışman Adayı',
-  HUNTER_CANDIDATE: 'İş Ortağı Adayı',
+  HUNTER_CANDIDATE: 'Avcı Adayı',
   BROKER_CANDIDATE: 'Broker Adayı',
   PARTNER_CANDIDATE: 'İş Ortağı Adayı',
   CORPORATE_LEAD: 'Kurumsal Talep',
@@ -96,8 +96,10 @@ export function ApplicationsOverviewPage() {
   }, [load]);
 
   return (
-    <RoleShell role="ADMIN" title="Aday & Talepler" subtitle="Formlardan gelen kayıtları tek yerden yönetin." nav={[]}>
+    <RoleShell role="ADMIN" title="Aday & Talepler" subtitle="Başvuru ve talepleri tek havuzdan takip et, doğru kişiye yönlendir." nav={[]}>
       {error ? <Alert type="error" message={error} className="mb-4" /> : null}
+
+      <div className="mb-3 text-xs font-medium uppercase tracking-wider text-[var(--muted)]">Genel Durum</div>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-6">
         <KpiCard label="Bugün Yeni" value={loading ? '…' : String(data?.newToday || 0)} />
         <KpiCard label="Nitelikli" value={loading ? '…' : String(data?.qualified || 0)} />
@@ -107,12 +109,16 @@ export function ApplicationsOverviewPage() {
         <KpiCard label="Süreyi Aşan" value={loading ? '…' : String(data?.slaBreaches || 0)} />
       </div>
 
+      <div className="mb-3 mt-4 text-xs font-medium uppercase tracking-wider text-[var(--muted)]">Kategoriler</div>
       <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
         <QuickLink href="/admin/applications/pool" title="Aday Havuzu" desc="Tüm başvuruları tek listede yönet." />
         <QuickLink href="/admin/applications/customers" title="Müşteri Adayları" desc="Alıcı ve kiracı taleplerini yönetin." />
         <QuickLink href="/admin/applications/portfolio" title="Portföy Adayları" desc="Satıcı/ev sahibi talepleri." />
         <QuickLink href="/admin/applications/consultants" title="Danışman Adayları" desc="Danışman başvuruları." />
-        <QuickLink href="/admin/applications/hunters" title="İş Ortağı Adayları" desc="İş ortağı başvurularını yönetin." />
+        <QuickLink href="/admin/applications/hunters" title="Avcı Adayları" desc="Avcı adaylarını filtreleyip değerlendir." />
+        <QuickLink href="/admin/applications/brokers" title="Broker Adayları" desc="Broker aday başvurularını takip et." />
+        <QuickLink href="/admin/applications/partners" title="İş Ortağı Adayları" desc="Partner ve iş ortağı başvuruları." />
+        <QuickLink href="/admin/applications/corporate" title="Kurumsal Talepler" desc="Kurumsal müşteri ve kurum talepleri." />
         <QuickLink href="/admin/applications/support" title="Destek / Şikayet" desc="Destek ve şikayet kayıtlarını yönetin." />
       </div>
     </RoleShell>
@@ -191,7 +197,7 @@ export function ApplicationsListPage({
           </Select>
           {!forcedType ? (
             <Select value={type} onChange={(e) => setType(e.target.value)} className="w-full sm:w-[220px]">
-            <option value="">Tüm Kayıt Türleri</option>
+              <option value="">Tüm Kayıt Türleri</option>
               {Object.entries(TYPE_LABELS).map(([v, l]) => (
                 <option key={v} value={v}>{l}</option>
               ))}
@@ -199,6 +205,11 @@ export function ApplicationsListPage({
           ) : null}
           <Button variant="secondary" onClick={() => { setSkip(0); load(); }} loading={loading}>Yenile</Button>
         </div>
+        {forcedType ? (
+          <div className="mt-3 text-xs text-[var(--muted)]">
+            Aktif görünüm: <span className="text-[var(--text)]">{forcedType.split(',').map((v) => TYPE_LABELS[v] || v).join(', ')}</span>
+          </div>
+        ) : null}
       </Card>
 
       <Card className="mt-4 overflow-hidden p-0">
@@ -206,7 +217,7 @@ export function ApplicationsListPage({
           Toplam: <b className="text-[var(--text)]">{total}</b> | Sayfa: <b className="text-[var(--text)]">{Math.floor(skip / take) + 1}</b>
         </div>
         <div className="overflow-x-auto">
-          <Table className="min-w-[1050px]">
+          <Table className="min-w-[1120px]">
             <thead>
               <tr>
                 <Th>Tarih</Th>
@@ -217,6 +228,7 @@ export function ApplicationsListPage({
                 <Th>Atanan</Th>
                 <Th>Öncelik</Th>
                 <Th>Son Aktivite</Th>
+                <Th className="text-right">İşlem</Th>
               </tr>
             </thead>
             <tbody>
@@ -233,10 +245,13 @@ export function ApplicationsListPage({
                   <Td>{row.assignedTo?.name || row.assignedTo?.email || '-'}</Td>
                   <Td><Badge variant={badgeForPriority(row.priority)}>{row.priority}</Badge></Td>
                   <Td>{new Date(row.lastActivityAt).toLocaleString('tr-TR')}</Td>
+                  <Td className="text-right">
+                    <span className="text-xs text-[var(--primary)]">Detay</span>
+                  </Td>
                 </tr>
               ))}
               {!loading && rows.length === 0 ? (
-                <tr><Td colSpan={8} className="text-[var(--muted)]">Kayıt bulunamadı.</Td></tr>
+                <tr><Td colSpan={9} className="text-[var(--muted)]">Bu filtrelerle kayıt bulunamadı.</Td></tr>
               ) : null}
             </tbody>
           </Table>
