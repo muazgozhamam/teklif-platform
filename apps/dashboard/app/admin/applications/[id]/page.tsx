@@ -90,52 +90,36 @@ export default function AdminApplicationDetailPage() {
   if (!id) return null;
 
   return (
-    <RoleShell role="ADMIN" title="Kayıt Detayı" subtitle={id} nav={[]}>
+    <RoleShell role="ADMIN" title="Kayıt Detayı" subtitle={TYPE_LABELS[application?.type] || id} nav={[]}>
       {error ? <Alert type="error" message={error} className="mb-4" /> : null}
       {loading ? <Card><CardDescription>Yükleniyor…</CardDescription></Card> : null}
 
       {!loading && application ? (
-        <div className="grid gap-4 xl:grid-cols-2">
+        <div className="grid gap-4 xl:grid-cols-[1.4fr_1fr]">
           <Card>
-            <CardTitle>{application.fullName}</CardTitle>
-            <CardDescription>{TYPE_LABELS[application.type] || application.type}</CardDescription>
-            <div className="mt-3 grid grid-cols-1 gap-2 text-sm">
-              <div>Telefon: <b>{application.phone}</b></div>
-              <div>Email: <b>{application.email || '-'}</b></div>
-              <div>Konum: <b>{[application.city, application.district].filter(Boolean).join(' / ') || '-'}</b></div>
-              <div>Kaynak: <b>{application.source || '-'}</b></div>
-            </div>
-            <div className="mt-3 flex flex-wrap items-center gap-2">
-              <Badge variant="primary">{STATUS_LABELS[application.status] || application.status}</Badge>
-              <Badge variant="warning">{application.priority}</Badge>
-              <Badge variant="neutral">Son Yanıt Süresi: {application.slaFirstResponseAt ? new Date(application.slaFirstResponseAt).toLocaleString('tr-TR') : '-'}</Badge>
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <CardTitle>{application.fullName}</CardTitle>
+                <CardDescription>{TYPE_LABELS[application.type] || application.type}</CardDescription>
+              </div>
+              <Badge variant={statusBadge(application.status)}>{STATUS_LABELS[application.status] || application.status}</Badge>
             </div>
 
-            <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
-              <Select value={application.status} onChange={(e) => patch({ status: e.target.value })} disabled={saving}>
-                {Object.entries(STATUS_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-              </Select>
-              <Select value={application.priority} onChange={(e) => patch({ priority: e.target.value })} disabled={saving}>
-                <option value="P0">P0</option>
-                <option value="P1">P1</option>
-                <option value="P2">P2</option>
-              </Select>
-              <Select value={application.assignedToUserId || ''} onChange={(e) => patch({ assignedToUserId: e.target.value || null })} disabled={saving} className="sm:col-span-2">
-                <option value="">Atama yok</option>
-                {users.map((u) => <option key={u.id} value={u.id}>{u.name || u.email}</option>)}
-              </Select>
+            <div className="mt-4 grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
+              <InfoRow label="Telefon" value={application.phone} />
+              <InfoRow label="E-posta" value={application.email || '-'} />
+              <InfoRow label="Konum" value={[application.city, application.district].filter(Boolean).join(' / ') || '-'} />
+              <InfoRow label="Kaynak" value={application.source || '-'} />
+              <InfoRow label="Öncelik" value={application.priority} />
+              <InfoRow
+                label="SLA İlk Dönüş"
+                value={application.slaFirstResponseAt ? new Date(application.slaFirstResponseAt).toLocaleString('tr-TR') : '-'}
+              />
             </div>
 
-            <div className="mt-3 flex flex-wrap gap-2">
-              <Button variant="secondary" onClick={assignRoundRobin} loading={saving}>Sırayla Ata</Button>
-              <Button variant="destructive" onClick={() => api.post(`/api/admin/applications/${id}/close`, { reason: 'Admin close' }).then(load)} disabled={saving}>Kapat</Button>
-            </div>
-          </Card>
-
-          <Card>
-            <CardTitle>Notlar</CardTitle>
+            <CardTitle className="mt-6">Notlar</CardTitle>
             <div className="mt-3 flex gap-2">
-              <Input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Not ekle..." />
+              <Input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Kısa not ekle..." />
               <Button onClick={addNote} loading={saving}>Ekle</Button>
             </div>
             <div className="mt-3 space-y-2">
@@ -152,14 +136,80 @@ export default function AdminApplicationDetailPage() {
             <div className="mt-3 space-y-2">
               {(application.events || []).map((ev: any) => (
                 <div key={ev.id} className="rounded-xl border border-[var(--border)] bg-[var(--card-2)] p-3 text-xs text-[var(--muted)]">
-                  <div className="font-medium text-[var(--text)]">{ev.eventType}</div>
+                  <div className="font-medium text-[var(--text)]">{eventLabel(ev.eventType)}</div>
                   <div>{new Date(ev.createdAt).toLocaleString('tr-TR')}</div>
                 </div>
               ))}
+            </div>
+          </Card>
+
+          <Card className="xl:sticky xl:top-4 xl:h-fit">
+            <CardTitle>Aksiyonlar</CardTitle>
+            <CardDescription>Kayıt durumunu güncelle, sorumlu ata veya kaydı kapat.</CardDescription>
+
+            <div className="mt-4 grid grid-cols-1 gap-2">
+              <div className="text-xs text-[var(--muted)]">Durum</div>
+              <Select value={application.status} onChange={(e) => patch({ status: e.target.value })} disabled={saving}>
+                {Object.entries(STATUS_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+              </Select>
+
+              <div className="mt-2 text-xs text-[var(--muted)]">Öncelik</div>
+              <Select value={application.priority} onChange={(e) => patch({ priority: e.target.value })} disabled={saving}>
+                <option value="P0">P0</option>
+                <option value="P1">P1</option>
+                <option value="P2">P2</option>
+              </Select>
+
+              <div className="mt-2 text-xs text-[var(--muted)]">Atanan Kişi</div>
+              <Select
+                value={application.assignedToUserId || ''}
+                onChange={(e) => patch({ assignedToUserId: e.target.value || null })}
+                disabled={saving}
+              >
+                <option value="">Atama yok</option>
+                {users.map((u) => <option key={u.id} value={u.id}>{u.name || u.email}</option>)}
+              </Select>
+            </div>
+
+            <div className="mt-4 grid grid-cols-1 gap-2">
+              <Button variant="secondary" onClick={assignRoundRobin} loading={saving}>Sırayla Ata</Button>
+              <Button variant="destructive" onClick={() => api.post(`/api/admin/applications/${id}/close`, { reason: 'Admin close' }).then(load)} disabled={saving}>
+                Kaydı Kapat
+              </Button>
             </div>
           </Card>
         </div>
       ) : null}
     </RoleShell>
   );
+}
+
+function InfoRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-xl border border-[var(--border)] bg-[var(--card-2)] px-3 py-2">
+      <div className="text-xs text-[var(--muted)]">{label}</div>
+      <div className="mt-0.5 text-sm font-medium text-[var(--text)]">{value}</div>
+    </div>
+  );
+}
+
+function eventLabel(type: string) {
+  const map: Record<string, string> = {
+    CREATED: 'Kayıt oluşturuldu',
+    STATUS_CHANGED: 'Durum güncellendi',
+    ASSIGNED: 'Atama yapıldı',
+    NOTE_ADDED: 'Not eklendi',
+    TAG_ADDED: 'Etiket eklendi',
+    TAG_REMOVED: 'Etiket kaldırıldı',
+    CLOSED: 'Kayıt kapatıldı',
+  };
+  return map[type] || type;
+}
+
+function statusBadge(status: string): 'neutral' | 'warning' | 'primary' | 'success' | 'danger' {
+  if (status === 'NEW') return 'warning';
+  if (status === 'QUALIFIED' || status === 'IN_REVIEW' || status === 'MEETING_SCHEDULED') return 'primary';
+  if (status === 'APPROVED' || status === 'ONBOARDED') return 'success';
+  if (status === 'REJECTED' || status === 'CLOSED') return 'danger';
+  return 'neutral';
 }
