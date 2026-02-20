@@ -1,7 +1,7 @@
 'use client';
 
-import { LeaderboardPage } from '../../applications/_components/applications-shared';
+import { LeaderboardRolePage } from '../_components/leaderboards-shared';
 
 export default function Page() {
-  return <LeaderboardPage title="Danışman Sıralama" role="CONSULTANT" />;
+  return <LeaderboardRolePage title="Danışman Sıralama" role="CONSULTANT" />;
 }
