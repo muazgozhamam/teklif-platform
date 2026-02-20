@@ -90,7 +90,19 @@ export class ApplicationsService {
   private isMissingApplicationTable(error: unknown): boolean {
     if (!error || typeof error !== 'object') return false;
     const e = error as { code?: string; message?: string };
-    return e.code === 'P2021' || String(e.message || '').includes('public.Application');
+    const message = String(e.message || '').toLowerCase();
+
+    // Stage environments can drift on one or more CRM tables/enums.
+    // In that case we should degrade gracefully to empty state instead of crashing admin UI.
+    const likelyCrmSchemaDrift =
+      message.includes('public.application') ||
+      message.includes('public.applicationnote') ||
+      message.includes('public.applicationevent') ||
+      message.includes('applicationtype') ||
+      message.includes('applicationstatus') ||
+      message.includes('applicationpriority');
+
+    return e.code === 'P2021' || e.code === 'P2022' || likelyCrmSchemaDrift;
   }
 
   private normalizeType(raw: string): AppType {
