@@ -30,7 +30,7 @@ export default function RefToPortfolioPage() {
         if (mounted) setData(res.data);
       } catch {
         if (mounted) {
-          setError('Funnel verisi alınamadı.');
+          setError('Dönüşüm verisi alınamadı.');
           setData({ totalRef: 0, portfolioFromRef: 0, refToPortfolioRate: 0, breakdownByPartner: [] });
         }
       } finally {
@@ -44,7 +44,7 @@ export default function RefToPortfolioPage() {
   const d = data || { totalRef: 0, portfolioFromRef: 0, refToPortfolioRate: 0, breakdownByPartner: [] };
 
   return (
-    <PerformancePageShell title="Funnel / Referans → Portföy" subtitle="Referans kaynaklarının portföye dönüşüm performansı.">
+    <PerformancePageShell title="Referans → Portföy" subtitle="Referansların portföye dönüşümünü takip edin.">
       {error ? <ErrorBanner message={error} /> : null}
       <KpiCardsGrid
         items={[

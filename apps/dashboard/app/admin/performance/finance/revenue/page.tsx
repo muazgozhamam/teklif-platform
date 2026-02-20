@@ -45,7 +45,7 @@ export default function FinanceRevenuePage() {
   const d = data || { revenueSum: 0, revenueByDay: [], revenueByConsultant: [] };
 
   return (
-    <PerformancePageShell title="Finans / Ciro" subtitle="Ciro dağılımı ve danışman bazlı kırılım.">
+    <PerformancePageShell title="Ciro Analizi" subtitle="Ciro dağılımını ve danışman bazlı kırılımı görün.">
       {error ? <ErrorBanner message={error} /> : null}
       <KpiCardsGrid
         items={[

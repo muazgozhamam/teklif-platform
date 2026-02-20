@@ -90,7 +90,7 @@ export default function AdminApplicationDetailPage() {
   if (!id) return null;
 
   return (
-    <RoleShell role="ADMIN" title="Başvuru Detayı" subtitle={id} nav={[]}>
+    <RoleShell role="ADMIN" title="Kayıt Detayı" subtitle={id} nav={[]}>
       {error ? <Alert type="error" message={error} className="mb-4" /> : null}
       {loading ? <Card><CardDescription>Yükleniyor…</CardDescription></Card> : null}
 
@@ -108,7 +108,7 @@ export default function AdminApplicationDetailPage() {
             <div className="mt-3 flex flex-wrap items-center gap-2">
               <Badge variant="primary">{STATUS_LABELS[application.status] || application.status}</Badge>
               <Badge variant="warning">{application.priority}</Badge>
-              <Badge variant="neutral">SLA: {application.slaFirstResponseAt ? new Date(application.slaFirstResponseAt).toLocaleString('tr-TR') : '-'}</Badge>
+              <Badge variant="neutral">Son Yanıt Süresi: {application.slaFirstResponseAt ? new Date(application.slaFirstResponseAt).toLocaleString('tr-TR') : '-'}</Badge>
             </div>
 
             <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
@@ -127,7 +127,7 @@ export default function AdminApplicationDetailPage() {
             </div>
 
             <div className="mt-3 flex flex-wrap gap-2">
-              <Button variant="secondary" onClick={assignRoundRobin} loading={saving}>Round-robin Ata</Button>
+              <Button variant="secondary" onClick={assignRoundRobin} loading={saving}>Sırayla Ata</Button>
               <Button variant="destructive" onClick={() => api.post(`/api/admin/applications/${id}/close`, { reason: 'Admin close' }).then(load)} disabled={saving}>Kapat</Button>
             </div>
           </Card>
@@ -148,7 +148,7 @@ export default function AdminApplicationDetailPage() {
               {(!application.appNotes || application.appNotes.length === 0) ? <div className="text-sm text-[var(--muted)]">Henüz not yok.</div> : null}
             </div>
 
-            <CardTitle className="mt-6">Olay Akışı</CardTitle>
+            <CardTitle className="mt-6">İşlem Geçmişi</CardTitle>
             <div className="mt-3 space-y-2">
               {(application.events || []).map((ev: any) => (
                 <div key={ev.id} className="rounded-xl border border-[var(--border)] bg-[var(--card-2)] p-3 text-xs text-[var(--muted)]">

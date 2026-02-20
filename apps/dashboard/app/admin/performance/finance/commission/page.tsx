@@ -45,7 +45,7 @@ export default function FinanceCommissionPage() {
   const d = data || { commissionSum: 0, pendingCommission: 0, commissionByRole: [], commissionByUser: [] };
 
   return (
-    <PerformancePageShell title="Finans / Komisyon" subtitle="Komisyon dağılımı ve kullanıcı kırılımları.">
+    <PerformancePageShell title="Komisyon Analizi" subtitle="Komisyon dağılımını ve kullanıcı kırılımını görün.">
       {error ? <ErrorBanner message={error} /> : null}
       <KpiCardsGrid
         items={[

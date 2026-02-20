@@ -64,7 +64,7 @@ export default function AdminPerformanceOverviewPage() {
   };
 
   return (
-    <PerformancePageShell title="Performans / Genel Bakış" subtitle="Referans, portföy, satış ve finans KPI özetleri.">
+    <PerformancePageShell title="Performans Genel Bakış" subtitle="Referans, portföy, satış ve ciro özetini görün.">
       {error ? <ErrorBanner message={error} /> : null}
       <KpiCardsGrid
         items={[

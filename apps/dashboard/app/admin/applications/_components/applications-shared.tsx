@@ -18,7 +18,7 @@ export const TYPE_LABELS: Record<string, string> = {
   CUSTOMER_LEAD: 'Müşteri Adayı',
   PORTFOLIO_LEAD: 'Portföy Adayı',
   CONSULTANT_CANDIDATE: 'Danışman Adayı',
-  HUNTER_CANDIDATE: 'Hunter Adayı',
+  HUNTER_CANDIDATE: 'İş Ortağı Adayı',
   BROKER_CANDIDATE: 'Broker Adayı',
   PARTNER_CANDIDATE: 'İş Ortağı Adayı',
   CORPORATE_LEAD: 'Kurumsal Talep',
@@ -32,7 +32,7 @@ export const STATUS_LABELS: Record<string, string> = {
   IN_REVIEW: 'İncelemede',
   MEETING_SCHEDULED: 'Görüşme',
   APPROVED: 'Onaylandı',
-  ONBOARDED: 'Onboarded',
+  ONBOARDED: 'Sürece Alındı',
   REJECTED: 'Reddedildi',
   CLOSED: 'Kapalı',
 };
@@ -85,7 +85,7 @@ export function ApplicationsOverviewPage() {
       const res = await api.get<any>('/api/admin/applications/overview');
       setData(res.data);
     } catch (e: any) {
-      setError(e?.data?.message || e?.message || 'Applications overview alınamadı.');
+      setError(e?.data?.message || e?.message || 'Genel bakış verisi alınamadı.');
     } finally {
       setLoading(false);
     }
@@ -96,7 +96,7 @@ export function ApplicationsOverviewPage() {
   }, [load]);
 
   return (
-    <RoleShell role="ADMIN" title="Aday & Talepler - Genel Bakış" subtitle="Homepage formlarından gelen CRM havuzu." nav={[]}>
+    <RoleShell role="ADMIN" title="Aday & Talepler" subtitle="Formlardan gelen kayıtları tek yerden yönetin." nav={[]}>
       {error ? <Alert type="error" message={error} className="mb-4" /> : null}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-6">
         <KpiCard label="Bugün Yeni" value={loading ? '…' : String(data?.newToday || 0)} />
@@ -104,16 +104,16 @@ export function ApplicationsOverviewPage() {
         <KpiCard label="İncelemede" value={loading ? '…' : String(data?.inReview || 0)} />
         <KpiCard label="Açık Kayıt" value={loading ? '…' : String(data?.totalOpen || 0)} />
         <KpiCard label="Ort. İlk Dönüş" value={loading ? '…' : `${data?.avgFirstResponseMinutes || 0} dk`} />
-        <KpiCard label="SLA Breach" value={loading ? '…' : String(data?.slaBreaches || 0)} />
+        <KpiCard label="Süreyi Aşan" value={loading ? '…' : String(data?.slaBreaches || 0)} />
       </div>
 
       <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
         <QuickLink href="/admin/applications/pool" title="Aday Havuzu" desc="Tüm başvuruları tek listede yönet." />
-        <QuickLink href="/admin/applications/customers" title="Müşteri Adayları" desc="Alıcı/kiracı leadlerini yönet." />
+        <QuickLink href="/admin/applications/customers" title="Müşteri Adayları" desc="Alıcı ve kiracı taleplerini yönetin." />
         <QuickLink href="/admin/applications/portfolio" title="Portföy Adayları" desc="Satıcı/ev sahibi talepleri." />
         <QuickLink href="/admin/applications/consultants" title="Danışman Adayları" desc="Danışman başvuruları." />
-        <QuickLink href="/admin/applications/hunters" title="Hunter Adayları" desc="Avcı aday havuzu." />
-        <QuickLink href="/admin/applications/support" title="Destek / Şikayet" desc="Destek ve complaint kayıtları." />
+        <QuickLink href="/admin/applications/hunters" title="İş Ortağı Adayları" desc="İş ortağı başvurularını yönetin." />
+        <QuickLink href="/admin/applications/support" title="Destek / Şikayet" desc="Destek ve şikayet kayıtlarını yönetin." />
       </div>
     </RoleShell>
   );
@@ -161,7 +161,7 @@ export function ApplicationsListPage({
       setRows(Array.isArray(res.data?.items) ? res.data.items : []);
       setTotal(Number(res.data?.total || 0));
     } catch (e: any) {
-      setError(e?.data?.message || e?.message || 'Başvuru listesi alınamadı.');
+      setError(e?.data?.message || e?.message || 'Kayıt listesi alınamadı.');
     } finally {
       setLoading(false);
     }
@@ -176,7 +176,7 @@ export function ApplicationsListPage({
       {error ? <Alert type="error" message={error} className="mb-4" /> : null}
       <Card>
         <div className="flex flex-wrap items-center gap-2">
-          <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Ad / email / telefon ara" className="min-w-[220px] flex-1" />
+          <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Ad, e-posta veya telefon ara" className="min-w-[220px] flex-1" />
           <Select value={status} onChange={(e) => setStatus(e.target.value)} className="w-full sm:w-[170px]">
             <option value="">Tüm Durumlar</option>
             {Object.entries(STATUS_LABELS).map(([v, l]) => (
@@ -191,7 +191,7 @@ export function ApplicationsListPage({
           </Select>
           {!forcedType ? (
             <Select value={type} onChange={(e) => setType(e.target.value)} className="w-full sm:w-[220px]">
-              <option value="">Tüm Tipler</option>
+            <option value="">Tüm Kayıt Türleri</option>
               {Object.entries(TYPE_LABELS).map(([v, l]) => (
                 <option key={v} value={v}>{l}</option>
               ))}
@@ -279,7 +279,7 @@ export function LeaderboardPage({
       });
       setRows(Array.isArray(res.data?.rows) ? res.data.rows : []);
     } catch (e: any) {
-      setError(e?.data?.message || e?.message || 'Leaderboard alınamadı.');
+      setError(e?.data?.message || e?.message || 'Sıralama verisi alınamadı.');
     } finally {
       setLoading(false);
     }
@@ -290,7 +290,7 @@ export function LeaderboardPage({
   }, [load]);
 
   return (
-    <RoleShell role="ADMIN" title={title} subtitle="Kalite + dönüşüm ağırlıklı skorlar." nav={[]}>
+    <RoleShell role="ADMIN" title={title} subtitle="Kalite ve dönüşüm odaklı performans sıralaması." nav={[]}>
       {error ? <Alert type="error" message={error} className="mb-4" /> : null}
       <Card>
         <div className="flex items-center gap-2">
@@ -312,7 +312,7 @@ export function LeaderboardPage({
                 <Th>İsim</Th>
                 <Th>Rol</Th>
                 <Th>Skor</Th>
-                <Th>Breakdown</Th>
+                <Th>Detay</Th>
               </tr>
             </thead>
             <tbody>

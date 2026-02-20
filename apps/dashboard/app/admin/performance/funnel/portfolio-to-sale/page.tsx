@@ -30,7 +30,7 @@ export default function PortfolioToSalePage() {
         if (mounted) setData(res.data);
       } catch {
         if (mounted) {
-          setError('Portföy → satış funnel verisi alınamadı.');
+          setError('Portföyden satışa dönüşüm verisi alınamadı.');
           setData({ totalPortfolio: 0, salesFromPortfolio: 0, portfolioToSaleRate: 0, avgTimeToCloseDays: 0, breakdownByConsultant: [] });
         }
       } finally {
@@ -44,7 +44,7 @@ export default function PortfolioToSalePage() {
   const d = data || { totalPortfolio: 0, salesFromPortfolio: 0, portfolioToSaleRate: 0, avgTimeToCloseDays: 0, breakdownByConsultant: [] };
 
   return (
-    <PerformancePageShell title="Funnel / Portföy → Satış" subtitle="Portföyden kapanan satışa dönüşüm.">
+    <PerformancePageShell title="Portföy → Satış" subtitle="Portföylerin satışa dönüşümünü takip edin.">
       {error ? <ErrorBanner message={error} /> : null}
       <KpiCardsGrid
         items={[
