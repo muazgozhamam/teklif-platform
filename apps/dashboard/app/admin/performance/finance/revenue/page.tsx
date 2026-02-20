@@ -21,13 +21,13 @@ export default function FinanceRevenuePage() {
   const [error, setError] = React.useState<string | null>(null);
 
   React.useEffect(() => {
-    const { from, to } = getRangeFromSearch(searchParams);
+    const { from, to, city } = getRangeFromSearch(searchParams);
     let mounted = true;
     async function load() {
       setLoading(true);
       setError(null);
       try {
-        const res = await api.get<Payload>('/admin/performance/finance/revenue', { params: { from, to } });
+        const res = await api.get<Payload>('/admin/performance/finance/revenue', { params: { from, to, city: city || undefined } });
         if (mounted) setData(res.data);
       } catch {
         if (mounted) {

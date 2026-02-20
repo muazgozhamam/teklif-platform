@@ -8,19 +8,35 @@ import { Card } from '@/src/ui/components/Card';
 import { Select } from '@/src/ui/components/Select';
 import { getDefaultRange, getRangeFromSearch, type DatePreset, isoDate } from './performance-utils';
 
+function inferPreset(from: string, to: string): DatePreset {
+  const defaults = getDefaultRange();
+  if (from === defaults.from && to === defaults.to) return '30d';
+
+  const today = new Date();
+  const todayIso = isoDate(today);
+  const sevenDaysAgo = isoDate(new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000));
+  if (to === todayIso && from === sevenDaysAgo) return '7d';
+
+  const monthStart = isoDate(new Date(today.getFullYear(), today.getMonth(), 1));
+  if (to === todayIso && from === monthStart) return 'month';
+
+  return 'custom';
+}
+
 export default function PerformanceFilterBar() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const initial = getRangeFromSearch(searchParams);
 
-  const [preset, setPreset] = React.useState<DatePreset>('30d');
+  const [preset, setPreset] = React.useState<DatePreset>(inferPreset(initial.from, initial.to));
   const [from, setFrom] = React.useState(initial.from);
   const [to, setTo] = React.useState(initial.to);
   const [city, setCity] = React.useState(initial.city);
 
   React.useEffect(() => {
     const next = getRangeFromSearch(searchParams);
+    setPreset(inferPreset(next.from, next.to));
     setFrom(next.from);
     setTo(next.to);
     setCity(next.city);

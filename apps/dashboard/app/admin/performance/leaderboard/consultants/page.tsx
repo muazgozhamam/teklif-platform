@@ -30,13 +30,13 @@ export default function LeaderboardConsultantsPage() {
   const [error, setError] = React.useState<string | null>(null);
 
   React.useEffect(() => {
-    const { from, to } = getRangeFromSearch(searchParams);
+    const { from, to, city } = getRangeFromSearch(searchParams);
     let mounted = true;
     async function load() {
       setLoading(true);
       setError(null);
       try {
-        const res = await api.get<Payload>('/admin/performance/leaderboard/consultants', { params: { from, to } });
+        const res = await api.get<Payload>('/admin/performance/leaderboard/consultants', { params: { from, to, city: city || undefined } });
         if (mounted) {
           const sorted = [...(res.data.rows || [])].sort((a, b) => (b.revenueSum === a.revenueSum ? b.dealsWonCount - a.dealsWonCount : b.revenueSum - a.revenueSum));
           setRows(sorted);
