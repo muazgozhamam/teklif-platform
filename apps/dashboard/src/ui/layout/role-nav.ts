@@ -57,12 +57,6 @@ const roleSections: Record<ShellRole, NavSection[]> = {
             { href: '/admin/commission/policies', label: 'Komisyon', icon: 'percent' },
           ],
         },
-      ],
-    },
-    {
-      id: 'listings',
-      title: 'İlanlar',
-      groups: [
         {
           id: 'admin-listings',
           title: 'İlanlar',
