@@ -90,12 +90,12 @@ export default function AdminCommissionDisputesPage() {
   }
 
   return (
-    <RoleShell role="ADMIN" title="Hakediş Uyuşmazlıkları" subtitle="Anlaşmazlık kayıtlarını buradan açar ve takip edersiniz." nav={[]}>
+    <RoleShell role="ADMIN" title="Hakediş Uyuşmazlıkları" subtitle="Anlaşmazlık kaydı aç, SLA sürecini takip et ve sonucu kapat." nav={[]}>
       {error ? <Alert type="error" message={error} className="mb-4" /> : null}
 
       <Card>
-        <CardTitle>Uyuşmazlık Kaydı Aç</CardTitle>
-        <CardDescription>Bir işlemde anlaşmazlık varsa kayıt açın ve süreci buradan takip edin.</CardDescription>
+        <CardTitle>Yeni Uyuşmazlık</CardTitle>
+        <CardDescription>İşlemde anlaşmazlık varsa kayıt aç ve değerlendirme sürecini başlat.</CardDescription>
         <form className="mt-3 grid gap-3 md:grid-cols-2" onSubmit={createDispute}>
           <Input value={dealId} onChange={(e) => setDealId(e.target.value)} placeholder="İşlem ID (zorunlu)" required />
           <Input value={snapshotId} onChange={(e) => setSnapshotId(e.target.value)} placeholder="Hakediş kaydı ID (opsiyonel)" />
@@ -114,7 +114,7 @@ export default function AdminCommissionDisputesPage() {
       </Card>
 
       <Card>
-        <CardTitle>Açık Kayıtlar</CardTitle>
+        <CardTitle>Uyuşmazlık Listesi</CardTitle>
         {loading ? <div className="mt-3 text-sm text-[var(--muted)]">Yükleniyor…</div> : null}
         {!loading && rows.length === 0 ? <div className="mt-3 text-sm text-[var(--muted)]">Uyuşmazlık kaydı yok.</div> : null}
         {!loading && rows.length > 0 ? (
@@ -125,7 +125,7 @@ export default function AdminCommissionDisputesPage() {
                   <th className="px-3 py-2">İşlem</th>
                   <th className="px-3 py-2">Tip</th>
                   <th className="px-3 py-2">Durum</th>
-                  <th className="px-3 py-2">Son Yanıt Süresi</th>
+                  <th className="px-3 py-2">SLA Bitiş</th>
                   <th className="px-3 py-2">Açan</th>
                   <th className="px-3 py-2">Hedef</th>
                   <th className="px-3 py-2">İşlem</th>
@@ -145,10 +145,10 @@ export default function AdminCommissionDisputesPage() {
                     <td className="px-3 py-2 text-xs text-[var(--muted)]">{row.againstUser?.name || row.againstUser?.email || '-'}</td>
                     <td className="px-3 py-2">
                       <div className="flex flex-wrap gap-2">
-                        <Button className="h-8 px-3 text-xs" onClick={() => setStatus(row.id, 'UNDER_REVIEW')} disabled={busyId === row.id}>İncelemeye Al</Button>
-                        <Button variant="secondary" className="h-8 px-3 text-xs" onClick={() => setStatus(row.id, 'ESCALATED')} disabled={busyId === row.id}>Üst Seviyeye Taşı</Button>
-                        <Button variant="primary" className="h-8 px-3 text-xs" onClick={() => setStatus(row.id, 'RESOLVED_APPROVED')} disabled={busyId === row.id}>Kabul</Button>
-                        <Button variant="destructive" className="h-8 px-3 text-xs" onClick={() => setStatus(row.id, 'RESOLVED_REJECTED')} disabled={busyId === row.id}>Red</Button>
+                        <Button className="h-8 px-3 text-xs" onClick={() => setStatus(row.id, 'UNDER_REVIEW')} disabled={busyId === row.id}>İncele</Button>
+                        <Button variant="secondary" className="h-8 px-3 text-xs" onClick={() => setStatus(row.id, 'ESCALATED')} disabled={busyId === row.id}>Yükselt</Button>
+                        <Button variant="primary" className="h-8 px-3 text-xs" onClick={() => setStatus(row.id, 'RESOLVED_APPROVED')} disabled={busyId === row.id}>Onayla</Button>
+                        <Button variant="destructive" className="h-8 px-3 text-xs" onClick={() => setStatus(row.id, 'RESOLVED_REJECTED')} disabled={busyId === row.id}>Reddet</Button>
                       </div>
                     </td>
                   </tr>

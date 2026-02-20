@@ -66,13 +66,13 @@ export default function AdminCommissionPayoutsPage() {
   }
 
   return (
-    <RoleShell role="ADMIN" title="Hakediş Ödemeleri" subtitle="Onaylanan hakediş satırlarına ödeme kaydı girin." nav={[]}>
+    <RoleShell role="ADMIN" title="Hakediş Ödemeleri" subtitle="Onaylanmış satırlara ödeme işlemi gir ve kayıt altına al." nav={[]}>
       {error ? <Alert type="error" message={error} className="mb-4" /> : null}
       {ok ? <Alert type="success" message={ok} className="mb-4" /> : null}
 
       <Card>
         <CardTitle>Yeni Ödeme</CardTitle>
-        <CardDescription>Tutarlar minor units (kuruş) olarak girilir. Örn: 12.345,67 TL = 1234567</CardDescription>
+        <CardDescription>Tutarları kuruş cinsinden gir. Örn: 12.345,67 TL = 1234567</CardDescription>
 
         <div className="mt-3 grid gap-3 md:grid-cols-3">
           <div>
@@ -96,7 +96,7 @@ export default function AdminCommissionPayoutsPage() {
           {rows.map((row, index) => (
             <div key={index} className="grid gap-2 md:grid-cols-[1fr_200px_auto]">
               <Input
-                placeholder="Allocation ID"
+                placeholder="Hakediş Satırı ID"
                 value={row.allocationId}
                 onChange={(e) => updateRow(index, { allocationId: e.target.value })}
               />

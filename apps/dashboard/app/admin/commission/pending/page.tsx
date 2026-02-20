@@ -60,12 +60,12 @@ export default function AdminCommissionPendingPage() {
   }
 
   return (
-    <RoleShell role="ADMIN" title="Hakediş Onay Kuyruğu" subtitle="Onay bekleyen hakediş kayıtlarını buradan yönetirsiniz." nav={[]}>
+    <RoleShell role="ADMIN" title="Hakediş Onay Kuyruğu" subtitle="Onay bekleyen kayıtları kontrol edip işleme al." nav={[]}>
       {error ? <Alert type="error" message={error} className="mb-4" /> : null}
 
       <Card>
         <CardTitle>Bekleyen Kayıtlar</CardTitle>
-        <CardDescription>Kayıdı oluşturan kişi aynı kaydı onaylayamaz.</CardDescription>
+        <CardDescription>Maker-checker kuralı geçerlidir: kaydı oluşturan kişi onaylayamaz.</CardDescription>
         {loading ? <div className="mt-3 text-sm text-[var(--muted)]">Yükleniyor…</div> : null}
 
         {!loading && rows.length === 0 ? <div className="mt-3 text-sm text-[var(--muted)]">Bekleyen kayıt yok.</div> : null}
@@ -76,10 +76,10 @@ export default function AdminCommissionPendingPage() {
               <thead>
                 <tr className="border-b border-[var(--border)] text-left text-xs text-[var(--muted)]">
                   <th className="px-3 py-2">İşlem</th>
-                  <th className="px-3 py-2">Havuz</th>
+                  <th className="px-3 py-2">Hakediş Havuzu</th>
                   <th className="px-3 py-2">Oluşturan</th>
                   <th className="px-3 py-2">Tarih</th>
-                  <th className="px-3 py-2">İşlem</th>
+                  <th className="px-3 py-2 text-right">Aksiyon</th>
                 </tr>
               </thead>
               <tbody>
@@ -93,7 +93,7 @@ export default function AdminCommissionPendingPage() {
                     <td className="px-3 py-2 text-xs text-[var(--muted)]">{row.maker?.name || row.maker?.email || '-'}</td>
                     <td className="px-3 py-2 text-xs text-[var(--muted)]">{new Date(row.createdAt).toLocaleString('tr-TR')}</td>
                     <td className="px-3 py-2">
-                      <div className="flex flex-wrap gap-2">
+                      <div className="flex flex-wrap justify-end gap-2">
                         <Button className="h-8 px-3 text-xs" onClick={() => approve(row.id)} disabled={busyId === row.id}>
                           {busyId === row.id ? 'Onaylanıyor…' : 'Onayla'}
                         </Button>

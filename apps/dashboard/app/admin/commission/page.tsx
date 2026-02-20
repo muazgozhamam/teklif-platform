@@ -64,11 +64,12 @@ export default function AdminCommissionOverviewPage() {
     <RoleShell
       role="ADMIN"
       title="Hakediş Genel Bakış"
-      subtitle="Hakediş süreçlerini tek ekranda izleyin ve yönetin."
+      subtitle="Onay, ödeme ve uyuşmazlık süreçlerini tek yerden yönet."
       nav={[]}
     >
       {error ? <Alert type="error" message={error} className="mb-4" /> : null}
 
+      <div className="mb-3 text-xs font-medium uppercase tracking-wider text-[var(--muted)]">Finans Özeti</div>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
         <Card><CardDescription>Toplam Hakediş</CardDescription><CardTitle className="mt-1">{loading ? '…' : formatMinorTry(overview?.totalEarnedMinor)}</CardTitle></Card>
         <Card><CardDescription>Toplam Ödenen</CardDescription><CardTitle className="mt-1">{loading ? '…' : formatMinorTry(overview?.totalPaidMinor)}</CardTitle></Card>
@@ -78,8 +79,8 @@ export default function AdminCommissionOverviewPage() {
       </div>
 
       <Card className="mt-4">
-        <CardTitle>İşlemden Hakediş Kaydı Oluştur</CardTitle>
-        <CardDescription>İşlem kapandıysa bu kayıtla hakediş dağıtımını başlatırsınız.</CardDescription>
+        <CardTitle>Yeni Hakediş Kaydı</CardTitle>
+        <CardDescription>İşlem kapanışından hakediş dağıtım sürecini başlat.</CardDescription>
         <div className="mt-3 flex flex-col gap-2 md:flex-row">
           <Input value={dealId} onChange={(e) => setDealId(e.target.value)} placeholder="İşlem ID" className="md:max-w-xl" />
           <Button onClick={createSnapshot} disabled={saving || !dealId.trim()}>
@@ -88,6 +89,7 @@ export default function AdminCommissionOverviewPage() {
         </div>
       </Card>
 
+      <div className="mb-3 mt-4 text-xs font-medium uppercase tracking-wider text-[var(--muted)]">Hızlı Erişim</div>
       <div className="mt-4 grid gap-3 md:grid-cols-3">
         <Link href="/admin/commission/pending" className="ui-interactive rounded-xl border border-[var(--border)] bg-[var(--card)] p-4 hover:bg-[var(--interactive-hover-bg)]">
           <div className="text-sm font-medium">Onay Kuyruğu</div>
@@ -101,9 +103,15 @@ export default function AdminCommissionOverviewPage() {
           <div className="text-sm font-medium">Uyuşmazlıklar</div>
           <div className="mt-1 text-xs text-[var(--muted)]">Açılan anlaşmazlık kayıtlarını takip edin.</div>
         </Link>
+      </div>
+      <div className="mt-3 grid gap-3 md:grid-cols-2">
         <Link href="/admin/commission/period-locks" className="ui-interactive rounded-xl border border-[var(--border)] bg-[var(--card)] p-4 hover:bg-[var(--interactive-hover-bg)]">
           <div className="text-sm font-medium">Dönem Kilidi</div>
           <div className="mt-1 text-xs text-[var(--muted)]">Belirli dönemlerde işlemleri geçici olarak kilitleyin.</div>
+        </Link>
+        <Link href="/admin/commission/policies" className="ui-interactive rounded-xl border border-[var(--border)] bg-[var(--card)] p-4 hover:bg-[var(--interactive-hover-bg)]">
+          <div className="text-sm font-medium">Komisyon Oranları</div>
+          <div className="mt-1 text-xs text-[var(--muted)]">Dağılım yüzdelerini ve komisyon oranını güncelle.</div>
         </Link>
       </div>
     </RoleShell>
