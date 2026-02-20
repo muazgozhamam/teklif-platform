@@ -82,7 +82,7 @@ export default function AdminHomePage() {
     <RoleShell
       role="ADMIN"
       title="Admin Komuta Ekranı"
-      subtitle="Referans akışı, ekip operasyonu ve kritik aksiyonlar tek ekranda."
+      subtitle="Öncelikli işler, günlük aksiyonlar ve operasyon sağlığı."
       headerControls={
         <div className="flex min-w-0 items-center gap-2">
           <Select
@@ -111,20 +111,21 @@ export default function AdminHomePage() {
       ]}
     >
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <KpiCard label="Toplam Kullanıcı" value={stats?.usersTotal ?? 0} loading={statsLoading} />
-        <KpiCard label="Toplam Referans" value={stats?.leadsTotal ?? 0} loading={statsLoading} />
-        <KpiCard label="Toplam İşlem" value={stats?.dealsTotal ?? 0} loading={statsLoading} />
-        <KpiCard label="Toplam İlan" value={stats?.listingsTotal ?? 0} loading={statsLoading} />
+        <KpiCard label="Aktif Kullanıcı" value={stats?.usersTotal ?? 0} loading={statsLoading} />
+        <KpiCard label="Referans" value={stats?.leadsTotal ?? 0} loading={statsLoading} />
+        <KpiCard label="İşlem" value={stats?.dealsTotal ?? 0} loading={statsLoading} />
+        <KpiCard label="İlan" value={stats?.listingsTotal ?? 0} loading={statsLoading} />
       </div>
 
       {statsErr ? <AlertMessage type="error" message={statsErr} /> : null}
 
+      <div className="mt-4 text-xs font-medium uppercase tracking-wider text-[var(--muted)]">Öncelikli İşler</div>
       <div className="mt-4 grid grid-cols-1 gap-4 xl:grid-cols-2">
         <Card>
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <CardTitle>Operasyon Kuyruğu</CardTitle>
-              <CardDescription>Günlük kritik iş listesi ve hızlı yönlendirmeler.</CardDescription>
+              <CardTitle>Bekleyen İşler</CardTitle>
+              <CardDescription>Önce tamamlanması gereken operasyon başlıkları.</CardDescription>
             </div>
             <Badge variant="warning">Öncelik: Orta</Badge>
           </div>
@@ -136,35 +137,37 @@ export default function AdminHomePage() {
         </Card>
 
         <Card>
-          <CardTitle>Hızlı Aksiyonlar</CardTitle>
-          <CardDescription>En sık yapılan yönetim işlemleri.</CardDescription>
+          <CardTitle>Bugün Yapılacaklar</CardTitle>
+          <CardDescription>Tek tıkla ilerleyebileceğin yönetim aksiyonları.</CardDescription>
           <div className="mt-4 grid gap-2">
-            <QuickAction href="/admin/users" label="Yeni kullanıcı oluştur / rol değiştir" />
-            <QuickAction href="/admin/onboarding" label="Başvuru durumlarını güncelle" />
-            <QuickAction href="/admin/commission" label="Komisyon dağılımını düzenle" />
-            <QuickAction href="/admin/audit" label="İşlem loglarını incele" />
+            <QuickAction href="/admin/users" label="Kullanıcı oluştur veya rol güncelle" variant="primary" />
+            <QuickAction href="/admin/onboarding" label="Uyum sürecini güncelle" variant="primary" />
+            <QuickAction href="/admin/commission" label="Hakediş dağılımını düzenle" />
+            <QuickAction href="/admin/audit" label="Sistem kayıtlarını incele" />
           </div>
         </Card>
       </div>
 
+      <div className="mt-4 text-xs font-medium uppercase tracking-wider text-[var(--muted)]">Operasyon Sağlığı</div>
       <div className="mt-4 grid grid-cols-1 gap-3 lg:grid-cols-3">
         <StatusCard title="Dönüşüm Sağlığı" value={computeConversion(stats?.dealsTotal ?? 0, stats?.leadsTotal ?? 0)} hint="İşlem / Referans" />
         <StatusCard title="Portföy Yoğunluğu" value={computeDensity(stats?.listingsTotal ?? 0, stats?.usersTotal ?? 0)} hint="İlan / Kullanıcı" />
         <StatusCard title="Operasyon Durumu" value="Stabil" hint="API ve panel erişimi aktif" />
       </div>
 
+      <div className="mt-4 text-xs font-medium uppercase tracking-wider text-[var(--muted)]">Modüller</div>
       <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <Link href="/admin/users" className={linkCardClass}>
-          <div className="font-semibold">Kullanıcı Yönetimi</div>
+          <div className="font-semibold">Kullanıcılar</div>
           <div className="mt-1 text-xs text-[var(--muted)]">Rol, aktif/pasif ve kullanıcı düzenlemeleri.</div>
         </Link>
         <Link href="/admin/onboarding" className={linkCardClass}>
           <div className="font-semibold">Uyum Süreci</div>
-          <div className="mt-1 text-xs text-[var(--muted)]">Rol bazlı onboarding ilerlemesini görüntüle.</div>
+          <div className="mt-1 text-xs text-[var(--muted)]">İlk kurulum adımlarını ve eksikleri takip et.</div>
         </Link>
         <Link href="/admin/audit" className={linkCardClass}>
-          <div className="font-semibold">Denetim Kayıtları</div>
-          <div className="mt-1 text-xs text-[var(--muted)]">Aksiyonları ham ve kanonik alanlarla incele.</div>
+          <div className="font-semibold">Sistem Kayıtları</div>
+          <div className="mt-1 text-xs text-[var(--muted)]">Kim, ne zaman, hangi işlemi yaptı görebilirsin.</div>
         </Link>
         <Link href="/admin/commission" className={linkCardClass}>
           <div className="font-semibold">Hakediş Ayarları</div>
@@ -198,9 +201,14 @@ function QueueRow({ title, note, ctaHref, ctaLabel }: { title: string; note: str
   );
 }
 
-function QuickAction({ href, label }: { href: string; label: string }) {
+function QuickAction({ href, label, variant = 'secondary' }: { href: string; label: string; variant?: 'primary' | 'secondary' }) {
+  const base = 'rounded-xl border px-3 py-2 text-sm transition-colors';
+  const style =
+    variant === 'primary'
+      ? 'border-[var(--primary)]/40 bg-[var(--primary)]/12 text-[var(--text)] hover:border-[var(--primary)]/60'
+      : 'border-[var(--border)] bg-[var(--card-2)] text-[var(--text)] hover:border-[var(--border-2)]';
   return (
-    <Link href={href} className="rounded-xl border border-[var(--border)] bg-[var(--card-2)] px-3 py-2 text-sm text-[var(--text)] transition-colors hover:border-[var(--border-2)]">
+    <Link href={href} className={`${base} ${style}`}>
       {label}
     </Link>
   );

@@ -99,7 +99,7 @@ export default function AdminAuditPage() {
     <RoleShell
       role="ADMIN"
       title="Denetim Kayıtları"
-      subtitle="Sistem aksiyonlarını ham + kanonik alanlarla izle."
+      subtitle="Sistemde yapılan işlemleri zaman sırasıyla takip et."
       nav={[
         { href: '/admin', label: 'Panel' },
         { href: '/admin/users', label: 'Kullanıcılar' },
@@ -116,7 +116,7 @@ export default function AdminAuditPage() {
               setQ(e.target.value);
               setSkip(0);
             }}
-            placeholder="Ara: entityId, actor email, action..."
+            placeholder="Ara: kayıt no, kullanıcı, işlem..."
             className="min-w-[220px] flex-1"
           />
           <Input
@@ -125,7 +125,7 @@ export default function AdminAuditPage() {
               setAction(e.target.value);
               setSkip(0);
             }}
-            placeholder="Action filtresi"
+            placeholder="İşlem filtresi"
             className="w-full sm:w-44"
           />
           <Input
@@ -134,7 +134,7 @@ export default function AdminAuditPage() {
               setEntityType(e.target.value);
               setSkip(0);
             }}
-            placeholder="Entity filtresi"
+            placeholder="Kayıt tipi filtresi"
             className="w-full sm:w-44"
           />
           <Select
@@ -164,33 +164,37 @@ export default function AdminAuditPage() {
       <Card className="mt-4 overflow-hidden p-0">
         <div className="border-b border-[var(--border)] px-4 py-3 text-sm font-medium text-[var(--text)]">{loading ? 'Yükleniyor…' : `${rows.length} kayıt`}</div>
         <div className="overflow-x-auto">
-          <Table className="min-w-[920px]">
+          <Table className="min-w-[720px]">
             <thead>
               <tr>
-                <Th>Tarih</Th>
-                <Th>Action</Th>
-                <Th>Canonical Action</Th>
-                <Th>Entity</Th>
-                <Th>Canonical Entity</Th>
-                <Th>Entity ID</Th>
-                <Th>Actor</Th>
+                <Th>Zaman</Th>
+                <Th>Olay</Th>
+                <Th>İlgili Kayıt</Th>
+                <Th>Yapan</Th>
               </tr>
             </thead>
             <tbody>
               {rows.map((r) => (
                 <tr key={r.id} className="hover:bg-[var(--interactive-hover-bg)]">
                   <Td className="whitespace-nowrap">{new Date(r.createdAt).toLocaleString()}</Td>
-                  <Td>{r.action}</Td>
-                  <Td>{r.canonicalAction}</Td>
-                  <Td>{r.entity}</Td>
-                  <Td>{r.canonicalEntity}</Td>
-                  <Td><code>{r.entityId}</code></Td>
+                  <Td>
+                    <div className="font-medium text-[var(--text)]">{r.canonicalAction || r.action}</div>
+                    {r.canonicalAction && r.canonicalAction !== r.action ? (
+                      <div className="text-xs text-[var(--muted)]">{r.action}</div>
+                    ) : null}
+                  </Td>
+                  <Td>
+                    <div className="font-medium text-[var(--text)]">{r.canonicalEntity || r.entity}</div>
+                    <div className="text-xs text-[var(--muted)]">
+                      <code>{r.entityId}</code>
+                    </div>
+                  </Td>
                   <Td>{r.actor?.email || r.actor?.role || '-'}</Td>
                 </tr>
               ))}
               {!loading && rows.length === 0 ? (
                 <tr>
-                  <Td colSpan={7} className="text-[var(--muted)]">Kayıt bulunamadı.</Td>
+                  <Td colSpan={4} className="text-[var(--muted)]">Kayıt bulunamadı.</Td>
                 </tr>
               ) : null}
             </tbody>

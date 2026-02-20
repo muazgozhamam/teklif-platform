@@ -115,7 +115,7 @@ export default function AdminOnboardingPage() {
     <RoleShell
       role="ADMIN"
       title="Yönetici Uyum Süreci"
-      subtitle="Partner uyum süreci ilerlemesini rol bazlı takip et."
+      subtitle="Kullanıcıların ilk kurulum adımlarını takip et ve eksikleri tamamlat."
       nav={[
         { href: '/admin', label: 'Panel' },
         { href: '/admin/users', label: 'Kullanıcılar' },
@@ -135,9 +135,10 @@ export default function AdminOnboardingPage() {
             className="w-full sm:w-44"
           >
             <option value="ALL">Tümü</option>
-            <option value="HUNTER">Hunter</option>
+            <option value="HUNTER">İş Ortağı</option>
             <option value="BROKER">Broker</option>
             <option value="CONSULTANT">Danışman</option>
+            <option value="ADMIN">Yönetici</option>
           </Select>
           <Select
             value={String(take)}
@@ -162,44 +163,65 @@ export default function AdminOnboardingPage() {
 
       {error ? <AlertMessage type="error" message={error} /> : null}
 
+      <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <MiniInfo title="Açık Kayıt" value={rows.length} />
+        <MiniInfo title="Aktif Hesap" value={rows.filter((r) => r.user.isActive).length} />
+        <MiniInfo title="Tamamlanan" value={rows.filter((r) => r.completionPct >= 100).length} />
+      </div>
+
       <Card className="mt-4 overflow-hidden p-0">
         <div className="border-b border-[var(--border)] px-4 py-3 text-sm font-medium text-[var(--text)]">{loading ? 'Yükleniyor…' : `${rows.length} uyum kaydı`}</div>
         <div className="overflow-x-auto">
           <Table className="min-w-[920px]">
             <thead>
               <tr>
-                <Th>E-posta</Th>
+                <Th>Kullanıcı</Th>
                 <Th>Rol</Th>
-                <Th>Durum</Th>
-                <Th>Tamamlama</Th>
-                <Th>Kontrol Listesi</Th>
+                <Th>Hesap</Th>
+                <Th>İlerleme</Th>
+                <Th>Eksik Adımlar</Th>
+                <Th className="text-right">İşlem</Th>
               </tr>
             </thead>
             <tbody>
               {rows.map((r) => (
                 <tr key={r.user.id} className="hover:bg-[var(--interactive-hover-bg)]">
                   <Td>{r.user.email}</Td>
-                  <Td>{r.user.role}</Td>
+                  <Td>{roleLabel(r.user.role)}</Td>
                   <Td><Badge variant={r.user.isActive ? 'success' : 'neutral'}>{r.user.isActive ? 'Aktif' : 'Pasif'}</Badge></Td>
                   <Td><Badge variant={variantForPct(r.completionPct)}> %{r.completionPct}</Badge></Td>
                   <Td>
-                    {r.checklist.length === 0 ? (
-                      <span className="text-xs text-[var(--muted)]">Yok</span>
+                    {r.checklist.length === 0 || r.checklist.every((c) => c.done) ? (
+                      <span className="text-xs text-[var(--muted)]">Eksik adım yok</span>
                     ) : (
                       <div className="flex flex-wrap gap-2">
-                        {r.checklist.map((c) => (
-                          <Badge key={`${r.user.id}-${c.key}`} variant={c.done ? 'success' : 'warning'} className="text-[11px]">
-                            {c.done ? '✓' : '•'} {c.key}
-                          </Badge>
-                        ))}
+                        {r.checklist
+                          .filter((c) => !c.done)
+                          .slice(0, 2)
+                          .map((c) => (
+                            <Badge key={`${r.user.id}-${c.key}`} variant="warning" className="text-[11px]">
+                              {c.label}
+                            </Badge>
+                          ))}
+                        {r.checklist.filter((c) => !c.done).length > 2 ? (
+                          <span className="text-xs text-[var(--muted)]">+{r.checklist.filter((c) => !c.done).length - 2} adım</span>
+                        ) : null}
                       </div>
                     )}
+                  </Td>
+                  <Td className="text-right">
+                    <a
+                      href="/admin/users"
+                      className="inline-flex h-8 items-center justify-center rounded-xl border border-[var(--border)] bg-[var(--card-2)] px-3 text-xs font-medium text-[var(--text)] transition-colors hover:border-[var(--interactive-hover-border)] hover:bg-[var(--interactive-hover-bg)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
+                    >
+                      Kullanıcılar
+                    </a>
                   </Td>
                 </tr>
               ))}
               {!loading && rows.length === 0 ? (
                 <tr>
-                  <Td colSpan={5} className="text-[var(--muted)]">Kayıt yok.</Td>
+                  <Td colSpan={6} className="text-[var(--muted)]">Kayıt yok.</Td>
                 </tr>
               ) : null}
             </tbody>
@@ -217,4 +239,22 @@ export default function AdminOnboardingPage() {
       </Card>
     </RoleShell>
   );
+}
+
+function MiniInfo({ title, value }: { title: string; value: number }) {
+  return (
+    <Card className="p-4">
+      <div className="text-xs text-[var(--muted)]">{title}</div>
+      <div className="mt-1 text-xl font-semibold text-[var(--text)]">{value}</div>
+    </Card>
+  );
+}
+
+function roleLabel(role: string) {
+  if (role === 'HUNTER') return 'İş Ortağı';
+  if (role === 'CONSULTANT') return 'Danışman';
+  if (role === 'BROKER') return 'Broker';
+  if (role === 'ADMIN') return 'Yönetici';
+  if (role === 'USER') return 'Kullanıcı';
+  return role;
 }
