@@ -7,7 +7,7 @@ import { AlertMessage } from '@/app/_components/UiFeedback';
 import { requireRole } from '@/lib/auth';
 import { Badge } from '@/src/ui/components/Badge';
 import { Button } from '@/src/ui/components/Button';
-import { Card } from '@/src/ui/components/Card';
+import { Card, CardDescription, CardTitle } from '@/src/ui/components/Card';
 import { Input } from '@/src/ui/components/Input';
 import { Select } from '@/src/ui/components/Select';
 import { Table, Td, Th } from '@/src/ui/components/Table';
@@ -50,6 +50,13 @@ export default function AdminUsersPage() {
   const [loading, setLoading] = React.useState(true);
   const [savingId, setSavingId] = React.useState<string | null>(null);
   const [error, setError] = React.useState<string | null>(null);
+  const stats = React.useMemo(() => {
+    const total = rows.length;
+    const active = rows.filter((row) => row.isActive).length;
+    const passive = total - active;
+    const admins = rows.filter((row) => row.role === 'ADMIN').length;
+    return { total, active, passive, admins };
+  }, [rows]);
 
   React.useEffect(() => {
     setAllowed(requireRole(['ADMIN']));
@@ -105,16 +112,18 @@ export default function AdminUsersPage() {
   return (
     <RoleShell
       role="ADMIN"
-      title="Yönetici Kullanıcıları"
-      subtitle="Kullanıcıları listele ve rol güncelle."
-      nav={[
-        { href: '/admin', label: 'Panel' },
-        { href: '/admin/users', label: 'Kullanıcılar' },
-        { href: '/admin/audit', label: 'Denetim' },
-        { href: '/admin/onboarding', label: 'Uyum Süreci' },
-        { href: '/admin/commission', label: 'Komisyon' },
-      ]}
+      title="Kullanıcılar"
+      subtitle="Kullanıcıları listele, rol güncelle ve hesap durumunu yönet."
+      nav={[]}
     >
+      <div className="mb-3 text-xs font-medium uppercase tracking-wider text-[var(--muted)]">Kullanıcı Yönetimi</div>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <Card><CardDescription>Toplam Kullanıcı</CardDescription><CardTitle className="mt-1">{loading ? '…' : String(stats.total)}</CardTitle></Card>
+        <Card><CardDescription>Aktif</CardDescription><CardTitle className="mt-1">{loading ? '…' : String(stats.active)}</CardTitle></Card>
+        <Card><CardDescription>Pasif</CardDescription><CardTitle className="mt-1">{loading ? '…' : String(stats.passive)}</CardTitle></Card>
+        <Card><CardDescription>Yönetici</CardDescription><CardTitle className="mt-1">{loading ? '…' : String(stats.admins)}</CardTitle></Card>
+      </div>
+
       <Card>
         <div className="flex flex-wrap items-center gap-2">
           <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Email/isim ara..." className="max-w-md" />

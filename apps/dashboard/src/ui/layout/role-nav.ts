@@ -55,8 +55,20 @@ const roleSections: Record<ShellRole, NavSection[]> = {
           items: [
             { href: '/admin/users', label: 'Kullanıcılar', icon: 'users' },
             { href: '/admin/commission/policies', label: 'Komisyon', icon: 'percent' },
-            { href: '/dashboard/listings', label: 'İlanlar', icon: 'home' },
           ],
+        },
+      ],
+    },
+    {
+      id: 'listings',
+      title: 'İlanlar',
+      groups: [
+        {
+          id: 'admin-listings',
+          title: 'İlanlar',
+          icon: 'home',
+          defaultOpen: true,
+          items: [{ href: '/dashboard/listings', label: 'İlanlar', icon: 'home' }],
         },
       ],
     },
