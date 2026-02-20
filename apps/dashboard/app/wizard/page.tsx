@@ -213,7 +213,7 @@ export default function WizardPage() {
             disabled={loading}
             style={{ marginTop: 14, width: '100%', padding: '12px 14px', borderRadius: 10, border: '1px solid #111', background: '#111', color: '#fff' }}
           >
-            {loading ? '...' : 'Lead oluştur ve wizard başlat'}
+            {loading ? '...' : 'Referans oluştur ve sihirbazı başlat'}
           </button>
         </>
       ) : (
@@ -229,13 +229,13 @@ export default function WizardPage() {
               style={{ padding: '8px 12px', borderRadius: 10, border: '1px solid #ddd', background: '#fff' }}
               disabled={loading}
             >
-              Reset / Yeni Lead
+              Sıfırla / Yeni Referans
             </button>
           </div>
 
           <div style={{ marginTop: 14, padding: 14, border: '1px solid #eee', borderRadius: 12 }}>
-            <div>Lead: <code>{leadId}</code></div>
-            <div>Deal: <code>{dealId || '(yok)'}</code></div>
+            <div>Referans: <code>{leadId}</code></div>
+            <div>İşlem: <code>{dealId || '(yok)'}</code></div>
             <div>Status: <b>{status}</b></div>
           </div>
 
@@ -279,7 +279,7 @@ export default function WizardPage() {
           {status === 'ASSIGNED' && (
             <div style={{ marginTop: 14, padding: 14, border: '1px solid #9ee29e', background: '#f4fff4', borderRadius: 12 }}>
               <b>ASSIGNED</b>
-              <div>Deal: <code>{dealId}</code></div>
+              <div>İşlem: <code>{dealId}</code></div>
             </div>
           )}
         </>

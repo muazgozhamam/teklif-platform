@@ -53,7 +53,7 @@ export default function ConsultantHome() {
     <RoleShell
       role="CONSULTANT"
       title="Danışman Komuta Ekranı"
-      subtitle="Atanan deal, ilan üretimi ve yayın sürecini tek merkezden yönet."
+      subtitle="Atanan işlem, ilan üretimi ve yayın sürecini tek merkezden yönet."
       nav={[
         { href: '/consultant', label: 'Panel' },
         { href: '/consultant/inbox', label: 'Gelen Kutusu' },
@@ -61,7 +61,7 @@ export default function ConsultantHome() {
       ]}
     >
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <KpiCard label="Açık Deal" value={stats?.dealsMineOpen ?? 0} loading={statsLoading} />
+        <KpiCard label="Açık İşlem" value={stats?.dealsMineOpen ?? 0} loading={statsLoading} />
         <KpiCard label="İlana Hazır" value={stats?.dealsReadyForListing ?? 0} loading={statsLoading} />
         <KpiCard label="Taslak İlan" value={stats?.listingsDraft ?? 0} loading={statsLoading} />
         <KpiCard label="Yayındaki İlan" value={stats?.listingsPublished ?? 0} loading={statsLoading} />
@@ -74,14 +74,14 @@ export default function ConsultantHome() {
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <CardTitle>Operasyon Kuyruğu</CardTitle>
-              <CardDescription>Gelen deal’leri ilana dönüştür ve yayın döngüsünü hızlandır.</CardDescription>
+              <CardDescription>Gelen işlemleri ilana dönüştür ve yayın döngüsünü hızlandır.</CardDescription>
             </div>
             <Badge variant="warning">Hedef: Hızlı yayın</Badge>
           </div>
 
           <div className="mt-4 grid gap-2.5">
-            <QueueRow title="Gelen kutusundaki atamaları temizle" note="Önce deal sahiplen, sonra listing üret." ctaHref="/consultant/inbox" ctaLabel="Gelen Kutusu" />
-            <QueueRow title="İlana hazır deal’leri yayınla" note="Taslakları tamamlayıp yayına al." ctaHref="/consultant/listings" ctaLabel="İlanlar" />
+            <QueueRow title="Gelen kutusundaki atamaları temizle" note="Önce işlem sahiplen, sonra portföy üret." ctaHref="/consultant/inbox" ctaLabel="Gelen Kutusu" />
+            <QueueRow title="İlana hazır işlemleri yayınla" note="Taslakları tamamlayıp yayına al." ctaHref="/consultant/listings" ctaLabel="İlanlar" />
             <QueueRow title="Eksik içerik ve fiyat girişini tamamla" note="İlan kalite puanını yükselt." ctaHref="/consultant/listings" ctaLabel="Taslaklar" />
           </div>
         </Card>
@@ -98,15 +98,15 @@ export default function ConsultantHome() {
       </div>
 
       <div className="mt-4 grid grid-cols-1 gap-3 lg:grid-cols-3">
-        <StatusCard title="Listing Hazırlık Oranı" value={computeReadiness(stats?.dealsReadyForListing ?? 0, stats?.dealsMineOpen ?? 0)} hint="Hazır Deal / Açık Deal" />
+        <StatusCard title="Portföy Hazırlık Oranı" value={computeReadiness(stats?.dealsReadyForListing ?? 0, stats?.dealsMineOpen ?? 0)} hint="Hazır İşlem / Açık İşlem" />
         <StatusCard title="Yayın Performansı" value={computePublish(stats?.listingsPublished ?? 0, stats?.listingsDraft ?? 0)} hint="Yayında / Taslak" />
-        <StatusCard title="Operasyon Durumu" value="Aktif" hint="Inbox ve listing akışı açık" />
+        <StatusCard title="Operasyon Durumu" value="Aktif" hint="Gelen kutusu ve portföy akışı açık" />
       </div>
 
       <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Link href="/consultant/inbox" className={linkCardClass}>
           <div className="font-semibold">Gelen Kutusu</div>
-          <div className="mt-1 text-xs text-[var(--muted)]">Atanan deal akışını yönet.</div>
+          <div className="mt-1 text-xs text-[var(--muted)]">Atanan işlem akışını yönet.</div>
         </Link>
         <Link href="/consultant/listings" className={linkCardClass}>
           <div className="font-semibold">İlanlarım</div>

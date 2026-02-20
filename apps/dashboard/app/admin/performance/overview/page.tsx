@@ -70,7 +70,7 @@ export default function AdminPerformanceOverviewPage() {
         items={[
           { label: 'Toplam Ciro', value: loading ? '…' : formatMoney(d.totalRevenue) },
           { label: 'Kapanan Satış', value: loading ? '…' : formatNumber(d.totalDealsWon) },
-          { label: 'Toplam Lead', value: loading ? '…' : formatNumber(d.totalLeads) },
+          { label: 'Toplam Referans', value: loading ? '…' : formatNumber(d.totalLeads) },
           { label: 'Toplam Portföy', value: loading ? '…' : formatNumber(d.totalPortfolio) },
           { label: 'Ref → Portföy', value: loading ? '…' : toRate(d.conversionRefToPortfolio) },
           { label: 'Portföy → Satış', value: loading ? '…' : toRate(d.conversionPortfolioToSale) },

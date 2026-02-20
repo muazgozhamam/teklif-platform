@@ -83,7 +83,7 @@ useEffect(() => {
 return (
     <div style={{ maxWidth: 980, margin: '24px auto', fontFamily: 'system-ui' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h1>Deal Defteri</h1>
+        <h1>İşlem Defteri</h1>
         <button onClick={() => (window.location.href = '/broker/leads/pending')}>Bekleyenlere Dön</button>
       </div>
 
@@ -91,8 +91,8 @@ return (
 
       {deal && (
         <div style={{ border: '1px solid #ddd', borderRadius: 10, padding: 12, marginBottom: 12 }}>
-          <div><b>Deal ID:</b> {deal.id}</div>
-          <div><b>Lead ID:</b> {deal.leadId}</div>
+          <div><b>İşlem ID:</b> {deal.id}</div>
+          <div><b>Referans ID:</b> {deal.leadId}</div>
           <div><b>Satış Fiyatı:</b> {deal.salePrice}</div>
           <div><b>Komisyon Oranı:</b> {deal.commissionRate}</div>
           <div><b>Toplam Komisyon:</b> {deal.commissionTotal}</div>

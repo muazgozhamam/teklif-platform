@@ -44,7 +44,7 @@ export default function LeaderboardPartnersPage() {
       } catch {
         if (mounted) {
           setRows([]);
-          setError('İş ortağı leaderboard verisi alınamadı.');
+          setError('İş ortağı sıralama verisi alınamadı.');
         }
       } finally {
         if (mounted) setLoading(false);
@@ -68,7 +68,7 @@ export default function LeaderboardPartnersPage() {
         ]}
       />
       {rows.length === 0 ? (
-        <EmptyState title="İş ortağı leaderboard boş" />
+        <EmptyState title="İş ortağı sıralama boş" />
       ) : (
         <DataTable
           title="İş Ortakları"

@@ -287,7 +287,7 @@ export default function ConsultantInboxPage() {
     <RoleShell
       role="CONSULTANT"
       title="Danışman Gelen Kutusu"
-      subtitle="Atanmış deal’leri sahiplen, ilan üret ve akışı yönet."
+      subtitle="Atanmış işlemleri sahiplen, ilan üret ve akışı yönet."
       nav={[
         { href: '/consultant', label: 'Panel' },
         { href: '/consultant/inbox', label: 'Gelen Kutusu' },
@@ -334,7 +334,7 @@ export default function ConsultantInboxPage() {
         ) : (
           <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit,minmax(160px,1fr))' }}>
             <div style={{ border: '1px solid #eee', borderRadius: 10, padding: 10, background: '#fff' }}>
-              <div style={{ fontSize: 12, color: '#666' }}>Deal (Açık/Atanmış)</div>
+              <div style={{ fontSize: 12, color: '#666' }}>İşlem (Açık/Atanmış)</div>
               <div style={{ fontSize: 22, fontWeight: 800 }}>{stats?.dealsMineOpen ?? 0}</div>
             </div>
             <div style={{ border: '1px solid #eee', borderRadius: 10, padding: 10, background: '#fff' }}>
@@ -362,7 +362,7 @@ export default function ConsultantInboxPage() {
         <input
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="id / leadId / listingId / şehir / durum ara..."
+          placeholder="id / referansId / ilanId / şehir / durum ara..."
           style={{
             flex: 1,
             minWidth: 260,
@@ -417,11 +417,11 @@ export default function ConsultantInboxPage() {
 
                   <div style={{ fontSize: 12, color: '#666', marginTop: 6, lineHeight: 1.6 }}>
                     <div>
-                      <b>Deal ID:</b> <code>{d.id}</code>
+                      <b>İşlem ID:</b> <code>{d.id}</code>
                     </div>
                     {d.leadId && (
                       <div>
-                        <b>Lead ID:</b> <code>{d.leadId}</code>
+                        <b>Referans ID:</b> <code>{d.leadId}</code>
                       </div>
                     )}
                     {d.listingId && (
@@ -451,7 +451,7 @@ export default function ConsultantInboxPage() {
                     onClick={() => createOrSyncListingFromDeal(d.id)}
                     disabled={isBusy || !d.consultantId}
                     style={{ padding: '10px 12px', fontWeight: 800 }}
-                    title={!d.consultantId ? 'Deal consultantId boş. Önce Bana Ata.' : 'Deal verisinden ilan oluştur/güncelle'}
+                    title={!d.consultantId ? 'İşlem consultantId boş. Önce Bana Ata.' : 'İşlem verisinden ilan oluştur/güncelle'}
                   >
                     {isBusy ? 'Çalışıyor...' : hasListing ? 'İlanı Eşitle' : 'İlan Oluştur'}
                   </button>
@@ -478,7 +478,7 @@ export default function ConsultantInboxPage() {
                     }}
                     style={{ padding: '10px 12px' }}
                   >
-                    Deal ID Kopyala
+                    İşlem ID Kopyala
                   </button>
                 </div>
               </div>

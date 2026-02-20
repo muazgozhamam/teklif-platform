@@ -82,7 +82,7 @@ export default function AdminHomePage() {
     <RoleShell
       role="ADMIN"
       title="Admin Komuta Ekranı"
-      subtitle="Lead akışı, ekip operasyonu ve kritik aksiyonlar tek ekranda."
+      subtitle="Referans akışı, ekip operasyonu ve kritik aksiyonlar tek ekranda."
       headerControls={
         <div className="flex min-w-0 items-center gap-2">
           <Select
@@ -112,8 +112,8 @@ export default function AdminHomePage() {
     >
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <KpiCard label="Toplam Kullanıcı" value={stats?.usersTotal ?? 0} loading={statsLoading} />
-        <KpiCard label="Toplam Lead" value={stats?.leadsTotal ?? 0} loading={statsLoading} />
-        <KpiCard label="Toplam Deal" value={stats?.dealsTotal ?? 0} loading={statsLoading} />
+        <KpiCard label="Toplam Referans" value={stats?.leadsTotal ?? 0} loading={statsLoading} />
+        <KpiCard label="Toplam İşlem" value={stats?.dealsTotal ?? 0} loading={statsLoading} />
         <KpiCard label="Toplam İlan" value={stats?.listingsTotal ?? 0} loading={statsLoading} />
       </div>
 
@@ -148,7 +148,7 @@ export default function AdminHomePage() {
       </div>
 
       <div className="mt-4 grid grid-cols-1 gap-3 lg:grid-cols-3">
-        <StatusCard title="Dönüşüm Sağlığı" value={computeConversion(stats?.dealsTotal ?? 0, stats?.leadsTotal ?? 0)} hint="Deal / Lead" />
+        <StatusCard title="Dönüşüm Sağlığı" value={computeConversion(stats?.dealsTotal ?? 0, stats?.leadsTotal ?? 0)} hint="İşlem / Referans" />
         <StatusCard title="Portföy Yoğunluğu" value={computeDensity(stats?.listingsTotal ?? 0, stats?.usersTotal ?? 0)} hint="İlan / Kullanıcı" />
         <StatusCard title="Operasyon Durumu" value="Stabil" hint="API ve panel erişimi aktif" />
       </div>
@@ -167,7 +167,7 @@ export default function AdminHomePage() {
           <div className="mt-1 text-xs text-[var(--muted)]">Aksiyonları ham ve kanonik alanlarla incele.</div>
         </Link>
         <Link href="/admin/commission" className={linkCardClass}>
-          <div className="font-semibold">Komisyon Ayarları</div>
+          <div className="font-semibold">Hakediş Ayarları</div>
           <div className="mt-1 text-xs text-[var(--muted)]">Temel komisyon oranı ve dağılım yüzdeleri.</div>
         </Link>
       </div>

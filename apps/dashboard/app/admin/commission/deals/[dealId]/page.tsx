@@ -2,6 +2,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import React from 'react';
+import { useParams } from 'next/navigation';
 import RoleShell from '@/app/_components/RoleShell';
 import { Card, CardDescription, CardTitle } from '@/src/ui/components/Card';
 import { Button } from '@/src/ui/components/Button';
@@ -10,8 +11,6 @@ import { api } from '@/lib/api';
 import { formatMinorTry } from '@/app/_components/commission-utils';
 
 const API_ROOT = '/api/admin/commission';
-
-type Props = { params: { dealId: string } };
 
 type Payload = {
   snapshots: Array<{
@@ -46,7 +45,9 @@ type Payload = {
   }>;
 };
 
-export default function AdminCommissionDealDetailPage({ params }: Props) {
+export default function AdminCommissionDealDetailPage() {
+  const params = useParams<{ dealId: string }>();
+  const dealId = String(params?.dealId || '');
   const [data, setData] = React.useState<Payload | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
@@ -55,7 +56,7 @@ export default function AdminCommissionDealDetailPage({ params }: Props) {
     setLoading(true);
     setError(null);
     try {
-      const res = await api.get<Payload>(`${API_ROOT}/deals/${params.dealId}`);
+      const res = await api.get<Payload>(`${API_ROOT}/deals/${dealId}`);
       setData(res.data);
     } catch (e: any) {
       setError(e?.data?.message || e?.message || 'İşlem hakediş detayı alınamadı.');
@@ -67,7 +68,7 @@ export default function AdminCommissionDealDetailPage({ params }: Props) {
   React.useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [params.dealId]);
+  }, [dealId]);
 
   async function reverse(snapshotId: string) {
     setError(null);
@@ -86,7 +87,7 @@ export default function AdminCommissionDealDetailPage({ params }: Props) {
   }
 
   return (
-    <RoleShell role="ADMIN" title="İşlem Hakediş Detayı" subtitle={params.dealId} nav={[]}>
+    <RoleShell role="ADMIN" title="İşlem Hakediş Detayı" subtitle={dealId} nav={[]}>
       {error ? <Alert type="error" message={error} className="mb-4" /> : null}
       {loading ? <Card><CardDescription>Yükleniyor…</CardDescription></Card> : null}
 

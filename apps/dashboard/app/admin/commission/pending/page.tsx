@@ -75,7 +75,7 @@ export default function AdminCommissionPendingPage() {
             <table className="min-w-full text-sm">
               <thead>
                 <tr className="border-b border-[var(--border)] text-left text-xs text-[var(--muted)]">
-                  <th className="px-3 py-2">Deal</th>
+                  <th className="px-3 py-2">İşlem</th>
                   <th className="px-3 py-2">Havuz</th>
                   <th className="px-3 py-2">Oluşturan</th>
                   <th className="px-3 py-2">Tarih</th>

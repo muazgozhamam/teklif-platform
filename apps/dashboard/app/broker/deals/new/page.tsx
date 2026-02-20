@@ -30,20 +30,20 @@ export default function NewDealPage() {
     setMsg(null);
     try {
       const res = await api.post('/broker/deals', { leadId, salePrice, commissionRate });
-      setMsg(`Deal oluşturuldu: ${res.data.id}`);
+      setMsg(`İşlem oluşturuldu: ${res.data.id}`);
       window.location.href = `/broker/deals/${res.data.id}/ledger`;
     } catch (err: unknown) {
-      setMsg(getApiMsg(err, 'Deal oluşturma başarısız'));
+      setMsg(getApiMsg(err, 'İşlem oluşturma başarısız'));
     }
   }
 
   return (
     <div style={{ maxWidth: 680, margin: '24px auto', fontFamily: 'system-ui' }}>
-      <h1>Deal Oluştur</h1>
+      <h1>İşlem Oluştur</h1>
 
       <div style={{ display: 'grid', gap: 10 }}>
         <label>
-          Lead ID
+          Referans ID
           <input value={leadId} onChange={(e) => setLeadId(e.target.value)} style={{ width: '100%', padding: 10 }} />
         </label>
 
@@ -71,14 +71,14 @@ export default function NewDealPage() {
         <div style={{ color: '#666' }}>Toplam Komisyon: {commissionTotal}</div>
 
         <button onClick={createDeal} style={{ padding: 12 }}>
-          Deal Oluştur
+          İşlem Oluştur
         </button>
 
         <button onClick={() => (window.location.href = '/broker/leads/pending')} style={{ padding: 12 }}>
           Geri
         </button>
 
-        {msg && <div style={{ color: msg.startsWith('Deal oluşturuldu') ? 'green' : 'crimson' }}>{msg}</div>}
+        {msg && <div style={{ color: msg.startsWith('İşlem oluşturuldu') ? 'green' : 'crimson' }}>{msg}</div>}
       </div>
     </div>
   );

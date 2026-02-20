@@ -50,12 +50,12 @@ export default function ConsultantPerformanceDetailPage() {
     <PerformancePageShell title={`Danışman Detay / ${d.name}`} subtitle="KPI ve son aktiviteler">
       {error ? <ErrorBanner message={error} /> : null}
       <div className="mb-2">
-        <Link href="/admin/performance/leaderboard/consultants" className="text-xs text-[var(--primary)] hover:underline">← Danışman leaderboard</Link>
+        <Link href="/admin/performance/leaderboard/consultants" className="text-xs text-[var(--primary)] hover:underline">← Danışman sıralaması</Link>
       </div>
       <KpiCardsGrid
         items={[
           { label: 'Portföy', value: formatNumber(Number(d.kpis.portfolioCount || 0)) },
-          { label: 'Kapanan Deal', value: formatNumber(Number(d.kpis.dealsWonCount || 0)) },
+          { label: 'Kapanan İşlem', value: formatNumber(Number(d.kpis.dealsWonCount || 0)) },
           { label: 'Ciro', value: formatMoney(Number(d.kpis.revenueSum || 0)) },
         ]}
       />

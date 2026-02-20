@@ -135,7 +135,7 @@ const roleSections: Record<ShellRole, NavSection[]> = {
             { href: '/admin/applications/customers', label: 'Müşteri Adayları', icon: 'users' },
             { href: '/admin/applications/portfolio', label: 'Portföy Adayları', icon: 'home' },
             { href: '/admin/applications/consultants', label: 'Danışman Adayları', icon: 'briefcase' },
-            { href: '/admin/applications/hunters', label: 'Hunter Adayları', icon: 'target' },
+            { href: '/admin/applications/hunters', label: 'Avcı Adayları', icon: 'target' },
             { href: '/admin/applications/brokers', label: 'Broker Adayları', icon: 'handshake' },
             { href: '/admin/applications/partners', label: 'İş Ortağı Adayları', icon: 'users' },
             { href: '/admin/applications/corporate', label: 'Kurumsal Talepler', icon: 'file-text' },
@@ -155,7 +155,7 @@ const roleSections: Record<ShellRole, NavSection[]> = {
           defaultOpen: true,
           items: [
             { href: '/admin/leaderboards', label: 'Genel', icon: 'dashboard' },
-            { href: '/admin/leaderboards/hunter', label: 'Hunter Sıralama', icon: 'target' },
+            { href: '/admin/leaderboards/hunter', label: 'İş Ortağı Sıralama', icon: 'target' },
             { href: '/admin/leaderboards/consultant', label: 'Danışman Sıralama', icon: 'briefcase' },
             { href: '/admin/leaderboards/broker', label: 'Broker Sıralama', icon: 'handshake' },
           ],
@@ -175,8 +175,8 @@ const roleSections: Record<ShellRole, NavSection[]> = {
           defaultOpen: true,
           items: [
             { href: '/broker', label: 'Panel', icon: 'handshake' },
-            { href: '/broker/leads/pending', label: 'Bekleyen Leadler', icon: 'list' },
-            { href: '/broker/deals/new', label: 'Yeni Deal', icon: 'plus' },
+            { href: '/broker/leads/pending', label: 'Bekleyen Referanslar', icon: 'list' },
+            { href: '/broker/deals/new', label: 'Yeni İşlem', icon: 'plus' },
             { href: '/broker/hunter-applications', label: 'İş Ortağı Başvuruları', icon: 'clipboard-check' },
             { href: '/dashboard/listings', label: 'İlanlar', icon: 'home' },
           ],
@@ -272,13 +272,13 @@ const roleSections: Record<ShellRole, NavSection[]> = {
       groups: [
         {
           id: 'hunter-leads',
-          title: 'Lead Yönetimi',
+          title: 'Referans Yönetimi',
           icon: 'target',
           defaultOpen: true,
           items: [
             { href: '/hunter', label: 'Panel', icon: 'target' },
-            { href: '/hunter/leads', label: 'Leadler', icon: 'list' },
-            { href: '/hunter/leads/new', label: 'Yeni Lead', icon: 'plus' },
+            { href: '/hunter/leads', label: 'Referanslar', icon: 'list' },
+            { href: '/hunter/leads/new', label: 'Yeni Referans', icon: 'plus' },
             { href: '/dashboard/listings', label: 'İlanlar', icon: 'home' },
           ],
         },

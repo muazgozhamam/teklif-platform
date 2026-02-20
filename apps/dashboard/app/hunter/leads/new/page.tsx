@@ -57,7 +57,7 @@ export default function HunterNewLeadPage() {
 
     // Hunter formunu şimdilik /leads initialText'e serialize ediyoruz.
     const initialText = [
-      `Hunter Lead`,
+      `Hunter Referans`,
       `Başlık: ${draft.title}`.trim(),
       `Tür: ${draft.type}`.trim(),
       `Şehir: ${draft.city}`.trim(),
@@ -82,7 +82,7 @@ export default function HunterNewLeadPage() {
 
       if (!r.ok) {
         const t = await r.text().catch(() => '');
-        setError(`Lead gönderilemedi. HTTP ${r.status} ${t.slice(0, 120)}`);
+        setError(`Referans gönderilemedi. HTTP ${r.status} ${t.slice(0, 120)}`);
         return;
       }
 
@@ -97,14 +97,14 @@ export default function HunterNewLeadPage() {
       }
 
       if (!leadId) {
-        setError('Lead oluşturuldu ama leadId dönmedi.');
+        setError('Referans oluşturuldu ama referans ID dönmedi.');
         return;
       }
 
       setResult({ leadId });
-      show('success', 'Lead başarıyla gönderildi');
+      show('success', 'Referans başarıyla gönderildi');
     } catch {
-      setError('Lead gönderilemedi (ağ hatası).');
+      setError('Referans gönderilemedi (ağ hatası).');
     } finally {
       setSubmitting(false);
     }
@@ -121,12 +121,12 @@ export default function HunterNewLeadPage() {
   return (
     <RoleShell
       role="HUNTER"
-      title="Yeni Lead Gönder"
-      subtitle="Satdedi ağına yeni müşteri talebini ekle."
+      title="Yeni Referans Gönder"
+      subtitle="SatDedi ağına yeni müşteri talebini ekle."
       nav={[
         { href: '/hunter', label: 'Panel' },
-        { href: '/hunter/leads', label: 'Leadlerim' },
-        { href: '/hunter/leads/new', label: 'Yeni Lead' },
+        { href: '/hunter/leads', label: 'Referanslarım' },
+        { href: '/hunter/leads/new', label: 'Yeni Referans' },
       ]}
     >
 
@@ -142,9 +142,9 @@ export default function HunterNewLeadPage() {
             marginBottom: 14,
           }}
         >
-          <div style={{ fontWeight: 700, marginBottom: 6 }}>Lead gönderildi</div>
+          <div style={{ fontWeight: 700, marginBottom: 6 }}>Referans gönderildi</div>
           <div style={{ opacity: 0.85, marginBottom: 10 }}>
-            Lead ID: <code>{result.leadId}</code>
+            Referans ID: <code>{result.leadId}</code>
           </div>
           <div style={{ display: 'flex', gap: 10 }}>
             <button
@@ -270,7 +270,7 @@ export default function HunterNewLeadPage() {
               fontWeight: 600,
             }}
           >
-            {submitting ? 'Gönderiliyor…' : 'Lead Gönder'}
+            {submitting ? 'Gönderiliyor…' : 'Referans Gönder'}
           </button>
 
           <a

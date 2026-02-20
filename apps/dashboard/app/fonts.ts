@@ -1,9 +1,4 @@
-import { Montserrat } from "next/font/google";
-
-export const montserrat = Montserrat({
-  subsets: ["latin"],
-  weight: ["300", "900"],
-  variable: "--font-montserrat",
-  display: "swap",
-});
-
+// Keep build deterministic in restricted/offline environments by avoiding remote font fetch.
+export const montserrat = {
+  variable: '',
+} as const;

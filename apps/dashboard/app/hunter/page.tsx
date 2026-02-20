@@ -57,16 +57,16 @@ export default function HunterDashboardPage() {
     <RoleShell
       role="HUNTER"
       title="İş Ortağı Komuta Ekranı"
-      subtitle="Lead üretimi, takip ve dönüşüm akışını tek merkezde yönet."
+      subtitle="Referans üretimi, takip ve dönüşüm akışını tek merkezde yönet."
       nav={[
         { href: '/hunter', label: 'Panel' },
-        { href: '/hunter/leads', label: 'Leadlerim' },
-        { href: '/hunter/leads/new', label: 'Yeni Lead' },
+        { href: '/hunter/leads', label: 'Referanslarım' },
+        { href: '/hunter/leads/new', label: 'Yeni Referans' },
       ]}
     >
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <KpiCard label="Toplam Lead" value={total} loading={loading} />
-        <KpiCard label="Açık Lead" value={open} loading={loading} />
+        <KpiCard label="Toplam Referans" value={total} loading={loading} />
+        <KpiCard label="Açık Referans" value={open} loading={loading} />
         <KpiCard label="İşlemde" value={inProgress} loading={loading} />
         <KpiCard label="Tamamlanan" value={completed} loading={loading} />
       </div>
@@ -78,15 +78,15 @@ export default function HunterDashboardPage() {
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <CardTitle>Operasyon Kuyruğu</CardTitle>
-              <CardDescription>Yeni lead gönder, durumları izle, broker dönüşünü hızlandır.</CardDescription>
+              <CardDescription>Yeni referans gönder, durumları izle, broker dönüşünü hızlandır.</CardDescription>
             </div>
             <Badge variant="warning">Hedef: Düzenli giriş</Badge>
           </div>
 
           <div className="mt-4 grid gap-2.5">
-            <QueueRow title="Yeni lead oluştur" note="Detaylı ve temiz lead notu bırak." ctaHref="/hunter/leads/new" ctaLabel="Yeni Lead" />
-            <QueueRow title="Gönderilen lead durumlarını kontrol et" note="Açık / işlemde / tamamlandı takibi." ctaHref="/hunter/leads" ctaLabel="Leadlerim" />
-            <QueueRow title="Düşük dönüşümde input kalitesini artır" note="Konum ve ihtiyaç bilgisini net gir." ctaHref="/hunter/leads/new" ctaLabel="Lead Kalitesi" />
+            <QueueRow title="Yeni referans oluştur" note="Detaylı ve temiz referans notu bırak." ctaHref="/hunter/leads/new" ctaLabel="Yeni Referans" />
+            <QueueRow title="Gönderilen referans durumlarını kontrol et" note="Açık / işlemde / tamamlandı takibi." ctaHref="/hunter/leads" ctaLabel="Referanslarım" />
+            <QueueRow title="Düşük dönüşümde input kalitesini artır" note="Konum ve ihtiyaç bilgisini net gir." ctaHref="/hunter/leads/new" ctaLabel="Referans Kalitesi" />
           </div>
         </Card>
 
@@ -94,25 +94,25 @@ export default function HunterDashboardPage() {
           <CardTitle>Hızlı Aksiyonlar</CardTitle>
           <CardDescription>Günlük çalışma kısayolları.</CardDescription>
           <div className="mt-4 grid gap-2">
-            <QuickAction href="/hunter/leads/new" label="Hemen lead gönder" />
-            <QuickAction href="/hunter/leads" label="Leadlerimi aç" />
+            <QuickAction href="/hunter/leads/new" label="Hemen referans gönder" />
+            <QuickAction href="/hunter/leads" label="Referanslarımı aç" />
           </div>
         </Card>
       </div>
 
       <div className="mt-4 grid grid-cols-1 gap-3 lg:grid-cols-3">
-        <StatusCard title="Tamamlanma Oranı" value={computeRate(completed, total)} hint="Tamamlanan / Toplam Lead" />
+        <StatusCard title="Tamamlanma Oranı" value={computeRate(completed, total)} hint="Tamamlanan / Toplam Referans" />
         <StatusCard title="Aktif Takip" value={computeRate(open + inProgress, total)} hint="Açık+İşlemde / Toplam" />
-        <StatusCard title="Operasyon Durumu" value="Aktif" hint="Lead gönderim hattı açık" />
+        <StatusCard title="Operasyon Durumu" value="Aktif" hint="Referans gönderim hattı açık" />
       </div>
 
       <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Link href="/hunter/leads/new" className={linkCardClass}>
-          <div className="font-semibold">Lead Gönder</div>
+          <div className="font-semibold">Referans Gönder</div>
           <div className="mt-1 text-xs text-[var(--muted)]">Yeni müşteri talebi oluştur.</div>
         </Link>
         <Link href="/hunter/leads" className={linkCardClass}>
-          <div className="font-semibold">Leadlerimi Gör</div>
+          <div className="font-semibold">Referanslarımı Gör</div>
           <div className="mt-1 text-xs text-[var(--muted)]">Gönderilen kayıtların durumunu izle.</div>
         </Link>
       </div>

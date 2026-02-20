@@ -51,18 +51,18 @@ export default function BrokerRootPage() {
     <RoleShell
       role="BROKER"
       title="Broker Komuta Ekranı"
-      subtitle="Lead onayı, deal üretimi ve iş ortağı operasyonu tek merkezde."
+      subtitle="Referans onayı, işlem üretimi ve iş ortağı operasyonu tek merkezde."
       nav={[
         { href: '/broker', label: 'Panel' },
-        { href: '/broker/leads/pending', label: 'Bekleyen Leadler' },
-        { href: '/broker/deals/new', label: 'Yeni Deal' },
+        { href: '/broker/leads/pending', label: 'Bekleyen Referanslar' },
+        { href: '/broker/deals/new', label: 'Yeni İşlem' },
         { href: '/broker/hunter-applications', label: 'İş Ortağı Başvuruları' },
       ]}
     >
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <KpiCard label="Bekleyen Lead" value={stats?.leadsPending ?? 0} loading={statsLoading} />
-        <KpiCard label="Onaylı Lead" value={stats?.leadsApproved ?? 0} loading={statsLoading} />
-        <KpiCard label="Oluşan Deal" value={stats?.dealsCreated ?? 0} loading={statsLoading} />
+        <KpiCard label="Bekleyen Referans" value={stats?.leadsPending ?? 0} loading={statsLoading} />
+        <KpiCard label="Onaylı Referans" value={stats?.leadsApproved ?? 0} loading={statsLoading} />
+        <KpiCard label="Oluşan İşlem" value={stats?.dealsCreated ?? 0} loading={statsLoading} />
         <KpiCard label="Onay Oranı" value={computeApproval(stats?.leadsApproved ?? 0, stats?.leadsPending ?? 0)} loading={statsLoading} />
       </div>
 
@@ -73,13 +73,13 @@ export default function BrokerRootPage() {
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <CardTitle>Operasyon Kuyruğu</CardTitle>
-              <CardDescription>Anlık onay, deal ve başvuru iş akışı.</CardDescription>
+              <CardDescription>Anlık onay, işlem ve başvuru iş akışı.</CardDescription>
             </div>
             <Badge variant="warning">Hedef: Hızlı dönüş</Badge>
           </div>
           <div className="mt-4 grid gap-2.5">
-            <QueueRow title="Bekleyen lead’leri onayla / reddet" note="Pipeline akışını güncel tut." ctaHref="/broker/leads/pending" ctaLabel="Lead Kuyruğu" />
-            <QueueRow title="Deal oluştur ve danışmana devret" note="Lead’den deal’e geçiş süresini kısalt." ctaHref="/broker/deals/new" ctaLabel="Yeni Deal" />
+            <QueueRow title="Bekleyen referansları onayla / reddet" note="Pipeline akışını güncel tut." ctaHref="/broker/leads/pending" ctaLabel="Referans Kuyruğu" />
+            <QueueRow title="İşlem oluştur ve danışmana devret" note="Referanstan işleme geçiş süresini kısalt." ctaHref="/broker/deals/new" ctaLabel="Yeni İşlem" />
             <QueueRow title="İş ortağı başvurularını değerlendir" note="Ağa yeni iş ortağı ekleme kalitesini artır." ctaHref="/broker/hunter-applications" ctaLabel="Başvurular" />
           </div>
         </Card>
@@ -88,27 +88,27 @@ export default function BrokerRootPage() {
           <CardTitle>Hızlı Aksiyonlar</CardTitle>
           <CardDescription>Broker günlük akış kısayolları.</CardDescription>
           <div className="mt-4 grid gap-2">
-            <QuickAction href="/broker/leads/pending" label="Bekleyen lead listesini aç" />
-            <QuickAction href="/broker/deals/new" label="Yeni deal oluştur" />
+            <QuickAction href="/broker/leads/pending" label="Bekleyen referans listesini aç" />
+            <QuickAction href="/broker/deals/new" label="Yeni işlem oluştur" />
             <QuickAction href="/broker/hunter-applications" label="İş ortağı başvurularını incele" />
           </div>
         </Card>
       </div>
 
       <div className="mt-4 grid grid-cols-1 gap-3 lg:grid-cols-3">
-        <StatusCard title="Dönüşüm Sağlığı" value={computePipeline(stats?.dealsCreated ?? 0, stats?.leadsApproved ?? 0)} hint="Deal / Onaylı Lead" />
-        <StatusCard title="İnceleme Hızı" value={statsLoading ? '…' : (stats?.leadsPending ?? 0) > 20 ? 'Dikkat' : 'İyi'} hint="Bekleyen lead yoğunluğu" />
+        <StatusCard title="Dönüşüm Sağlığı" value={computePipeline(stats?.dealsCreated ?? 0, stats?.leadsApproved ?? 0)} hint="İşlem / Onaylı Referans" />
+        <StatusCard title="İnceleme Hızı" value={statsLoading ? '…' : (stats?.leadsPending ?? 0) > 20 ? 'Dikkat' : 'İyi'} hint="Bekleyen referans yoğunluğu" />
         <StatusCard title="Ağ Operasyonu" value="Aktif" hint="İş ortağı başvuru değerlendirme açık" />
       </div>
 
       <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
         <Link href="/broker/leads/pending" className={linkCardClass}>
-          <div className="font-semibold">Lead Kuyruğu</div>
-          <div className="mt-1 text-xs text-[var(--muted)]">Onay bekleyen lead’leri aç.</div>
+          <div className="font-semibold">Referans Kuyruğu</div>
+          <div className="mt-1 text-xs text-[var(--muted)]">Onay bekleyen referansları aç.</div>
         </Link>
         <Link href="/broker/deals/new" className={linkCardClass}>
-          <div className="font-semibold">Deal Oluştur</div>
-          <div className="mt-1 text-xs text-[var(--muted)]">Manuel deal oluşturma akışı.</div>
+          <div className="font-semibold">İşlem Oluştur</div>
+          <div className="mt-1 text-xs text-[var(--muted)]">Manuel işlem oluşturma akışı.</div>
         </Link>
         <Link href="/broker/hunter-applications" className={linkCardClass}>
           <div className="font-semibold">İş Ortağı Başvuruları</div>

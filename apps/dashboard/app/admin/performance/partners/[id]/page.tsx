@@ -50,7 +50,7 @@ export default function PartnerPerformanceDetailPage() {
     <PerformancePageShell title={`İş Ortağı Detay / ${d.name}`} subtitle="Referans ve dönüşüm aktiviteleri">
       {error ? <ErrorBanner message={error} /> : null}
       <div className="mb-2">
-        <Link href="/admin/performance/leaderboard/partners" className="text-xs text-[var(--primary)] hover:underline">← İş ortağı leaderboard</Link>
+        <Link href="/admin/performance/leaderboard/partners" className="text-xs text-[var(--primary)] hover:underline">← İş ortağı sıralaması</Link>
       </div>
       <KpiCardsGrid
         items={[
@@ -64,7 +64,7 @@ export default function PartnerPerformanceDetailPage() {
         title="Son Aktiviteler"
         rows={d.recentActivities}
         columns={[
-          { key: 'id', label: 'Lead ID' },
+          { key: 'id', label: 'Referans ID' },
           { key: 'status', label: 'Durum', sortable: true },
           { key: 'updatedAt', label: 'Güncelleme', sortable: true, render: (r) => new Date(String(r.updatedAt)).toLocaleString('tr-TR') },
         ]}

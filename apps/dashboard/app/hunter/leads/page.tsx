@@ -30,7 +30,7 @@ export default function HunterLeadsPage() {
         e && typeof e === 'object' && 'message' in e
           ? String((e as { message?: string }).message || '')
           : '';
-      setError(msg || 'Lead listesi alınamadı.');
+      setError(msg || 'Referans listesi alınamadı.');
     } finally {
       setLoading(false);
     }
@@ -53,12 +53,12 @@ export default function HunterLeadsPage() {
   return (
     <RoleShell
       role="HUNTER"
-      title="Leadlerim"
-      subtitle="Gönderdiğin lead kayıtlarını son durumlarıyla takip et."
+      title="Referanslarım"
+      subtitle="Gönderdiğin referans kayıtlarını son durumlarıyla takip et."
       nav={[
         { href: '/hunter', label: 'Panel' },
-        { href: '/hunter/leads', label: 'Leadlerim' },
-        { href: '/hunter/leads/new', label: 'Yeni Lead' },
+        { href: '/hunter/leads', label: 'Referanslarım' },
+        { href: '/hunter/leads/new', label: 'Yeni Referans' },
       ]}
     >
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
@@ -82,13 +82,13 @@ export default function HunterLeadsPage() {
 
       <div style={{ border: '1px solid #e2dbd1', borderRadius: 14, overflow: 'hidden', background: '#fff' }}>
         <div style={{ padding: 12, borderBottom: '1px solid #efe9df', fontWeight: 700 }}>
-          {loading ? 'Yükleniyor…' : `${rows.length} lead`}
+          {loading ? 'Yükleniyor…' : `${rows.length} referans`}
         </div>
 
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr style={{ textAlign: 'left' }}>
-              <th style={{ padding: 12, borderBottom: '1px solid #f2eee7' }}>Lead ID</th>
+              <th style={{ padding: 12, borderBottom: '1px solid #f2eee7' }}>Referans ID</th>
               <th style={{ padding: 12, borderBottom: '1px solid #f2eee7' }}>Durum</th>
               <th style={{ padding: 12, borderBottom: '1px solid #f2eee7' }}>Tarih</th>
               <th style={{ padding: 12, borderBottom: '1px solid #f2eee7' }}>Özet</th>
@@ -108,7 +108,7 @@ export default function HunterLeadsPage() {
             {!loading && rows.length === 0 ? (
               <tr>
                 <td colSpan={4} style={{ padding: 16, color: '#6f665c' }}>
-                  Henüz lead kaydın yok. Yeni lead oluşturabilirsin.
+                  Henüz referans kaydın yok. Yeni referans oluşturabilirsin.
                 </td>
               </tr>
             ) : null}

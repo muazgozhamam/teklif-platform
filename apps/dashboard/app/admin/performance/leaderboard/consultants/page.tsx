@@ -44,7 +44,7 @@ export default function LeaderboardConsultantsPage() {
       } catch {
         if (mounted) {
           setRows([]);
-          setError('Danışman leaderboard verisi alınamadı.');
+          setError('Danışman sıralama verisi alınamadı.');
         }
       } finally {
         if (mounted) setLoading(false);
@@ -64,11 +64,11 @@ export default function LeaderboardConsultantsPage() {
         items={[
           { label: 'Toplam Danışman', value: loading ? '…' : formatNumber(rows.length) },
           { label: 'Toplam Ciro', value: loading ? '…' : formatMoney(totalRevenue) },
-          { label: 'Toplam Kazanılan Deal', value: loading ? '…' : formatNumber(totalWon) },
+          { label: 'Toplam Kapanan İşlem', value: loading ? '…' : formatNumber(totalWon) },
         ]}
       />
       {rows.length === 0 ? (
-        <EmptyState title="Danışman leaderboard boş" />
+        <EmptyState title="Danışman sıralama boş" />
       ) : (
         <DataTable
           title="Danışmanlar"

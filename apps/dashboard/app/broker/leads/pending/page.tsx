@@ -48,7 +48,7 @@ const [lastDealId, setLastDealId] = useState<string | null>(null);
 
   const [busy, setBusy] = useState<{ id: string; action: 'approve' | 'reject' | 'createDeal' } | null>(null);
 
-  const title = useMemo(() => `Bekleyen Leadler (${total})`, [total]);
+  const title = useMemo(() => `Bekleyen Referanslar (${total})`, [total]);
 
   function getStatus(err: unknown): number | undefined {
     const e = err as { status?: number; response?: { status?: number } };
@@ -74,10 +74,10 @@ const [lastDealId, setLastDealId] = useState<string | null>(null);
     try {
       await navigator.clipboard.writeText(dealId);
       setLastDealId(dealId);
-      setActionMsg(`Deal ID kopyalandı: ${dealId}`);
+      setActionMsg(`İşlem ID kopyalandı: ${dealId}`);
     } catch {
       setLastDealId(dealId);
-      setActionMsg(`Deal ID: ${dealId}`);
+      setActionMsg(`İşlem ID: ${dealId}`);
     }
   }
 
@@ -177,7 +177,7 @@ const [lastDealId, setLastDealId] = useState<string | null>(null);
     const existing = createdDeals[id];
     if (existing) {
       setLastDealId(existing);
-      setActionMsg(`Deal zaten mevcut: ${existing}`);
+      setActionMsg(`İşlem zaten mevcut: ${existing}`);
       return;
     }
 
@@ -189,12 +189,12 @@ const [lastDealId, setLastDealId] = useState<string | null>(null);
       const res = await api.post(`/broker/leads/${id}/deal`, {});
       const data = res.data as { ok?: boolean; dealId?: string; created?: boolean };
       if (data?.dealId) setCreatedDeals((prev) => ({ ...prev, [id]: String(data.dealId) }));
-      if (!data?.dealId) throw new Error('Yanıtta deal id yok');
+      if (!data?.dealId) throw new Error('Yanıtta işlem id yok');
       setLastDealId(data.dealId);
-      setActionMsg(data.created ? `Deal oluşturuldu: ${data.dealId}` : `Deal zaten mevcut: ${data.dealId}`);
+      setActionMsg(data.created ? `İşlem oluşturuldu: ${data.dealId}` : `İşlem zaten mevcut: ${data.dealId}`);
       await load(page, pageSize);
     } catch (err: unknown) {
-      setError(getErrMsg(err, 'Deal oluşturma başarısız'));
+      setError(getErrMsg(err, 'İşlem oluşturma başarısız'));
     } finally {
       setBusy(null);
     }
@@ -223,13 +223,13 @@ const [lastDealId, setLastDealId] = useState<string | null>(null);
   return (
     <RoleShell
       role="BROKER"
-      title="Bekleyen Leadler"
-      subtitle="Onayla, reddet veya lead’den deal üret."
+      title="Bekleyen Referanslar"
+      subtitle="Onayla, reddet veya referanstan işlem üret."
       nav={[
         { href: '/broker', label: 'Panel' },
-        { href: '/broker/leads/pending', label: 'Bekleyen Leadler' },
-        { href: '/broker/deals/new', label: 'Yeni Deal' },
-        { href: '/broker/hunter-applications', label: 'Hunter Başvuruları' },
+        { href: '/broker/leads/pending', label: 'Bekleyen Referanslar' },
+        { href: '/broker/deals/new', label: 'Yeni İşlem' },
+        { href: '/broker/hunter-applications', label: 'İş Ortağı Başvuruları' },
       ]}
     >
       <div className="min-h-screen bg-gray-50">
@@ -237,7 +237,7 @@ const [lastDealId, setLastDealId] = useState<string | null>(null);
         <div className="flex items-start justify-between gap-3">
           <div>
             <h1 className="text-lg font-semibold tracking-tight text-gray-900">{title}</h1>
-            <p className="mt-1 text-sm text-gray-600">Onayla, reddet veya lead’den deal üret.</p>
+            <p className="mt-1 text-sm text-gray-600">Onayla, reddet veya referanstan işlem üret.</p>
           </div>
 
           <div className="flex items-center gap-2">
@@ -297,7 +297,7 @@ const [lastDealId, setLastDealId] = useState<string | null>(null);
               className="rounded-md border bg-white px-3 py-2 text-sm"
               type="button"
             >
-              Deal Aç
+              İşlem Aç
             </button>
 
             <button
@@ -313,7 +313,7 @@ const [lastDealId, setLastDealId] = useState<string | null>(null);
               className="rounded-md border bg-white px-3 py-2 text-sm"
               type="button"
             >
-              Deal ID Kopyala
+              İşlem ID Kopyala
             </button>
           </div>
         ) : null}<div className="rounded-xl border bg-white">
@@ -323,7 +323,7 @@ const [lastDealId, setLastDealId] = useState<string | null>(null);
 
           <div className="divide-y">
             {items.length === 0 && !loading ? (
-              <div className="px-4 py-8 text-center text-sm text-gray-500">Bekleyen lead yok.</div>
+              <div className="px-4 py-8 text-center text-sm text-gray-500">Bekleyen referans yok.</div>
             ) : null}
 
             {items.map((l) => (
@@ -353,8 +353,8 @@ const [lastDealId, setLastDealId] = useState<string | null>(null);
                     {busy?.id === l.id && busy?.action === 'createDeal'
                       ? 'İşleniyor…'
                       : createdDeals[l.id]
-                        ? 'Deal Hazır'
-                        : 'Deal Oluştur'}
+                        ? 'İşlem Hazır'
+                        : 'İşlem Oluştur'}
                   </button>
                   {createdDeals[l.id] ? (
                     <>
@@ -363,14 +363,14 @@ const [lastDealId, setLastDealId] = useState<string | null>(null);
                         onClick={() => openDealInInbox(String(createdDeals[l.id]))}
                         className="rounded-md border bg-white px-3 py-2 text-sm"
                       >
-                        Deal Aç
+                        İşlem Aç
                       </button>
                       <button
                         type="button"
                         onClick={() => void copyDealId(String(createdDeals[l.id]))}
                         className="rounded-md border bg-white px-3 py-2 text-sm"
                       >
-                        Deal ID Kopyala
+                        İşlem ID Kopyala
                       </button>
                     </>
                   ) : null}

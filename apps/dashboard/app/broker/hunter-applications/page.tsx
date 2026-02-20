@@ -53,7 +53,7 @@ export default function BrokerHunterApplicationsPage() {
 
   const reqSeq = useRef(0);
 
-  const title = useMemo(() => `Hunter Başvuruları`, []);
+  const title = useMemo(() => `İş Ortağı Başvuruları`, []);
 
   async function load(currentStatus = status) {
     const seq = ++reqSeq.current;
@@ -142,13 +142,13 @@ export default function BrokerHunterApplicationsPage() {
   return (
     <RoleShell
       role="BROKER"
-      title="Hunter Başvuruları"
+      title="İş Ortağı Başvuruları"
       subtitle="Ağ başvurularını onayla veya reddet."
       nav={[
         { href: '/broker', label: 'Panel' },
-        { href: '/broker/leads/pending', label: 'Bekleyen Leadler' },
-        { href: '/broker/deals/new', label: 'Yeni Deal' },
-        { href: '/broker/hunter-applications', label: 'Hunter Başvuruları' },
+        { href: '/broker/leads/pending', label: 'Bekleyen Referanslar' },
+        { href: '/broker/deals/new', label: 'Yeni İşlem' },
+        { href: '/broker/hunter-applications', label: 'İş Ortağı Başvuruları' },
       ]}
     >
     <div className="min-h-screen bg-gray-50">

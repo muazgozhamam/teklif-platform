@@ -254,7 +254,7 @@ export default function ConsultantListingEditPage() {
     <RoleShell
       role="CONSULTANT"
       title="İlan Düzenle"
-      subtitle="Deal’den üretilen ilanı düzenle, yayınla ve zaman çizelgesini izle."
+      subtitle="İşlemden üretilen ilanı düzenle, yayınla ve zaman çizelgesini izle."
       nav={[
         { href: '/consultant', label: 'Panel' },
         { href: '/consultant/inbox', label: 'Gelen Kutusu' },
