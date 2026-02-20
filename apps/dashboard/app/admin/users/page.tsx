@@ -124,7 +124,7 @@ export default function AdminUsersPage() {
         <Card><CardDescription>Yönetici</CardDescription><CardTitle className="mt-1">{loading ? '…' : String(stats.admins)}</CardTitle></Card>
       </div>
 
-      <Card>
+      <Card className="mt-3">
         <div className="flex flex-wrap items-center gap-2">
           <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Email/isim ara..." className="max-w-md" />
           <Button onClick={load} variant="secondary" loading={loading}>
