@@ -57,21 +57,21 @@ export default function AdminCommissionPayoutsPage() {
 
       setRows([{ allocationId: '', amountMinor: '' }]);
       setReferenceNo('');
-      setOk('Payout kaydı oluşturuldu.');
+      setOk('Ödeme kaydı oluşturuldu.');
     } catch (e: any) {
-      setError(e?.data?.message || e?.message || 'Payout işlemi başarısız.');
+      setError(e?.data?.message || e?.message || 'Ödeme işlemi başarısız.');
     } finally {
       setSaving(false);
     }
   }
 
   return (
-    <RoleShell role="ADMIN" title="Hakediş Ödemeleri" subtitle="Onaylı allocation satırlarına ödeme kaydı oluştur." nav={[]}>
+    <RoleShell role="ADMIN" title="Hakediş Ödemeleri" subtitle="Onaylanan hakediş satırlarına ödeme kaydı girin." nav={[]}>
       {error ? <Alert type="error" message={error} className="mb-4" /> : null}
       {ok ? <Alert type="success" message={ok} className="mb-4" /> : null}
 
       <Card>
-        <CardTitle>Yeni Payout</CardTitle>
+        <CardTitle>Yeni Ödeme</CardTitle>
         <CardDescription>Tutarlar minor units (kuruş) olarak girilir. Örn: 12.345,67 TL = 1234567</CardDescription>
 
         <div className="mt-3 grid gap-3 md:grid-cols-3">
@@ -101,7 +101,7 @@ export default function AdminCommissionPayoutsPage() {
                 onChange={(e) => updateRow(index, { allocationId: e.target.value })}
               />
               <Input
-                placeholder="Amount Minor"
+                placeholder="Tutar (kuruş)"
                 value={row.amountMinor}
                 onChange={(e) => updateRow(index, { amountMinor: e.target.value })}
               />
@@ -112,7 +112,7 @@ export default function AdminCommissionPayoutsPage() {
 
         <div className="mt-4 flex flex-wrap gap-2">
           <Button variant="secondary" onClick={addRow}>Satır Ekle</Button>
-          <Button onClick={submit} disabled={saving}>{saving ? 'Kaydediliyor…' : 'Payout Oluştur'}</Button>
+          <Button onClick={submit} disabled={saving}>{saving ? 'Kaydediliyor…' : 'Ödeme Kaydı Oluştur'}</Button>
         </div>
       </Card>
     </RoleShell>

@@ -60,12 +60,12 @@ export default function AdminCommissionPendingPage() {
   }
 
   return (
-    <RoleShell role="ADMIN" title="Hakediş Onay Kuyruğu" subtitle="PENDING_APPROVAL snapshot kayıtları." nav={[]}>
+    <RoleShell role="ADMIN" title="Hakediş Onay Kuyruğu" subtitle="Onay bekleyen hakediş kayıtlarını buradan yönetirsiniz." nav={[]}>
       {error ? <Alert type="error" message={error} className="mb-4" /> : null}
 
       <Card>
-        <CardTitle>Bekleyen Snapshotlar</CardTitle>
-        <CardDescription>Maker-checker kuralı aktif: oluşturan onaylayamaz.</CardDescription>
+        <CardTitle>Bekleyen Kayıtlar</CardTitle>
+        <CardDescription>Kayıdı oluşturan kişi aynı kaydı onaylayamaz.</CardDescription>
         {loading ? <div className="mt-3 text-sm text-[var(--muted)]">Yükleniyor…</div> : null}
 
         {!loading && rows.length === 0 ? <div className="mt-3 text-sm text-[var(--muted)]">Bekleyen kayıt yok.</div> : null}

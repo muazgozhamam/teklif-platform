@@ -64,26 +64,26 @@ export default function AdminCommissionOverviewPage() {
     <RoleShell
       role="ADMIN"
       title="Hakediş Genel Bakış"
-      subtitle="Ledger bazlı hakediş özeti ve operasyon kısayolları."
+      subtitle="Hakediş süreçlerini tek ekranda izleyin ve yönetin."
       nav={[]}
     >
       {error ? <Alert type="error" message={error} className="mb-4" /> : null}
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
-        <Card><CardDescription>Toplam Earned</CardDescription><CardTitle className="mt-1">{loading ? '…' : formatMinorTry(overview?.totalEarnedMinor)}</CardTitle></Card>
-        <Card><CardDescription>Toplam Paid</CardDescription><CardTitle className="mt-1">{loading ? '…' : formatMinorTry(overview?.totalPaidMinor)}</CardTitle></Card>
-        <Card><CardDescription>Toplam Reversed</CardDescription><CardTitle className="mt-1">{loading ? '…' : formatMinorTry(overview?.totalReversedMinor)}</CardTitle></Card>
-        <Card><CardDescription>Outstanding</CardDescription><CardTitle className="mt-1">{loading ? '…' : formatMinorTry(overview?.payableOutstandingMinor)}</CardTitle></Card>
+        <Card><CardDescription>Toplam Hakediş</CardDescription><CardTitle className="mt-1">{loading ? '…' : formatMinorTry(overview?.totalEarnedMinor)}</CardTitle></Card>
+        <Card><CardDescription>Toplam Ödenen</CardDescription><CardTitle className="mt-1">{loading ? '…' : formatMinorTry(overview?.totalPaidMinor)}</CardTitle></Card>
+        <Card><CardDescription>Toplam Ters Kayıt</CardDescription><CardTitle className="mt-1">{loading ? '…' : formatMinorTry(overview?.totalReversedMinor)}</CardTitle></Card>
+        <Card><CardDescription>Kalan Ödeme</CardDescription><CardTitle className="mt-1">{loading ? '…' : formatMinorTry(overview?.payableOutstandingMinor)}</CardTitle></Card>
         <Card><CardDescription>Bekleyen Onay</CardDescription><CardTitle className="mt-1">{loading ? '…' : String(overview?.pendingApprovalCount || 0)}</CardTitle></Card>
       </div>
 
       <Card className="mt-4">
-        <CardTitle>Deal’den Snapshot Oluştur</CardTitle>
-        <CardDescription>Deal status = WON olmalı, listing.price dolu olmalı.</CardDescription>
+        <CardTitle>İşlemden Hakediş Kaydı Oluştur</CardTitle>
+        <CardDescription>İşlem kapandıysa bu kayıtla hakediş dağıtımını başlatırsınız.</CardDescription>
         <div className="mt-3 flex flex-col gap-2 md:flex-row">
-          <Input value={dealId} onChange={(e) => setDealId(e.target.value)} placeholder="Deal ID" className="md:max-w-xl" />
+          <Input value={dealId} onChange={(e) => setDealId(e.target.value)} placeholder="İşlem ID" className="md:max-w-xl" />
           <Button onClick={createSnapshot} disabled={saving || !dealId.trim()}>
-            {saving ? 'Oluşturuluyor…' : 'Snapshot Oluştur'}
+            {saving ? 'Oluşturuluyor…' : 'Hakediş Kaydı Oluştur'}
           </Button>
         </div>
       </Card>
@@ -91,19 +91,19 @@ export default function AdminCommissionOverviewPage() {
       <div className="mt-4 grid gap-3 md:grid-cols-3">
         <Link href="/admin/commission/pending" className="ui-interactive rounded-xl border border-[var(--border)] bg-[var(--card)] p-4 hover:bg-[var(--interactive-hover-bg)]">
           <div className="text-sm font-medium">Onay Kuyruğu</div>
-          <div className="mt-1 text-xs text-[var(--muted)]">PENDING_APPROVAL snapshot’ları yönet.</div>
+          <div className="mt-1 text-xs text-[var(--muted)]">Onay bekleyen hakediş kayıtlarını yönet.</div>
         </Link>
         <Link href="/admin/commission/payouts" className="ui-interactive rounded-xl border border-[var(--border)] bg-[var(--card)] p-4 hover:bg-[var(--interactive-hover-bg)]">
-          <div className="text-sm font-medium">Ödeme Planı</div>
-          <div className="mt-1 text-xs text-[var(--muted)]">Onaylı satırlara payout oluştur.</div>
+          <div className="text-sm font-medium">Ödeme Kayıtları</div>
+          <div className="mt-1 text-xs text-[var(--muted)]">Onaylanan hakedişler için ödeme girin.</div>
         </Link>
         <Link href="/admin/commission/disputes" className="ui-interactive rounded-xl border border-[var(--border)] bg-[var(--card)] p-4 hover:bg-[var(--interactive-hover-bg)]">
           <div className="text-sm font-medium">Uyuşmazlıklar</div>
-          <div className="mt-1 text-xs text-[var(--muted)]">Aktif dispute kayıtları ve durum yönetimi.</div>
+          <div className="mt-1 text-xs text-[var(--muted)]">Açılan anlaşmazlık kayıtlarını takip edin.</div>
         </Link>
         <Link href="/admin/commission/period-locks" className="ui-interactive rounded-xl border border-[var(--border)] bg-[var(--card)] p-4 hover:bg-[var(--interactive-hover-bg)]">
           <div className="text-sm font-medium">Dönem Kilidi</div>
-          <div className="mt-1 text-xs text-[var(--muted)]">Period lock ve SLA escalation yönetimi.</div>
+          <div className="mt-1 text-xs text-[var(--muted)]">Belirli dönemlerde işlemleri geçici olarak kilitleyin.</div>
         </Link>
       </div>
     </RoleShell>

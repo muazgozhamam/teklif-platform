@@ -54,12 +54,12 @@ export default function BrokerCommissionApprovalPage() {
   }
 
   return (
-    <RoleShell role="BROKER" title="Hakediş Onay Ekranı" subtitle="Broker tarafı bekleyen snapshot onay listesi." nav={[]}>
+    <RoleShell role="BROKER" title="Hakediş Onay Ekranı" subtitle="Onay bekleyen hakediş kayıtlarını buradan onaylarsınız." nav={[]}>
       {error ? <Alert type="error" message={error} className="mb-4" /> : null}
 
       <Card>
         <CardTitle>Bekleyen Onaylar</CardTitle>
-        <CardDescription>Maker-checker kuralı broker için de uygulanır.</CardDescription>
+        <CardDescription>Kaydı oluşturan kişi aynı kaydı onaylayamaz.</CardDescription>
 
         {loading ? <div className="mt-3 text-sm text-[var(--muted)]">Yükleniyor…</div> : null}
         {!loading && rows.length === 0 ? <div className="mt-3 text-sm text-[var(--muted)]">Bekleyen kayıt yok.</div> : null}

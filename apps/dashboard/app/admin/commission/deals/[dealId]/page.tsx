@@ -58,7 +58,7 @@ export default function AdminCommissionDealDetailPage({ params }: Props) {
       const res = await api.get<Payload>(`${API_ROOT}/deals/${params.dealId}`);
       setData(res.data);
     } catch (e: any) {
-      setError(e?.data?.message || e?.message || 'Deal hakediş detayı alınamadı.');
+      setError(e?.data?.message || e?.message || 'İşlem hakediş detayı alınamadı.');
     } finally {
       setLoading(false);
     }
@@ -71,9 +71,9 @@ export default function AdminCommissionDealDetailPage({ params }: Props) {
 
   async function reverse(snapshotId: string) {
     setError(null);
-    const reasonInput = window.prompt('Reverse nedeni', 'Admin reverse');
+    const reasonInput = window.prompt('Ters kayıt nedeni', 'Yönetici düzeltmesi');
     if (!reasonInput) return;
-    const amountInput = window.prompt('Kısmi reverse için amountMinor (boş bırak = full reverse)', '');
+    const amountInput = window.prompt('Kısmi işlem için kuruş tutarı (boş bırak = tamamı)', '');
     try {
       await api.post(`${API_ROOT}/snapshots/${snapshotId}/reverse`, {
         reason: reasonInput,
@@ -81,12 +81,12 @@ export default function AdminCommissionDealDetailPage({ params }: Props) {
       });
       await load();
     } catch (e: any) {
-      setError(e?.data?.message || e?.message || 'Reverse işlemi başarısız.');
+      setError(e?.data?.message || e?.message || 'Ters kayıt işlemi başarısız.');
     }
   }
 
   return (
-    <RoleShell role="ADMIN" title={`Deal Hakediş Detayı`} subtitle={params.dealId} nav={[]}>
+    <RoleShell role="ADMIN" title="İşlem Hakediş Detayı" subtitle={params.dealId} nav={[]}>
       {error ? <Alert type="error" message={error} className="mb-4" /> : null}
       {loading ? <Card><CardDescription>Yükleniyor…</CardDescription></Card> : null}
 
@@ -95,9 +95,9 @@ export default function AdminCommissionDealDetailPage({ params }: Props) {
       {!loading && data ? (
         <div className="space-y-4">
           <Card>
-            <CardTitle>Snapshotlar</CardTitle>
+            <CardTitle>Hakediş Kayıtları</CardTitle>
             <div className="mt-3 space-y-3">
-              {data.snapshots.length === 0 ? <div className="text-sm text-[var(--muted)]">Snapshot yok.</div> : null}
+              {data.snapshots.length === 0 ? <div className="text-sm text-[var(--muted)]">Kayıt yok.</div> : null}
               {data.snapshots.map((s) => (
                 <div key={s.id} className="rounded-xl border border-[var(--border)] p-3">
                   <div className="flex flex-wrap items-center justify-between gap-2">
@@ -106,7 +106,7 @@ export default function AdminCommissionDealDetailPage({ params }: Props) {
                       <div className="text-xs text-[var(--muted)]">Havuz: {formatMinorTry(s.poolAmountMinor)}</div>
                     </div>
                     <Button variant="danger" className="h-8 px-3 text-xs" onClick={() => reverse(s.id)}>
-                      Partial/Full Reverse
+                      Kısmi/Tam Ters Kayıt
                     </Button>
                   </div>
                   <div className="mt-2 overflow-auto">

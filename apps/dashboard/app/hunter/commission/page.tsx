@@ -45,13 +45,13 @@ export default function HunterCommissionPage() {
   }, []);
 
   return (
-    <RoleShell role="HUNTER" title="Hakedişim" subtitle="İş ortağı bazlı earned/paid/outstanding görünümü." nav={[]}>
+    <RoleShell role="HUNTER" title="Hakedişim" subtitle="Kazanılan, ödenen ve kalan tutarları buradan takip edersiniz." nav={[]}>
       {error ? <Alert type="error" message={error} className="mb-4" /> : null}
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <Card><CardDescription>Earned</CardDescription><CardTitle className="mt-1">{loading ? '…' : formatMinorTry(data?.earnedMinor)}</CardTitle></Card>
-        <Card><CardDescription>Paid</CardDescription><CardTitle className="mt-1">{loading ? '…' : formatMinorTry(data?.paidMinor)}</CardTitle></Card>
-        <Card><CardDescription>Outstanding</CardDescription><CardTitle className="mt-1">{loading ? '…' : formatMinorTry(data?.outstandingMinor)}</CardTitle></Card>
+        <Card><CardDescription>Kazanılan</CardDescription><CardTitle className="mt-1">{loading ? '…' : formatMinorTry(data?.earnedMinor)}</CardTitle></Card>
+        <Card><CardDescription>Ödenen</CardDescription><CardTitle className="mt-1">{loading ? '…' : formatMinorTry(data?.paidMinor)}</CardTitle></Card>
+        <Card><CardDescription>Kalan</CardDescription><CardTitle className="mt-1">{loading ? '…' : formatMinorTry(data?.outstandingMinor)}</CardTitle></Card>
       </div>
 
       <Card className="mt-4">
@@ -61,7 +61,7 @@ export default function HunterCommissionPage() {
         {!loading && (data?.items || []).length > 0 ? (
           <div className="mt-3 overflow-auto">
             <table className="min-w-full text-sm">
-              <thead><tr className="text-left text-xs text-[var(--muted)]"><th className="px-2 py-1">Deal</th><th className="px-2 py-1">Durum</th><th className="px-2 py-1">Earned</th><th className="px-2 py-1">Paid</th><th className="px-2 py-1">Kalan</th></tr></thead>
+              <thead><tr className="text-left text-xs text-[var(--muted)]"><th className="px-2 py-1">İşlem</th><th className="px-2 py-1">Durum</th><th className="px-2 py-1">Kazanılan</th><th className="px-2 py-1">Ödenen</th><th className="px-2 py-1">Kalan</th></tr></thead>
               <tbody>
                 {(data?.items || []).map((item) => (
                   <tr key={item.allocationId} className="border-t border-[var(--border)]">

@@ -41,7 +41,7 @@ export default function CommissionPeriodLocksPage() {
       const res = await api.get<LockRow[]>(`${API_ROOT}/period-locks`);
       setRows(Array.isArray(res.data) ? res.data : []);
     } catch (e: any) {
-      setError(e?.data?.message || e?.message || 'Period lock listesi alınamadı.');
+      setError(e?.data?.message || e?.message || 'Dönem kilidi listesi alınamadı.');
     } finally {
       setLoading(false);
     }
@@ -62,10 +62,10 @@ export default function CommissionPeriodLocksPage() {
         periodTo,
         reason,
       });
-      setOk('Period lock oluşturuldu.');
+      setOk('Dönem kilidi oluşturuldu.');
       await load();
     } catch (e: any) {
-      setError(e?.data?.message || e?.message || 'Period lock oluşturulamadı.');
+      setError(e?.data?.message || e?.message || 'Dönem kilidi oluşturulamadı.');
     } finally {
       setSaving(false);
     }
@@ -76,10 +76,10 @@ export default function CommissionPeriodLocksPage() {
     setOk(null);
     try {
       await api.post(`${API_ROOT}/period-locks/${lockId}/release`, { reason: 'Manuel açma' });
-      setOk('Period lock serbest bırakıldı.');
+      setOk('Dönem kilidi kaldırıldı.');
       await load();
     } catch (e: any) {
-      setError(e?.data?.message || e?.message || 'Period lock açılamadı.');
+      setError(e?.data?.message || e?.message || 'Dönem kilidi kaldırılamadı.');
     }
   }
 
@@ -88,33 +88,33 @@ export default function CommissionPeriodLocksPage() {
     setOk(null);
     try {
       const res = await api.post<{ escalated: number }>(`${API_ROOT}/disputes/escalate-overdue`, {});
-      setOk(`Escalation tamamlandı: ${res.data?.escalated ?? 0} kayıt`);
+      setOk(`Üst seviyeye taşınan kayıt: ${res.data?.escalated ?? 0}`);
     } catch (e: any) {
-      setError(e?.data?.message || e?.message || 'SLA escalation çalıştırılamadı.');
+      setError(e?.data?.message || e?.message || 'Süre aşımı işlemi çalıştırılamadı.');
     }
   }
 
   return (
-    <RoleShell role="ADMIN" title="Hakediş Dönem Kilidi" subtitle="Period lock ve dispute SLA escalation yönetimi." nav={[]}>
+    <RoleShell role="ADMIN" title="Hakediş Dönem Kilidi" subtitle="Belirli dönemlerde hakediş işlemlerini geçici olarak durdurabilirsiniz." nav={[]}>
       {error ? <Alert type="error" message={error} className="mb-4" /> : null}
       {ok ? <Alert type="success" message={ok} className="mb-4" /> : null}
 
       <Card>
-        <CardTitle>Yeni Period Lock</CardTitle>
-        <CardDescription>Aktif kilit dönemlerinde approve/payout/reverse işlemleri engellenir.</CardDescription>
+        <CardTitle>Yeni Dönem Kilidi</CardTitle>
+        <CardDescription>Kilit aktifken onay, ödeme ve ters kayıt işlemleri durdurulur.</CardDescription>
         <form className="mt-3 grid gap-3 md:grid-cols-4" onSubmit={createLock}>
           <Input type="datetime-local" value={periodFrom} onChange={(e) => setPeriodFrom(e.target.value)} required />
           <Input type="datetime-local" value={periodTo} onChange={(e) => setPeriodTo(e.target.value)} required />
           <Input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Kilitleme nedeni" required />
-          <Button type="submit" disabled={saving}>{saving ? 'Oluşturuluyor…' : 'Lock Oluştur'}</Button>
+          <Button type="submit" disabled={saving}>{saving ? 'Oluşturuluyor…' : 'Dönemi Kilitle'}</Button>
         </form>
         <div className="mt-3">
-          <Button variant="secondary" onClick={escalateOverdue}>Overdue Dispute Escalate Çalıştır</Button>
+          <Button variant="secondary" onClick={escalateOverdue}>Süresi Geçenleri Üst Seviyeye Taşı</Button>
         </div>
       </Card>
 
       <Card className="mt-4">
-        <CardTitle>Period Lock Listesi</CardTitle>
+        <CardTitle>Dönem Kilidi Listesi</CardTitle>
         {loading ? <div className="mt-3 text-sm text-[var(--muted)]">Yükleniyor…</div> : null}
         {!loading && rows.length === 0 ? <div className="mt-3 text-sm text-[var(--muted)]">Kayıt yok.</div> : null}
         {!loading && rows.length > 0 ? (
@@ -132,7 +132,7 @@ export default function CommissionPeriodLocksPage() {
               <tbody>
                 {rows.map((row) => (
                   <tr key={row.id} className="border-b border-[var(--border)]">
-                    <td className="px-3 py-2">{row.isActive ? 'ACTIVE' : 'RELEASED'}</td>
+                    <td className="px-3 py-2">{row.isActive ? 'AKTİF' : 'KALDIRILDI'}</td>
                     <td className="px-3 py-2 text-xs text-[var(--muted)]">
                       {new Date(row.periodFrom).toLocaleString('tr-TR')}<br />{new Date(row.periodTo).toLocaleString('tr-TR')}
                     </td>
@@ -140,7 +140,7 @@ export default function CommissionPeriodLocksPage() {
                     <td className="px-3 py-2 text-xs text-[var(--muted)]">{row.creator?.name || row.creator?.email || '-'}</td>
                     <td className="px-3 py-2">
                       {row.isActive ? (
-                        <Button className="h-8 px-3 text-xs" onClick={() => releaseLock(row.id)}>Release</Button>
+                        <Button className="h-8 px-3 text-xs" onClick={() => releaseLock(row.id)}>Kilidi Kaldır</Button>
                       ) : (
                         <span className="text-xs text-[var(--muted)]">{row.unlocker?.name || row.unlocker?.email || '-'}</span>
                       )}

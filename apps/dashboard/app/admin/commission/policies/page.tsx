@@ -156,7 +156,7 @@ export default function AdminCommissionPoliciesPage() {
     <RoleShell
       role="ADMIN"
       title="Komisyon Politikaları"
-      subtitle="Yönetim tarafı komisyon kural ve oran ekranı."
+      subtitle="Komisyon oranlarını ve dağıtım paylarını buradan yönetirsiniz."
       nav={[]}
     >
       <div className="grid gap-3 md:grid-cols-2">
@@ -182,7 +182,7 @@ export default function AdminCommissionPoliciesPage() {
 
           <div className="mt-4 grid grid-cols-2 gap-3">
             <label className="grid gap-1">
-              <span className="text-xs text-[var(--muted)]">Hunter</span>
+              <span className="text-xs text-[var(--muted)]">İş Ortağı</span>
               <Input value={form.hunterPercent} onChange={(e) => updateField('hunterPercent', e.target.value)} />
             </label>
             <label className="grid gap-1">
