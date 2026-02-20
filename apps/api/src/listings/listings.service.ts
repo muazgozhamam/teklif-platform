@@ -41,6 +41,7 @@ const citiesCache = { fetchedAt: 0, value: [] as string[] };
 const districtsCache = new Map<string, string[]>();
 const neighborhoodsCache = new Map<string, string[]>();
 const LOCATION_DEBUG_VERSION = '2026-02-19-local-address-v2';
+type DistrictOption = { id: number | null; name: string };
 
 @Injectable()
 export class ListingsService {
@@ -338,6 +339,31 @@ export class ListingsService {
     }
   }
 
+  private async fetchLocalDistrictRows(city: string): Promise<DistrictOption[] | null> {
+    try {
+      const rows = await this.prisma.$queryRawUnsafe<Array<{ id: number; name: string }>>(
+        `SELECT d.id, d.name
+         FROM district d
+         JOIN city c ON c.id = d.city_id
+         WHERE lower(
+           replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(c.name,
+             'İ','i'),'I','i'),'ı','i'),'Ş','s'),'ş','s'),'Ğ','g'),'ğ','g'),'Ü','u'),'ü','u'),'Ö','o'),'Ç','c'),'ç','c')
+         ) = lower(
+           replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace($1,
+             'İ','i'),'I','i'),'ı','i'),'Ş','s'),'ş','s'),'Ğ','g'),'ğ','g'),'Ü','u'),'ü','u'),'Ö','o'),'Ç','c'),'ç','c')
+         )
+         ORDER BY d.name ASC`,
+        city,
+      );
+      const out = rows
+        .map((r) => ({ id: Number(r.id), name: String(r.name || '').trim() }))
+        .filter((r) => Number.isFinite(r.id) && r.name.length > 0);
+      return out.length > 0 ? out : null;
+    } catch {
+      return null;
+    }
+  }
+
   private async fetchLocalNeighborhoods(city: string, district: string): Promise<string[] | null> {
     try {
       const rows = await this.prisma.$queryRawUnsafe<Array<{ name: string }>>(
@@ -371,6 +397,22 @@ export class ListingsService {
          ORDER BY n.name ASC`,
         city,
         district,
+      );
+      const names = this.normalizeRows(rows);
+      return names.length > 0 ? names : null;
+    } catch {
+      return null;
+    }
+  }
+
+  private async fetchLocalNeighborhoodsByDistrictId(districtId: number): Promise<string[] | null> {
+    try {
+      const rows = await this.prisma.$queryRawUnsafe<Array<{ name: string }>>(
+        `SELECT n.name
+         FROM neighbourhood n
+         WHERE n.district_id = $1
+         ORDER BY n.name ASC`,
+        districtId,
       );
       const names = this.normalizeRows(rows);
       return names.length > 0 ? names : null;
@@ -456,10 +498,11 @@ export class ListingsService {
     if (cached) return { districts: cached };
 
     const useLocal = await this.hasLocalAddressData();
-    const local = useLocal ? await this.fetchLocalDistricts(cityName) : null;
-    if (local && local.length > 0) {
+    const localRows = useLocal ? await this.fetchLocalDistrictRows(cityName) : null;
+    if (localRows && localRows.length > 0) {
+      const local = localRows.map((x) => x.name);
       districtsCache.set(cacheKey, local);
-      return { districts: local };
+      return { districts: localRows };
     }
     if (useLocal) return { districts: [] as string[] };
 
@@ -467,7 +510,7 @@ export class ListingsService {
     const byProvince = this.parseNames(dataByProvince);
     if (byProvince.length > 0) {
       districtsCache.set(cacheKey, byProvince);
-      return { districts: byProvince };
+      return { districts: byProvince.map((name) => ({ id: null, name })) };
     }
 
     const provinces = await this.fetchTurkiyeApi(`/provinces?name=${encodeURIComponent(cityName)}`);
@@ -480,25 +523,31 @@ export class ListingsService {
       const byId = this.parseNames(dataById);
       if (byId.length > 0) {
         districtsCache.set(cacheKey, byId);
-        return { districts: byId };
+        return { districts: byId.map((name) => ({ id: null, name })) };
       }
     }
 
-    return { districts: [] as string[] };
+    return { districts: [] as DistrictOption[] };
   }
 
-  async getPublicNeighborhoods(city: string, district: string) {
+  async getPublicNeighborhoods(city: string, district: string, districtId?: string) {
     const cityName = String(city || '').trim();
     const districtName = String(district || '').trim();
     if (!cityName) throw new BadRequestException('city zorunlu');
-    if (!districtName) throw new BadRequestException('district zorunlu');
+    if (!districtName && !districtId) throw new BadRequestException('district veya districtId zorunlu');
 
     const cacheKey = `${this.normalizeLocationValue(cityName)}::${this.normalizeLocationValue(districtName)}`;
     const cached = neighborhoodsCache.get(cacheKey);
     if (cached) return { neighborhoods: cached };
 
     const useLocal = await this.hasLocalAddressData();
-    const local = useLocal ? await this.fetchLocalNeighborhoods(cityName, districtName) : null;
+    let local: string[] | null = null;
+    if (useLocal && districtId && Number.isFinite(Number(districtId))) {
+      local = await this.fetchLocalNeighborhoodsByDistrictId(Number(districtId));
+    }
+    if (!local && useLocal) {
+      local = await this.fetchLocalNeighborhoods(cityName, districtName);
+    }
     if (local && local.length > 0) {
       neighborhoodsCache.set(cacheKey, local);
       return { neighborhoods: local };

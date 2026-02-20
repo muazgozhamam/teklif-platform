@@ -59,8 +59,12 @@ export class PublicListingsController {
   }
 
   @Get('locations/neighborhoods')
-  locationsNeighborhoods(@Query('city') city: string, @Query('district') district: string) {
-    return this.listings.getPublicNeighborhoods(city, district);
+  locationsNeighborhoods(
+    @Query('city') city: string,
+    @Query('district') district: string,
+    @Query('districtId') districtId?: string,
+  ) {
+    return this.listings.getPublicNeighborhoods(city, district, districtId);
   }
 
   @Get('locations/debug')

@@ -12,6 +12,7 @@ type Props = {
   value: LocationValue;
   onChange: (next: LocationValue) => void;
 };
+type DistrictOption = { id: number | null; name: string };
 
 const PUBLIC_TR_API = 'https://turkiyeapi.dev/api/v1';
 const FALLBACK_DISTRICTS: Record<string, string[]> = {
@@ -61,7 +62,7 @@ function norm(value: string) {
 async function fetchOptions(path: string) {
   const res = await fetch(path, { cache: 'no-store' });
   if (!res.ok) throw new Error('Lokasyon verisi alınamadı');
-  return res.json() as Promise<{ cities?: string[]; districts?: string[]; neighborhoods?: string[] }>;
+  return res.json() as Promise<{ cities?: string[]; districts?: DistrictOption[] | string[]; neighborhoods?: string[] }>;
 }
 
 async function fetchTurkiyeApi(path: string) {
@@ -167,7 +168,8 @@ async function fetchNeighborhoodsFromGoogle(city: string, district: string): Pro
 
 export function LocationCascader({ value, onChange }: Props) {
   const [cities, setCities] = React.useState<string[]>([]);
-  const [districts, setDistricts] = React.useState<string[]>([]);
+  const [districts, setDistricts] = React.useState<DistrictOption[]>([]);
+  const [selectedDistrictId, setSelectedDistrictId] = React.useState<number | null>(null);
   const [neighborhoods, setNeighborhoods] = React.useState<string[]>([]);
   const [loadingCities, setLoadingCities] = React.useState(false);
   const [loadingDistricts, setLoadingDistricts] = React.useState(false);
@@ -197,6 +199,7 @@ export function LocationCascader({ value, onChange }: Props) {
   React.useEffect(() => {
     if (!value.city) {
       setDistricts([]);
+      setSelectedDistrictId(null);
       setNeighborhoods([]);
       return;
     }
@@ -205,22 +208,32 @@ export function LocationCascader({ value, onChange }: Props) {
     fetchOptions(`/api/public/listings/locations/districts?city=${encodeURIComponent(value.city)}`)
       .then(async (payload) => {
         if (!alive) return;
-        let next = Array.isArray(payload.districts) ? payload.districts : [];
+        let next: DistrictOption[] = Array.isArray(payload.districts)
+          ? payload.districts.map((d) =>
+              typeof d === 'string' ? { id: null, name: d } : { id: d.id ?? null, name: String(d.name || '') },
+            )
+          : [];
         if (next.length === 0) {
           try {
-            next = await fetchTurkiyeApi(`/districts?province=${encodeURIComponent(value.city)}`);
+            const names = await fetchTurkiyeApi(`/districts?province=${encodeURIComponent(value.city)}`);
+            next = names.map((name) => ({ id: null, name }));
           } catch {
             next = [];
           }
         }
         if (next.length === 0) {
-          next = FALLBACK_DISTRICTS[norm(value.city)] || [];
+          next = (FALLBACK_DISTRICTS[norm(value.city)] || []).map((name) => ({ id: null, name }));
         }
         setDistricts(next);
+        const matched = next.find((d) => d.name === value.district);
+        setSelectedDistrictId(matched?.id ?? null);
       })
       .catch(() => {
         if (!alive) return;
-        setDistricts(FALLBACK_DISTRICTS[norm(value.city)] || []);
+        const fallback = (FALLBACK_DISTRICTS[norm(value.city)] || []).map((name) => ({ id: null, name }));
+        setDistricts(fallback);
+        const matched = fallback.find((d) => d.name === value.district);
+        setSelectedDistrictId(matched?.id ?? null);
       })
       .finally(() => {
         if (!alive) return;
@@ -238,9 +251,10 @@ export function LocationCascader({ value, onChange }: Props) {
     }
     let alive = true;
     setLoadingNeighborhoods(true);
-    fetchOptions(
-      `/api/public/listings/locations/neighborhoods?city=${encodeURIComponent(value.city)}&district=${encodeURIComponent(value.district)}`,
-    )
+    const districtQuery = selectedDistrictId
+      ? `districtId=${encodeURIComponent(String(selectedDistrictId))}&district=${encodeURIComponent(value.district)}`
+      : `district=${encodeURIComponent(value.district)}`;
+    fetchOptions(`/api/public/listings/locations/neighborhoods?city=${encodeURIComponent(value.city)}&${districtQuery}`)
       .then(async (payload) => {
         if (!alive) return;
         let next = Array.isArray(payload.neighborhoods) ? payload.neighborhoods : [];
@@ -272,7 +286,7 @@ export function LocationCascader({ value, onChange }: Props) {
     return () => {
       alive = false;
     };
-  }, [value.city, value.district]);
+  }, [value.city, value.district, selectedDistrictId]);
 
   return (
     <div className="grid gap-2">
@@ -298,15 +312,19 @@ export function LocationCascader({ value, onChange }: Props) {
         <select
           className="h-10 rounded-xl border border-[var(--border)] bg-[var(--card)] px-3 text-sm"
           value={value.district}
-          onChange={(e) => onChange({ ...value, district: e.target.value, neighborhood: '' })}
+          onChange={(e) => {
+            const picked = districts.find((d) => d.name === e.target.value) || null;
+            setSelectedDistrictId(picked?.id ?? null);
+            onChange({ ...value, district: e.target.value, neighborhood: '' });
+          }}
           disabled={!value.city || loadingDistricts}
         >
           <option value="">
             {!value.city ? 'Önce il seçin' : loadingDistricts ? 'İlçeler yükleniyor...' : 'İlçe seçin'}
           </option>
           {districts.map((district) => (
-            <option key={district} value={district}>
-              {district}
+            <option key={`${district.id ?? 'x'}-${district.name}`} value={district.name}>
+              {district.name}
             </option>
           ))}
         </select>
